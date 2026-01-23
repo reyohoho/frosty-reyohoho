@@ -133,7 +133,8 @@ enum BadgeType {
   twitch,
   bttv,
   ffz,
-  sevenTV;
+  sevenTV,
+  reyohoho;
 
   @override
   String toString() {
@@ -146,6 +147,8 @@ enum BadgeType {
         return 'FrankerFaceZ badge';
       case BadgeType.sevenTV:
         return '7TV badge';
+      case BadgeType.reyohoho:
+        return 'ReYohoho badge';
     }
   }
 }

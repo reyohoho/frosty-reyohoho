@@ -1,9 +1,12 @@
+import 'dart:math' as math;
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:frosty/apis/reyohoho_api.dart';
 import 'package:frosty/cache_manager.dart';
 import 'package:frosty/constants.dart';
 import 'package:frosty/models/badges.dart';
@@ -246,15 +249,16 @@ class IRCMessage {
     }
   }
 
-  /// Adds all user badges (Twitch, FFZ, BTTV, 7TV) to the span
+  /// Adds all user badges (Twitch, FFZ, BTTV, 7TV, Reyohoho) to the span
   bool _addUserBadges(
     BuildContext context,
     List<InlineSpan> span,
     ChatAssetsStore assetsStore,
     double badgeSize,
     bool launchExternal,
-    bool isHistorical,
-  ) {
+    bool isHistorical, {
+    bool showReyohohoBadges = true,
+  }) {
     var skipBot = false;
     final twitchBadgeToObject = assetsStore.twitchBadgesToObject;
     final ffzUserToBadges = assetsStore.userToFFZBadges;
@@ -401,15 +405,35 @@ class IRCMessage {
       }
     }
 
+    // Add Reyohoho badge (on-demand loading)
+    final userId = tags['user-id'];
+    if (userId != null && showReyohohoBadges) {
+      final reyohohoBadge = assetsStore.getReyohohoBadge(userId);
+      if (reyohohoBadge != null) {
+        span.add(
+          _createBadgeSpan(
+            context,
+            badge: reyohohoBadge,
+            size: badgeSize,
+            launchExternal: launchExternal,
+          ),
+        );
+        span.add(const TextSpan(text: ' '));
+      }
+    }
+
     return skipBot;
   }
 
   /// Adds the username to the span with proper color and styling
+  /// If showPaints is true and user has a paint, renders with gradient styling.
   void _addUsername(
     List<InlineSpan> span,
     BuildContext context,
-    void Function()? onTapName,
-  ) {
+    void Function()? onTapName, {
+    ChatAssetsStore? assetsStore,
+    bool showPaints = false,
+  }) {
     var color = Color(
       int.parse((tags['color'] ?? '#868686').replaceFirst('#', '0xFF')),
     );
@@ -418,11 +442,43 @@ class IRCMessage {
     color = utils.adjustChatNameColor(context, color);
 
     final displayName = tags['display-name']!;
+    final nameText =
+        user != null ? utils.getReadableName(displayName, user!) : displayName;
+
+    final userId = tags['user-id'];
+
+    // Check for paint if enabled
+    if (showPaints && assetsStore != null && userId != null) {
+      final userPaint = assetsStore.getUserPaint(userId);
+      if (userPaint != null) {
+        // Create a painted username widget
+        span.add(
+          WidgetSpan(
+            alignment: PlaceholderAlignment.middle,
+            child: GestureDetector(
+              onTap: onTapName,
+              child: Tooltip(
+                message: '${userPaint.sourceName}: ${userPaint.paint.name}',
+                child: _PaintedText(
+                  text: nameText,
+                  paint: userPaint.paint,
+                  fallbackColor: color,
+                ),
+              ),
+            ),
+          ),
+        );
+
+        // Add the colon separator between the username and their message
+        if (action == false) span.add(const TextSpan(text: ':'));
+        return;
+      }
+    }
+
+    // Default: render with solid color
     span.add(
       TextSpan(
-        text: user != null
-            ? utils.getReadableName(displayName, user!)
-            : displayName,
+        text: nameText,
         style: TextStyle(color: color, fontWeight: FontWeight.bold),
         recognizer: TapGestureRecognizer()..onTap = onTapName,
       ),
@@ -671,6 +727,8 @@ class IRCMessage {
     double linkPreviewMaxWidth = 300.0,
     double linkPreviewMaxHeight = 200.0,
     List<LinkPreviewInfo>? linkPreviews,
+    bool showReyohohoBadges = true,
+    bool showPaints = true,
   }) {
     final emoteToObject = assetsStore.emoteToObject;
     final badgeSize = defaultBadgeSize * badgeScale;
@@ -696,9 +754,16 @@ class IRCMessage {
       badgeSize,
       launchExternal,
       isHistorical,
+      showReyohohoBadges: showReyohohoBadges,
     );
 
-    _addUsername(span, context, onTapName);
+    _addUsername(
+      span,
+      context,
+      onTapName,
+      assetsStore: assetsStore,
+      showPaints: showPaints,
+    );
 
     // Italicize the text if it was called with an IRC Action (e.g., "/me").
     final textStyle = action == true
@@ -1272,3 +1337,101 @@ final regexEmoji = RegExp(
   r'-\u{23ef}\u{25b6}\u{23f8}-\u{23fa}\u{200d}]+',
   unicode: true,
 );
+
+/// Widget to render text with paint gradient styling.
+class _PaintedText extends StatelessWidget {
+  final String text;
+  final PaintData paint;
+  final Color fallbackColor;
+
+  const _PaintedText({
+    required this.text,
+    required this.paint,
+    required this.fallbackColor,
+  });
+
+  /// Converts a 7TV decimal color (RGBA packed as int) to a Flutter Color.
+  Color _decimalToColor(int num) {
+    final r = (num >>> 24) & 0xff;
+    final g = (num >>> 16) & 0xff;
+    final b = (num >>> 8) & 0xff;
+    final a = num & 0xff;
+    return Color.fromARGB(a, r, g, b);
+  }
+
+  /// Generates a gradient from paint data.
+  Gradient? _buildGradient() {
+    if (paint.stops.isEmpty) return null;
+
+    final colors = paint.stops.map((s) => _decimalToColor(s.color)).toList();
+    final stops = paint.stops.map((s) => s.at).toList();
+
+    switch (paint.function) {
+      case 'LINEAR_GRADIENT':
+        final angle = (paint.angle ?? 0) * math.pi / 180;
+        return LinearGradient(
+          colors: colors,
+          stops: stops,
+          begin: Alignment(
+            -1.0 * math.cos(angle),
+            -1.0 * math.sin(angle),
+          ),
+          end: Alignment(
+            math.cos(angle),
+            math.sin(angle),
+          ),
+          tileMode: paint.repeat ? TileMode.repeated : TileMode.clamp,
+        );
+      case 'RADIAL_GRADIENT':
+        return RadialGradient(
+          colors: colors,
+          stops: stops,
+          tileMode: paint.repeat ? TileMode.repeated : TileMode.clamp,
+        );
+      default:
+        return null;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final gradient = _buildGradient();
+
+    // If we have a gradient, use ShaderMask
+    if (gradient != null) {
+      return ShaderMask(
+        blendMode: BlendMode.srcIn,
+        shaderCallback: (bounds) => gradient.createShader(
+          Rect.fromLTWH(0, 0, bounds.width, bounds.height),
+        ),
+        child: Text(
+          text,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.white, // Base color for shader
+          ),
+        ),
+      );
+    }
+
+    // If we have a solid color from paint, use that
+    if (paint.color != null) {
+      return Text(
+        text,
+        style: TextStyle(
+          fontWeight: FontWeight.bold,
+          color: _decimalToColor(paint.color!),
+        ),
+      );
+    }
+
+    // Fallback to default color
+    return Text(
+      text,
+      style: TextStyle(
+        fontWeight: FontWeight.bold,
+        color: fallbackColor,
+      ),
+    );
+  }
+}

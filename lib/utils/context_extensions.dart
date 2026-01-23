@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:frosty/apis/bttv_api.dart';
 import 'package:frosty/apis/ffz_api.dart';
+import 'package:frosty/apis/reyohoho_api.dart';
 import 'package:frosty/apis/seventv_api.dart';
 import 'package:frosty/apis/twitch_api.dart';
 import 'package:frosty/screens/settings/stores/auth_store.dart';
@@ -81,6 +82,9 @@ extension ContextExtensions on BuildContext {
 
   /// Gets SevenTVApi from provider
   SevenTVApi get sevenTVApi => read<SevenTVApi>();
+
+  /// Gets ReyohohoApi from provider
+  ReyohohoApi get reyohohoApi => read<ReyohohoApi>();
 
   /// Gets GlobalAssetsStore from provider
   GlobalAssetsStore get globalAssetsStore => read<GlobalAssetsStore>();

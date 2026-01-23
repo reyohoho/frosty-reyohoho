@@ -68,6 +68,8 @@ SettingsStore _$SettingsStoreFromJson(
   ..showBTTVBadges = json['showBTTVBadges'] as bool? ?? true
   ..showFFZEmotes = json['showFFZEmotes'] as bool? ?? true
   ..showFFZBadges = json['showFFZBadges'] as bool? ?? true
+  ..showReyohohoBadges = json['showReyohohoBadges'] as bool? ?? true
+  ..showPaints = json['showPaints'] as bool? ?? true
   ..useEmoteProxy = json['useEmoteProxy'] as bool? ?? false
   ..selectedEmoteProxyUrl = json['selectedEmoteProxyUrl'] as String? ?? ''
   ..showRecentMessages = json['showRecentMessages'] as bool? ?? false
@@ -141,6 +143,8 @@ Map<String, dynamic> _$SettingsStoreToJson(
   'showBTTVBadges': instance.showBTTVBadges,
   'showFFZEmotes': instance.showFFZEmotes,
   'showFFZBadges': instance.showFFZBadges,
+  'showReyohohoBadges': instance.showReyohohoBadges,
+  'showPaints': instance.showPaints,
   'useEmoteProxy': instance.useEmoteProxy,
   'selectedEmoteProxyUrl': instance.selectedEmoteProxyUrl,
   'showRecentMessages': instance.showRecentMessages,
@@ -914,6 +918,42 @@ mixin _$SettingsStore on _SettingsStoreBase, Store {
     });
   }
 
+  late final _$showReyohohoBadgesAtom = Atom(
+    name: '_SettingsStoreBase.showReyohohoBadges',
+    context: context,
+  );
+
+  @override
+  bool get showReyohohoBadges {
+    _$showReyohohoBadgesAtom.reportRead();
+    return super.showReyohohoBadges;
+  }
+
+  @override
+  set showReyohohoBadges(bool value) {
+    _$showReyohohoBadgesAtom.reportWrite(value, super.showReyohohoBadges, () {
+      super.showReyohohoBadges = value;
+    });
+  }
+
+  late final _$showPaintsAtom = Atom(
+    name: '_SettingsStoreBase.showPaints',
+    context: context,
+  );
+
+  @override
+  bool get showPaints {
+    _$showPaintsAtom.reportRead();
+    return super.showPaints;
+  }
+
+  @override
+  set showPaints(bool value) {
+    _$showPaintsAtom.reportWrite(value, super.showPaints, () {
+      super.showPaints = value;
+    });
+  }
+
   late final _$useEmoteProxyAtom = Atom(
     name: '_SettingsStoreBase.useEmoteProxy',
     context: context,
@@ -1323,6 +1363,8 @@ showBTTVEmotes: ${showBTTVEmotes},
 showBTTVBadges: ${showBTTVBadges},
 showFFZEmotes: ${showFFZEmotes},
 showFFZBadges: ${showFFZBadges},
+showReyohohoBadges: ${showReyohohoBadges},
+showPaints: ${showPaints},
 useEmoteProxy: ${useEmoteProxy},
 selectedEmoteProxyUrl: ${selectedEmoteProxyUrl},
 showRecentMessages: ${showRecentMessages},

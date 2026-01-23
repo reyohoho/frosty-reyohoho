@@ -525,6 +525,20 @@ class _ChatSettingsState extends State<ChatSettings> {
             onChanged: (newValue) => settingsStore.showFFZBadges = newValue,
           ),
           SettingsListSwitch(
+            title: 'Show ReYohoho badges',
+            value: settingsStore.showReyohohoBadges,
+            onChanged: (newValue) =>
+                settingsStore.showReyohohoBadges = newValue,
+          ),
+          SettingsListSwitch(
+            title: 'Show colored nicknames (paints)',
+            subtitle: const Text(
+              'Displays custom nickname gradients from 7TV and ReYohoho.',
+            ),
+            value: settingsStore.showPaints,
+            onChanged: (newValue) => settingsStore.showPaints = newValue,
+          ),
+          SettingsListSwitch(
             title: 'Use emote proxy',
             subtitle: Text(
               settingsStore.useEmoteProxy &&

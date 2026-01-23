@@ -166,6 +166,8 @@ abstract class _SettingsStoreBase with Store {
   static const defaultShowBTTVBadges = true;
   static const defaultShowFFZEmotes = true;
   static const defaultShowFFZBadges = true;
+  static const defaultShowReyohohoBadges = true;
+  static const defaultShowPaints = true;
 
   // Emote proxy defaults
   static const defaultUseEmoteProxy = false;
@@ -300,6 +302,14 @@ abstract class _SettingsStoreBase with Store {
   @observable
   var showFFZBadges = defaultShowFFZBadges;
 
+  @JsonKey(defaultValue: defaultShowReyohohoBadges)
+  @observable
+  var showReyohohoBadges = defaultShowReyohohoBadges;
+
+  @JsonKey(defaultValue: defaultShowPaints)
+  @observable
+  var showPaints = defaultShowPaints;
+
   // Emote proxy
   @JsonKey(defaultValue: defaultUseEmoteProxy)
   @observable
@@ -392,6 +402,8 @@ abstract class _SettingsStoreBase with Store {
     showBTTVBadges = defaultShowBTTVBadges;
     showFFZEmotes = defaultShowFFZEmotes;
     showFFZBadges = defaultShowFFZBadges;
+    showReyohohoBadges = defaultShowReyohohoBadges;
+    showPaints = defaultShowPaints;
 
     useEmoteProxy = defaultUseEmoteProxy;
     selectedEmoteProxyUrl = defaultSelectedEmoteProxyUrl;

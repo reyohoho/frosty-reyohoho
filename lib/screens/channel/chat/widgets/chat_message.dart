@@ -107,6 +107,8 @@ class ChatMessage extends StatelessWidget {
                   channelIdToUserTwitch:
                       chatStore.assetsStore.channelIdToUserTwitch,
                   currentChannelId: chatStore.channelId,
+                  showReyohohoBadges: chatStore.settings.showReyohohoBadges,
+                  showPaints: chatStore.settings.showPaints,
                 ),
                 style: defaultTextStyle,
               ),
@@ -211,6 +213,8 @@ class ChatMessage extends StatelessWidget {
                   linkPreviewMaxWidth: chatStore.settings.linkPreviewMaxWidth,
                   linkPreviewMaxHeight: chatStore.settings.linkPreviewMaxHeight,
                   linkPreviews: collectedLinkPreviews,
+                  showReyohohoBadges: chatStore.settings.showReyohohoBadges,
+                  showPaints: chatStore.settings.showPaints,
                 ),
               ),
             );
@@ -392,6 +396,8 @@ class ChatMessage extends StatelessWidget {
                         channelIdToUserTwitch:
                             chatStore.assetsStore.channelIdToUserTwitch,
                         currentChannelId: chatStore.channelId,
+                        showReyohohoBadges: chatStore.settings.showReyohohoBadges,
+                        showPaints: chatStore.settings.showPaints,
                       ),
                     ),
                   ),
@@ -515,6 +521,8 @@ class ChatMessage extends StatelessWidget {
                           channelIdToUserTwitch:
                               chatStore.assetsStore.channelIdToUserTwitch,
                           currentChannelId: chatStore.channelId,
+                          showReyohohoBadges: chatStore.settings.showReyohohoBadges,
+                          showPaints: chatStore.settings.showPaints,
                         ),
                       ),
                     ),

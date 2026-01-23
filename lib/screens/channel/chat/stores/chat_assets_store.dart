@@ -1,7 +1,9 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:frosty/apis/bttv_api.dart';
 import 'package:frosty/apis/ffz_api.dart';
+import 'package:frosty/apis/reyohoho_api.dart';
 import 'package:frosty/apis/seventv_api.dart';
 import 'package:frosty/apis/twitch_api.dart';
 import 'package:frosty/models/badges.dart';
@@ -21,6 +23,7 @@ abstract class ChatAssetsStoreBase with Store {
   final BTTVApi bttvApi;
   final FFZApi ffzApi;
   final SevenTVApi sevenTVApi;
+  final ReyohohoApi reyohohoApi;
   final GlobalAssetsStore globalAssetsStore;
 
   /// Contains any custom FFZ mod and vip badges for the channel.
@@ -98,6 +101,117 @@ abstract class ChatAssetsStoreBase with Store {
   /// The map of user IDs to their BTTV badge (from global store).
   Map<String, ChatBadge> get userToBTTVBadges => globalAssetsStore.bttvBadges;
 
+  /// On-demand cache for Reyohoho badges (userId -> ChatBadge).
+  final _reyohohoBadgeCache = <String, ChatBadge?>{};
+
+  /// Set of pending Reyohoho badge requests to prevent duplicate requests.
+  final _pendingReyohohoBadgeRequests = <String>{};
+
+  /// On-demand cache for user paints (userId -> UserPaint).
+  final _userPaintCache = <String, UserPaint?>{};
+
+  /// Set of pending paint requests to prevent duplicate requests.
+  final _pendingPaintRequests = <String>{};
+
+  /// Cache timeout for paints (15 minutes).
+  static const _paintCacheTimeout = Duration(minutes: 15);
+
+  /// Timestamp of last paint cache entries.
+  final _paintCacheTimestamps = <String, DateTime>{};
+
+  /// Gets a Reyohoho badge for a user, loading on-demand if needed.
+  /// Returns null if user has no badge or badge hasn't loaded yet.
+  ChatBadge? getReyohohoBadge(String userId) {
+    // Return cached badge if available
+    if (_reyohohoBadgeCache.containsKey(userId)) {
+      return _reyohohoBadgeCache[userId];
+    }
+
+    // Avoid duplicate requests
+    if (_pendingReyohohoBadgeRequests.contains(userId)) {
+      return null;
+    }
+
+    // Trigger async fetch
+    _fetchReyohohoBadge(userId);
+    return null;
+  }
+
+  /// Fetches Reyohoho badge for a user asynchronously.
+  Future<void> _fetchReyohohoBadge(String userId) async {
+    if (_pendingReyohohoBadgeRequests.contains(userId)) return;
+
+    _pendingReyohohoBadgeRequests.add(userId);
+
+    try {
+      final badge = await reyohohoApi.getUserBadge(userId);
+      _reyohohoBadgeCache[userId] = badge;
+    } catch (e) {
+      debugPrint('Failed to fetch Reyohoho badge for $userId: $e');
+      _reyohohoBadgeCache[userId] = null;
+    } finally {
+      _pendingReyohohoBadgeRequests.remove(userId);
+    }
+  }
+
+  /// Gets a user's paint data, loading on-demand if needed.
+  /// Returns null if user has no paint or paint hasn't loaded yet.
+  UserPaint? getUserPaint(String userId) {
+    // Check cache validity
+    final cacheTime = _paintCacheTimestamps[userId];
+    if (cacheTime != null) {
+      if (DateTime.now().difference(cacheTime) < _paintCacheTimeout) {
+        return _userPaintCache[userId];
+      } else {
+        // Cache expired, clear it
+        _userPaintCache.remove(userId);
+        _paintCacheTimestamps.remove(userId);
+      }
+    }
+
+    // Return cached paint if available
+    if (_userPaintCache.containsKey(userId)) {
+      return _userPaintCache[userId];
+    }
+
+    // Avoid duplicate requests
+    if (_pendingPaintRequests.contains(userId)) {
+      return null;
+    }
+
+    // Trigger async fetch
+    _fetchUserPaint(userId);
+    return null;
+  }
+
+  /// Fetches paint for a user asynchronously.
+  Future<void> _fetchUserPaint(String userId) async {
+    if (_pendingPaintRequests.contains(userId)) return;
+
+    _pendingPaintRequests.add(userId);
+
+    try {
+      final paint = await reyohohoApi.getUserPaint(userId);
+      _userPaintCache[userId] = paint;
+      _paintCacheTimestamps[userId] = DateTime.now();
+    } catch (e) {
+      debugPrint('Failed to fetch paint for $userId: $e');
+      _userPaintCache[userId] = null;
+      _paintCacheTimestamps[userId] = DateTime.now();
+    } finally {
+      _pendingPaintRequests.remove(userId);
+    }
+  }
+
+  /// Clears all on-demand caches.
+  void clearOnDemandCaches() {
+    _reyohohoBadgeCache.clear();
+    _pendingReyohohoBadgeRequests.clear();
+    _userPaintCache.clear();
+    _pendingPaintRequests.clear();
+    _paintCacheTimestamps.clear();
+  }
+
   /// Whether or not the emote menu is visible.
   @observable
   var showEmoteMenu = false;
@@ -125,6 +239,7 @@ abstract class ChatAssetsStoreBase with Store {
     required this.bttvApi,
     required this.ffzApi,
     required this.sevenTVApi,
+    required this.reyohohoApi,
     required this.globalAssetsStore,
   });
 

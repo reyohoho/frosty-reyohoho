@@ -64,6 +64,7 @@ class _VideoChatState extends State<VideoChat>
     bttvApi: context.bttvApi,
     ffzApi: context.ffzApi,
     sevenTVApi: context.sevenTVApi,
+    reyohohoApi: context.reyohohoApi,
     authStore: context.authStore,
     settingsStore: context.settingsStore,
     globalAssetsStore: context.globalAssetsStore,

@@ -12,6 +12,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:frosty/apis/bttv_api.dart';
 import 'package:frosty/apis/dio_client.dart';
 import 'package:frosty/apis/ffz_api.dart';
+import 'package:frosty/apis/reyohoho_api.dart';
 import 'package:frosty/apis/seventv_api.dart';
 import 'package:frosty/apis/twitch_api.dart';
 import 'package:frosty/apis/twitch_auth_interceptor.dart';
@@ -89,6 +90,7 @@ void main() async {
   final bttvApiService = BTTVApi(dioClient);
   final ffzApiService = FFZApi(dioClient);
   final sevenTVApiService = SevenTVApi(dioClient);
+  final reyohohoApiService = ReyohohoApi(dioClient);
 
   // Set up emote proxy for third-party APIs when enabled
   void updateEmoteApiProxy() {
@@ -139,6 +141,7 @@ void main() async {
         Provider<BTTVApi>.value(value: bttvApiService),
         Provider<FFZApi>.value(value: ffzApiService),
         Provider<SevenTVApi>.value(value: sevenTVApiService),
+        Provider<ReyohohoApi>.value(value: reyohohoApiService),
         Provider<GlobalAssetsStore>.value(value: globalAssetsStore),
       ],
       child: MyApp(firstRun: firstRun),

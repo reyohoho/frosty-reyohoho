@@ -1,5 +1,6 @@
 import 'package:frosty/apis/bttv_api.dart';
 import 'package:frosty/apis/ffz_api.dart';
+import 'package:frosty/apis/reyohoho_api.dart';
 import 'package:frosty/apis/seventv_api.dart';
 import 'package:frosty/apis/twitch_api.dart';
 import 'package:frosty/screens/channel/chat/details/chat_details_store.dart';
@@ -77,6 +78,7 @@ abstract class ChatTabsStoreBase with Store {
   final BTTVApi bttvApi;
   final FFZApi ffzApi;
   final SevenTVApi sevenTVApi;
+  final ReyohohoApi reyohohoApi;
 
   /// Global stores passed to each ChatStore.
   final AuthStore authStore;
@@ -116,6 +118,7 @@ abstract class ChatTabsStoreBase with Store {
     required this.bttvApi,
     required this.ffzApi,
     required this.sevenTVApi,
+    required this.reyohohoApi,
     required this.authStore,
     required this.settingsStore,
     required this.globalAssetsStore,
@@ -161,6 +164,7 @@ abstract class ChatTabsStoreBase with Store {
         ffzApi: ffzApi,
         bttvApi: bttvApi,
         sevenTVApi: sevenTVApi,
+        reyohohoApi: reyohohoApi,
         globalAssetsStore: globalAssetsStore,
       ),
     );

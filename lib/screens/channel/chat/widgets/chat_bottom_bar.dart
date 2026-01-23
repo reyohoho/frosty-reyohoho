@@ -106,6 +106,9 @@ class ChatBottomBar extends StatelessWidget {
                                         chatStore.settings.launchUrlExternal,
                                     timestamp: chatStore.settings.timestampType,
                                     currentChannelId: chatStore.channelId,
+                                    showReyohohoBadges:
+                                        chatStore.settings.showReyohohoBadges,
+                                    showPaints: chatStore.settings.showPaints,
                                   ),
                             ),
                             maxLines: 1,
