@@ -11,6 +11,14 @@ import 'package:frosty/models/shared_chat_session.dart';
 import 'package:frosty/models/stream.dart';
 import 'package:frosty/models/user.dart';
 
+/// Starege proxy domains for recent messages API.
+const _recentMessagesProxyDomains = [
+  'https://starege.rte.net.ru',
+  'https://starege3.rte.net.ru',
+  'https://starege5.rte.net.ru',
+  'https://starege4.rte.net.ru',
+];
+
 /// The Twitch service for making API calls.
 class TwitchApi extends BaseApiClient {
   static const String _helixBaseUrl = 'https://api.twitch.tv/helix';
@@ -18,7 +26,57 @@ class TwitchApi extends BaseApiClient {
   static const String _recentMessagesUrl =
       'https://recent-messages.robotty.de/api/v2';
 
+  /// Cached working proxy domain for recent messages.
+  String? _workingProxyDomain;
+  Future<String?>? _proxyInitFuture;
+  bool _proxyInitialized = false;
+
   TwitchApi(Dio dio) : super(dio, _helixBaseUrl);
+
+  /// Finds a working proxy domain for recent messages.
+  Future<String?> _initializeProxyDomain() async {
+    if (_proxyInitialized && _workingProxyDomain != null) {
+      return _workingProxyDomain;
+    }
+
+    if (_proxyInitFuture != null) {
+      return _proxyInitFuture;
+    }
+
+    _proxyInitFuture = _findWorkingProxyDomain();
+    _workingProxyDomain = await _proxyInitFuture;
+    _proxyInitialized = true;
+    _proxyInitFuture = null;
+
+    return _workingProxyDomain;
+  }
+
+  Future<String?> _findWorkingProxyDomain() async {
+    for (final domain in _recentMessagesProxyDomains) {
+      try {
+        final testUrl = '$domain/https://google.com';
+        final response = await Dio().head(
+          testUrl,
+          options: Options(
+            receiveTimeout: const Duration(seconds: 3),
+            sendTimeout: const Duration(seconds: 3),
+          ),
+        );
+
+        if (response.statusCode != null &&
+            response.statusCode! >= 200 &&
+            response.statusCode! < 400) {
+          debugPrint('TwitchApi: Using proxy domain for recent messages: $domain');
+          return domain;
+        }
+      } catch (e) {
+        // Try next domain
+      }
+    }
+
+    debugPrint('TwitchApi: All proxy domains unavailable, using direct connection');
+    return null;
+  }
 
   /// Returns a list of all Twitch global emotes.
   Future<List<Emote>> getEmotesGlobal() async {
@@ -456,12 +514,16 @@ class TwitchApi extends BaseApiClient {
     }
   }
 
-  // Gets recent messages from a third-party service.
+  // Gets recent messages from a third-party service via proxy.
   Future<JsonList> getRecentMessages({required String userLogin}) async {
-    // Use custom base URL for third-party service
-    final data = await get<JsonMap>(
-      '$_recentMessagesUrl/recent-messages/$userLogin',
-    );
+    final proxyDomain = await _initializeProxyDomain();
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final targetUrl = '$_recentMessagesUrl/recent-messages/$userLogin?t=$timestamp';
+
+    // Use proxy if available, otherwise fall back to direct connection
+    final url = proxyDomain != null ? '$proxyDomain/$targetUrl' : targetUrl;
+
+    final data = await get<JsonMap>(url);
 
     return data['messages'] as JsonList;
   }

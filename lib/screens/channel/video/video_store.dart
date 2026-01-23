@@ -467,11 +467,17 @@ abstract class VideoStoreBase with Store {
               .top-bar,
               .player-controls,
               #channel-player-disclosures,
-              [data-a-target="player-overlay-preview-background"],
-              [data-a-target="player-overlay-video-stats"] {
+              [data-a-target="player-overlay-preview-background"] {
                 display: none !important;
                 visibility: hidden !important;
                 pointer-events: none !important;
+              }
+              /* Keep video stats in DOM but invisible for latency reading */
+              [data-a-target="player-overlay-video-stats"] {
+                opacity: 0 !important;
+                pointer-events: none !important;
+                position: absolute !important;
+                z-index: -1 !important;
               }
             `;
             document.head.appendChild(style);
@@ -517,10 +523,10 @@ abstract class VideoStoreBase with Store {
     try {
       await _webViewController?.evaluateJavascript(source: r'''
         window._latencyTracker = {
-          CYCLE_INTERVAL: 60000,
-          STATS_ACTIVE_TIME: 1500,
-          INITIAL_RETRY_INTERVAL: 3000,
-          MAX_INITIAL_RETRIES: 4,
+          CYCLE_INTERVAL: 15000,  // Update every 15 seconds
+          STATS_ACTIVE_TIME: 2000,
+          INITIAL_RETRY_INTERVAL: 2000,
+          MAX_INITIAL_RETRIES: 6,
 
           cycleCount: 0,
           hasInitialLatency: false,
@@ -590,10 +596,12 @@ abstract class VideoStoreBase with Store {
             try {
               await _queuePromise(async () => {
                 const settingsBtn = await _asyncQuerySelector('[data-a-target="player-settings-button"]');
+                console.log('[Latency] Settings button:', settingsBtn ? 'found' : 'NOT FOUND');
                 if (!settingsBtn) return;
                 settingsBtn.click();
 
                 const advancedItem = await _asyncQuerySelector('[data-a-target="player-settings-menu-item-advanced"]');
+                console.log('[Latency] Advanced menu item:', advancedItem ? 'found' : 'NOT FOUND');
                 if (!advancedItem) {
                   settingsBtn.click();
                   return;
@@ -601,13 +609,16 @@ abstract class VideoStoreBase with Store {
                 advancedItem.click();
 
                 const statsCheckbox = await _asyncQuerySelector('[data-a-target="player-settings-submenu-advanced-video-stats"] input');
+                console.log('[Latency] Stats checkbox:', statsCheckbox ? 'found' : 'NOT FOUND', statsCheckbox?.checked ? '(checked)' : '(unchecked)');
                 if (statsCheckbox && !statsCheckbox.checked) {
                   statsCheckbox.click();
                 }
 
                 settingsBtn.click();
               });
-            } catch (error) {}
+            } catch (error) {
+              console.error('[Latency] _enableStats error:', error);
+            }
           },
 
           async _disableStats() {
@@ -631,27 +642,83 @@ abstract class VideoStoreBase with Store {
 
                 settingsBtn.click();
               });
-            } catch (error) {}
+            } catch (error) {
+              console.error('[Latency] _disableStats error:', error);
+            }
           },
 
           _readLatency() {
             try {
-              const latencyElement = document.querySelector('[aria-label="Latency To Broadcaster"]');
-              if (latencyElement && latencyElement.textContent) {
-                let latencyText = latencyElement.textContent.trim();
+              const statsOverlay = document.querySelector('[data-a-target="player-overlay-video-stats"]');
+              if (!statsOverlay) {
+                console.log('[Latency] Stats overlay not found');
+                return;
+              }
 
-                const match = latencyText.match(/([0-9.]+)\s*sec/i);
-                if (match) {
-                  const rounded = Math.round(parseFloat(match[1]));
-                  latencyText = rounded + 's';
-                  this.hasInitialLatency = true;
+              // Debug: dump all rows to understand structure
+              const allRows = statsOverlay.querySelectorAll('tr, [class*="stat-"]');
+              console.log('[Latency] Found rows:', allRows.length);
+
+              // Find the row that contains "Latency" or "Задержка" label
+              let latencyValue = null;
+              const allElements = statsOverlay.querySelectorAll('*');
+              
+              for (const el of allElements) {
+                const text = el.textContent || '';
+                
+                // Look for the label that indicates latency
+                if (/latency|задержка/i.test(text)) {
+                  // Found a latency-related element, look for the value nearby
+                  const parent = el.closest('tr') || el.parentElement?.parentElement || el.parentElement;
+                  if (parent) {
+                    const valueMatch = parent.textContent.match(/(\d+\.?\d*)\s*(sec|сек|seconds|секунд|с\.)/i);
+                    if (valueMatch && parseFloat(valueMatch[1]) > 0) {
+                      latencyValue = valueMatch[1];
+                      console.log('[Latency] Found in row with label:', parent.textContent.substring(0, 100));
+                      break;
+                    }
+                  }
                 }
+              }
+
+              // Fallback: search for any reasonable latency value (> 0 and < 60 seconds)
+              if (!latencyValue) {
+                for (const el of allElements) {
+                  const text = el.textContent || '';
+                  const match = text.match(/^(\d+\.?\d*)\s*(sec|сек|seconds|секунд|с\.)$/i);
+                  if (match) {
+                    const value = parseFloat(match[1]);
+                    // Latency is typically between 0.5 and 30 seconds
+                    if (value > 0.1 && value < 60) {
+                      latencyValue = match[1];
+                      console.log('[Latency] Found by value pattern:', text);
+                      break;
+                    }
+                  }
+                }
+              }
+
+              if (latencyValue && parseFloat(latencyValue) > 0) {
+                const rounded = Math.round(parseFloat(latencyValue));
+                const latencyText = rounded + 's';
+                this.hasInitialLatency = true;
+                console.log('[Latency] Final value:', latencyText);
 
                 if (window.flutter_inappwebview) {
                   window.flutter_inappwebview.callHandler('Latency', latencyText);
                 }
+              } else {
+                // Debug: dump all text content from stats overlay
+                const texts = [];
+                statsOverlay.querySelectorAll('p, span, td').forEach(el => {
+                  const t = el.textContent?.trim();
+                  if (t && t.length < 50) texts.push(t);
+                });
+                console.log('[Latency] All stats texts:', JSON.stringify(texts.slice(0, 20)));
               }
-            } catch (error) {}
+            } catch (error) {
+              console.error('[Latency] _readLatency error:', error);
+            }
           }
         };
 
@@ -1039,3 +1106,4 @@ abstract class VideoStoreBase with Store {
     _dio.close();
   }
 }
+
