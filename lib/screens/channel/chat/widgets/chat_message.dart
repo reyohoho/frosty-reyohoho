@@ -9,6 +9,7 @@ import 'package:frosty/screens/channel/chat/stores/chat_store.dart';
 import 'package:frosty/screens/channel/chat/widgets/chat_user_modal.dart';
 import 'package:frosty/screens/channel/chat/widgets/reply_thread.dart';
 import 'package:frosty/utils/modal_bottom_sheet.dart';
+import 'package:frosty/widgets/link_preview.dart';
 import 'package:provider/provider.dart';
 
 class ChatMessage extends StatelessWidget {
@@ -187,6 +188,8 @@ class ChatMessage extends StatelessWidget {
                 chatStore.settings.showUserNotices &&
                 ircMessage.tags['msg-id'] == 'highlighted-message';
 
+            // Collect link previews during span generation
+            final collectedLinkPreviews = <LinkPreviewInfo>[];
             final messageSpan = Text.rich(
               TextSpan(
                 children: ircMessage.generateSpan(
@@ -203,9 +206,43 @@ class ChatMessage extends StatelessWidget {
                   channelIdToUserTwitch:
                       chatStore.assetsStore.channelIdToUserTwitch,
                   currentChannelId: chatStore.channelId,
+                  showLinkPreviews: chatStore.settings.showLinkPreviews,
+                  hideLinkPreviewLinks: chatStore.settings.hideLinkPreviewLinks,
+                  linkPreviewMaxWidth: chatStore.settings.linkPreviewMaxWidth,
+                  linkPreviewMaxHeight: chatStore.settings.linkPreviewMaxHeight,
+                  linkPreviews: collectedLinkPreviews,
                 ),
               ),
             );
+
+            // Build message widget with optional link previews
+            Widget messageContent;
+            if (collectedLinkPreviews.isNotEmpty) {
+              messageContent = Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  messageSpan,
+                  const SizedBox(height: 4),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: collectedLinkPreviews
+                        .map(
+                          (preview) => LinkPreviewWidget(
+                            previewInfo: preview,
+                            maxWidth: chatStore.settings.linkPreviewMaxWidth,
+                            maxHeight: chatStore.settings.linkPreviewMaxHeight,
+                            launchExternal:
+                                chatStore.settings.launchUrlExternal,
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ],
+              );
+            } else {
+              messageContent = messageSpan;
+            }
 
             // Check if the message is replying to another message.
             final replyUser = ircMessage.tags['reply-parent-display-name'];
@@ -294,11 +331,11 @@ class ChatMessage extends StatelessWidget {
                     )
                   else
                     messageHeader,
-                  messageSpan,
+                  messageContent,
                 ],
               );
             } else {
-              renderMessage = messageSpan;
+              renderMessage = messageContent;
             }
 
             break;

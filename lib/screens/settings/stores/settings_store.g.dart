@@ -71,6 +71,12 @@ SettingsStore _$SettingsStoreFromJson(
   ..useEmoteProxy = json['useEmoteProxy'] as bool? ?? false
   ..selectedEmoteProxyUrl = json['selectedEmoteProxyUrl'] as String? ?? ''
   ..showRecentMessages = json['showRecentMessages'] as bool? ?? false
+  ..showLinkPreviews = json['showLinkPreviews'] as bool? ?? true
+  ..hideLinkPreviewLinks = json['hideLinkPreviewLinks'] as bool? ?? false
+  ..linkPreviewMaxHeight =
+      (json['linkPreviewMaxHeight'] as num?)?.toDouble() ?? 200.0
+  ..linkPreviewMaxWidth =
+      (json['linkPreviewMaxWidth'] as num?)?.toDouble() ?? 300.0
   ..persistChatTabs = json['persistChatTabs'] as bool? ?? true
   ..secondaryTabs =
       (json['secondaryTabs'] as List<dynamic>?)
@@ -138,6 +144,10 @@ Map<String, dynamic> _$SettingsStoreToJson(
   'useEmoteProxy': instance.useEmoteProxy,
   'selectedEmoteProxyUrl': instance.selectedEmoteProxyUrl,
   'showRecentMessages': instance.showRecentMessages,
+  'showLinkPreviews': instance.showLinkPreviews,
+  'hideLinkPreviewLinks': instance.hideLinkPreviewLinks,
+  'linkPreviewMaxHeight': instance.linkPreviewMaxHeight,
+  'linkPreviewMaxWidth': instance.linkPreviewMaxWidth,
   'persistChatTabs': instance.persistChatTabs,
   'secondaryTabs': instance.secondaryTabs,
   'mutedWords': instance.mutedWords,
@@ -962,6 +972,86 @@ mixin _$SettingsStore on _SettingsStoreBase, Store {
     });
   }
 
+  late final _$showLinkPreviewsAtom = Atom(
+    name: '_SettingsStoreBase.showLinkPreviews',
+    context: context,
+  );
+
+  @override
+  bool get showLinkPreviews {
+    _$showLinkPreviewsAtom.reportRead();
+    return super.showLinkPreviews;
+  }
+
+  @override
+  set showLinkPreviews(bool value) {
+    _$showLinkPreviewsAtom.reportWrite(value, super.showLinkPreviews, () {
+      super.showLinkPreviews = value;
+    });
+  }
+
+  late final _$hideLinkPreviewLinksAtom = Atom(
+    name: '_SettingsStoreBase.hideLinkPreviewLinks',
+    context: context,
+  );
+
+  @override
+  bool get hideLinkPreviewLinks {
+    _$hideLinkPreviewLinksAtom.reportRead();
+    return super.hideLinkPreviewLinks;
+  }
+
+  @override
+  set hideLinkPreviewLinks(bool value) {
+    _$hideLinkPreviewLinksAtom.reportWrite(
+      value,
+      super.hideLinkPreviewLinks,
+      () {
+        super.hideLinkPreviewLinks = value;
+      },
+    );
+  }
+
+  late final _$linkPreviewMaxHeightAtom = Atom(
+    name: '_SettingsStoreBase.linkPreviewMaxHeight',
+    context: context,
+  );
+
+  @override
+  double get linkPreviewMaxHeight {
+    _$linkPreviewMaxHeightAtom.reportRead();
+    return super.linkPreviewMaxHeight;
+  }
+
+  @override
+  set linkPreviewMaxHeight(double value) {
+    _$linkPreviewMaxHeightAtom.reportWrite(
+      value,
+      super.linkPreviewMaxHeight,
+      () {
+        super.linkPreviewMaxHeight = value;
+      },
+    );
+  }
+
+  late final _$linkPreviewMaxWidthAtom = Atom(
+    name: '_SettingsStoreBase.linkPreviewMaxWidth',
+    context: context,
+  );
+
+  @override
+  double get linkPreviewMaxWidth {
+    _$linkPreviewMaxWidthAtom.reportRead();
+    return super.linkPreviewMaxWidth;
+  }
+
+  @override
+  set linkPreviewMaxWidth(double value) {
+    _$linkPreviewMaxWidthAtom.reportWrite(value, super.linkPreviewMaxWidth, () {
+      super.linkPreviewMaxWidth = value;
+    });
+  }
+
   late final _$persistChatTabsAtom = Atom(
     name: '_SettingsStoreBase.persistChatTabs',
     context: context,
@@ -1236,6 +1326,10 @@ showFFZBadges: ${showFFZBadges},
 useEmoteProxy: ${useEmoteProxy},
 selectedEmoteProxyUrl: ${selectedEmoteProxyUrl},
 showRecentMessages: ${showRecentMessages},
+showLinkPreviews: ${showLinkPreviews},
+hideLinkPreviewLinks: ${hideLinkPreviewLinks},
+linkPreviewMaxHeight: ${linkPreviewMaxHeight},
+linkPreviewMaxWidth: ${linkPreviewMaxWidth},
 persistChatTabs: ${persistChatTabs},
 secondaryTabs: ${secondaryTabs},
 mutedWords: ${mutedWords},

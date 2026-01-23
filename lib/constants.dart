@@ -21,6 +21,54 @@ const zeroWidthEmotes = [
 /// Regex for matching strings that contain lower or upper case English characters.
 final regexEnglish = RegExp(r'[a-zA-Z]');
 
+/// Regex for matching direct image URLs.
+final regexImageUrl = RegExp(
+  r'https?://[a-zA-Z0-9./\-_%@?&=:+~]+(?:\.jpg|\.jpeg|\.png|\.gif|\.bmp|\.tif|\.tiff|\.webp|\.jfif)',
+  caseSensitive: false,
+);
+
+/// Regex for matching direct video URLs.
+final regexVideoUrl = RegExp(
+  r'https?://[a-zA-Z0-9./\-_%@?&=:+~]+(?:\.mp4|\.mov)',
+  caseSensitive: false,
+);
+
+/// Regex for matching 7TV emote page URLs.
+final regex7TVEmote = RegExp(
+  r'https?://7tv\.app/emotes/([a-zA-Z0-9]+)',
+  caseSensitive: false,
+);
+
+/// Regex for matching Imgur URLs.
+final regexImgur = RegExp(
+  r'https?://(?:www\.)?imgur\.com/([a-zA-Z0-9]+)',
+  caseSensitive: false,
+);
+
+/// Regex for matching Kappa.lol URLs.
+final regexKappaLol = RegExp(
+  r'https?://(?:[a-zA-Z0-9]+\.)?kappa\.lol/([a-zA-Z0-9]+)',
+  caseSensitive: false,
+);
+
+/// CDN domains that need proxying for link previews.
+const linkPreviewProxyDomains = [
+  'cdn.discordapp.com',
+  'media.discordapp.net',
+  'i.ytimg.com',
+  'i.ibb.co',
+  'cdn.7tv.app',
+];
+
+/// Domains that should NOT be proxied (our own proxy servers).
+const linkPreviewNoProxyDomains = [
+  'cdn.rte.net.ru',
+  'starege.rte.net.ru',
+  'starege3.rte.net.ru',
+  'starege4.rte.net.ru',
+  'starege5.rte.net.ru',
+];
+
 /// Regex for matching strings that contain only numeric characters.
 final regexNumbersOnly = RegExp(r'^\d+$');
 

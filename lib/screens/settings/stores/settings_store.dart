@@ -175,6 +175,12 @@ abstract class _SettingsStoreBase with Store {
   // Recent messages defaults
   static const defaultShowRecentMessages = false;
 
+  // Link preview defaults
+  static const defaultShowLinkPreviews = true;
+  static const defaultHideLinkPreviewLinks = false;
+  static const defaultLinkPreviewMaxHeight = 200.0;
+  static const defaultLinkPreviewMaxWidth = 300.0;
+
   // Chat tabs defaults
   static const defaultPersistChatTabs = true;
   static const defaultSecondaryTabs = <PersistedChatTab>[];
@@ -314,6 +320,23 @@ abstract class _SettingsStoreBase with Store {
   @observable
   var showRecentMessages = defaultShowRecentMessages;
 
+  // Link previews
+  @JsonKey(defaultValue: defaultShowLinkPreviews)
+  @observable
+  var showLinkPreviews = defaultShowLinkPreviews;
+
+  @JsonKey(defaultValue: defaultHideLinkPreviewLinks)
+  @observable
+  var hideLinkPreviewLinks = defaultHideLinkPreviewLinks;
+
+  @JsonKey(defaultValue: defaultLinkPreviewMaxHeight)
+  @observable
+  var linkPreviewMaxHeight = defaultLinkPreviewMaxHeight;
+
+  @JsonKey(defaultValue: defaultLinkPreviewMaxWidth)
+  @observable
+  var linkPreviewMaxWidth = defaultLinkPreviewMaxWidth;
+
   // Chat tabs
   @JsonKey(defaultValue: defaultPersistChatTabs)
   @observable
@@ -374,6 +397,11 @@ abstract class _SettingsStoreBase with Store {
     selectedEmoteProxyUrl = defaultSelectedEmoteProxyUrl;
 
     showRecentMessages = defaultShowRecentMessages;
+
+    showLinkPreviews = defaultShowLinkPreviews;
+    hideLinkPreviewLinks = defaultHideLinkPreviewLinks;
+    linkPreviewMaxHeight = defaultLinkPreviewMaxHeight;
+    linkPreviewMaxWidth = defaultLinkPreviewMaxWidth;
 
     persistChatTabs = defaultPersistChatTabs;
     secondaryTabs = defaultSecondaryTabs;

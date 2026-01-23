@@ -567,6 +567,46 @@ class _ChatSettingsState extends State<ChatSettings> {
             onChanged: (newValue) =>
                 settingsStore.showRecentMessages = newValue,
           ),
+          const SectionHeader('Link previews'),
+          SettingsListSwitch(
+            title: 'Show link previews',
+            subtitle: const Text(
+              'Displays inline previews for images and supported links (Imgur, 7TV, Kappa.lol).',
+            ),
+            value: settingsStore.showLinkPreviews,
+            onChanged: (newValue) => settingsStore.showLinkPreviews = newValue,
+          ),
+          if (settingsStore.showLinkPreviews) ...[
+            SettingsListSwitch(
+              title: 'Hide link text',
+              subtitle: const Text(
+                'Hides the link text when showing a preview.',
+              ),
+              value: settingsStore.hideLinkPreviewLinks,
+              onChanged: (newValue) =>
+                  settingsStore.hideLinkPreviewLinks = newValue,
+            ),
+            SettingsListSlider(
+              title: 'Max preview width',
+              trailing: '${settingsStore.linkPreviewMaxWidth.toInt()}px',
+              value: settingsStore.linkPreviewMaxWidth,
+              min: 100,
+              max: 500,
+              divisions: 8,
+              onChanged: (newValue) =>
+                  settingsStore.linkPreviewMaxWidth = newValue,
+            ),
+            SettingsListSlider(
+              title: 'Max preview height',
+              trailing: '${settingsStore.linkPreviewMaxHeight.toInt()}px',
+              value: settingsStore.linkPreviewMaxHeight,
+              min: 100,
+              max: 400,
+              divisions: 6,
+              onChanged: (newValue) =>
+                  settingsStore.linkPreviewMaxHeight = newValue,
+            ),
+          ],
         ],
       ),
     );

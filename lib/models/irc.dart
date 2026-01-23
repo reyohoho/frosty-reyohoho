@@ -15,6 +15,7 @@ import 'package:frosty/utils.dart' as utils;
 import 'package:frosty/utils/modal_bottom_sheet.dart';
 import 'package:frosty/widgets/frosty_cached_network_image.dart';
 import 'package:frosty/widgets/frosty_photo_view_dialog.dart';
+import 'package:frosty/widgets/link_preview.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -442,8 +443,11 @@ class IRCMessage {
     bool launchExternal,
     TextStyle? textStyle,
     void Function(String)? onTapPingedUser,
-    void Function()? onTapDeletedMessage,
-  ) {
+    void Function()? onTapDeletedMessage, {
+    bool showLinkPreviews = false,
+    bool hideLinkPreviewLinks = false,
+    List<LinkPreviewInfo>? linkPreviews,
+  }) {
     if (!showMessage) {
       span.add(
         TextSpan(
@@ -526,6 +530,9 @@ class IRCMessage {
                 style: textStyle,
                 launchExternal: launchExternal,
                 onTapPingedUser: onTapPingedUser,
+                showLinkPreviews: showLinkPreviews,
+                hideLinkPreviewLinks: hideLinkPreviewLinks,
+                linkPreviews: linkPreviews,
               ),
             );
           }
@@ -643,6 +650,8 @@ class IRCMessage {
   }
 
   /// Returns an [InlineSpan] list that corresponds to the badges, username, words, and emotes of the given [IRCMessage].
+  ///
+  /// If [linkPreviews] is provided and not null, detected link previews will be added to this list.
   List<InlineSpan> generateSpan(
     BuildContext context, {
     TextStyle? style,
@@ -657,6 +666,11 @@ class IRCMessage {
     Map<String, UserTwitch>? channelIdToUserTwitch,
     TimestampType timestamp = TimestampType.disabled,
     String? currentChannelId,
+    bool showLinkPreviews = false,
+    bool hideLinkPreviewLinks = false,
+    double linkPreviewMaxWidth = 300.0,
+    double linkPreviewMaxHeight = 200.0,
+    List<LinkPreviewInfo>? linkPreviews,
   }) {
     final emoteToObject = assetsStore.emoteToObject;
     final badgeSize = defaultBadgeSize * badgeScale;
@@ -702,6 +716,9 @@ class IRCMessage {
       textStyle,
       onTapPingedUser,
       onTapDeletedMessage,
+      showLinkPreviews: showLinkPreviews,
+      hideLinkPreviewLinks: hideLinkPreviewLinks,
+      linkPreviews: linkPreviews,
     );
 
     return span;
@@ -815,6 +832,9 @@ class IRCMessage {
     required bool launchExternal,
     TextStyle? style,
     Function(String)? onTapPingedUser,
+    bool showLinkPreviews = false,
+    bool hideLinkPreviewLinks = false,
+    List<LinkPreviewInfo>? linkPreviews,
   }) {
     if (text.startsWith('@')) {
       return TextSpan(
@@ -828,6 +848,19 @@ class IRCMessage {
           },
       );
     } else if (regexLink.hasMatch(text)) {
+      // Check if this link can be previewed
+      final previewInfo = showLinkPreviews ? detectLinkPreview(text) : null;
+
+      if (previewInfo != null) {
+        // Add to the list of link previews to be rendered
+        linkPreviews?.add(previewInfo);
+
+        // If we should hide the link text when showing preview, return empty
+        if (hideLinkPreviewLinks) {
+          return const TextSpan(text: '');
+        }
+      }
+
       return TextSpan(
         text: text,
         style: style?.copyWith(
