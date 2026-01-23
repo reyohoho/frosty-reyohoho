@@ -80,6 +80,23 @@ class ReyohohoApi extends BaseApiClient {
     return '$domain$cleanPath';
   }
 
+  /// Registers a user as an extension/app user.
+  /// This should be called when emote proxy is enabled.
+  Future<void> registerUser(String userId) async {
+    final apiUrl = await _getApiUrl('/api/badge-users');
+    if (apiUrl == null) return;
+
+    try {
+      await post<void>(
+        apiUrl,
+        data: {'userId': userId},
+      );
+      debugPrint('ReyohohoApi: Registered user $userId');
+    } catch (e) {
+      debugPrint('ReyohohoApi: Failed to register user $userId: $e');
+    }
+  }
+
   /// Returns a map of user IDs to their Reyohoho badges.
   /// Uses on-demand loading per user.
   Future<ChatBadge?> getUserBadge(String userId) async {

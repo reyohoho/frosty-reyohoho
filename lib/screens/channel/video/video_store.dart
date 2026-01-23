@@ -109,6 +109,10 @@ abstract class VideoStoreBase with Store {
   @readonly
   var _isInPipMode = false;
 
+  /// Whether audio compressor is currently active.
+  @readonly
+  var _audioCompressorActive = false;
+
   /// The video URL to use for the webview.
   String get videoUrl =>
       'https://player.twitch.tv/?channel=$userLogin&muted=false&parent=frosty';
@@ -304,6 +308,16 @@ abstract class VideoStoreBase with Store {
           _overlayVisible = false;
           _updateLatencyTrackerVisibility(false);
         }
+      },
+    );
+
+    controller.addJavaScriptHandler(
+      handlerName: 'AudioCompressorState',
+      callback: (args) {
+        if (args.isEmpty) return;
+        final isActive = args[0] == true || args[0] == 'true';
+        _audioCompressorActive = isActive;
+        settingsStore.audioCompressorEnabled = isActive;
       },
     );
 
@@ -729,6 +743,167 @@ abstract class VideoStoreBase with Store {
     }
   }
 
+  /// Initializes the audio compressor JavaScript module.
+  Future<void> _initAudioCompressor() async {
+    final shouldEnable = settingsStore.audioCompressorEnabled;
+    try {
+      await _webViewController?.evaluateJavascript(source: '''
+        window._audioCompressor = {
+          DEFAULTS: {
+            threshold: -50,
+            knee: 40,
+            ratio: 12,
+            attack: 0,
+            release: 0.25,
+          },
+          
+          context: null,
+          source: null,
+          compressor: null,
+          isActive: false,
+          videoElement: null,
+          
+          async init(video) {
+            if (!window.AudioContext || !window.DynamicsCompressorNode) {
+              console.log('[AudioCompressor] Web Audio API not supported');
+              return false;
+            }
+            
+            if (this.context) {
+              console.log('[AudioCompressor] Already initialized');
+              return this.isActive;
+            }
+            
+            if (!video || video.paused || video.ended || video.currentTime === 0) {
+              console.log('[AudioCompressor] Video not ready');
+              return false;
+            }
+            
+            try {
+              console.log('[AudioCompressor] Creating AudioContext');
+              this.context = new AudioContext();
+              this.videoElement = video;
+              
+              if (this.context.state === 'suspended') {
+                await this.context.resume();
+              }
+              
+              this.source = new MediaElementAudioSourceNode(this.context, {
+                mediaElement: video,
+              });
+              
+              this.compressor = new DynamicsCompressorNode(this.context, {
+                threshold: this.DEFAULTS.threshold,
+                knee: this.DEFAULTS.knee,
+                ratio: this.DEFAULTS.ratio,
+                attack: this.DEFAULTS.attack,
+                release: this.DEFAULTS.release,
+              });
+              
+              // Start with direct connection
+              this.source.connect(this.context.destination);
+              console.log('[AudioCompressor] Initialized successfully');
+              return true;
+            } catch (err) {
+              console.error('[AudioCompressor] Init failed:', err);
+              return false;
+            }
+          },
+          
+          async enable() {
+            const video = document.querySelector('video');
+            if (!video) return false;
+            
+            if (!this.context) {
+              const initResult = await this.init(video);
+              if (!initResult) return false;
+            }
+            
+            if (this.isActive) return true;
+            
+            try {
+              if (this.context.state === 'suspended') {
+                await this.context.resume();
+              }
+              
+              this.source.disconnect(this.context.destination);
+              this.source.connect(this.compressor);
+              this.compressor.connect(this.context.destination);
+              this.isActive = true;
+              console.log('[AudioCompressor] Enabled');
+              
+              if (window.flutter_inappwebview) {
+                window.flutter_inappwebview.callHandler('AudioCompressorState', true);
+              }
+              return true;
+            } catch (err) {
+              console.error('[AudioCompressor] Enable failed:', err);
+              return false;
+            }
+          },
+          
+          disable() {
+            if (!this.context || !this.isActive) return false;
+            
+            try {
+              this.source.disconnect(this.compressor);
+              this.compressor.disconnect(this.context.destination);
+              this.source.connect(this.context.destination);
+              this.isActive = false;
+              console.log('[AudioCompressor] Disabled');
+              
+              if (window.flutter_inappwebview) {
+                window.flutter_inappwebview.callHandler('AudioCompressorState', false);
+              }
+              return true;
+            } catch (err) {
+              console.error('[AudioCompressor] Disable failed:', err);
+              return false;
+            }
+          },
+          
+          async toggle() {
+            if (this.isActive) {
+              return !this.disable();
+            } else {
+              return await this.enable();
+            }
+          },
+          
+          getState() {
+            return this.isActive;
+          }
+        };
+        
+        // Auto-enable if setting was on
+        if ($shouldEnable) {
+          setTimeout(async () => {
+            const video = document.querySelector('video');
+            if (video && !video.paused) {
+              await window._audioCompressor.enable();
+            }
+          }, 1000);
+        }
+      ''');
+    } catch (e) {
+      debugPrint('Audio compressor init error: $e');
+    }
+  }
+
+  /// Toggles the audio compressor on/off.
+  @action
+  Future<void> toggleAudioCompressor() async {
+    try {
+      final result = await _webViewController?.evaluateJavascript(
+        source: 'window._audioCompressor?.toggle()',
+      );
+      // State will be updated via AudioCompressorState handler
+      debugPrint('Audio compressor toggle result: $result');
+    } catch (e) {
+      debugPrint('Audio compressor toggle error: $e');
+    }
+  }
+
   /// Updates the latency tracker's overlay visibility state.
   void _updateLatencyTrackerVisibility(bool visible) {
     if (!settingsStore.showLatency && !settingsStore.autoSyncChatDelay) return;
@@ -878,6 +1053,7 @@ abstract class VideoStoreBase with Store {
             await _listenOnLatencyChanges();
           }
           await updateStreamQualities();
+          await _initAudioCompressor();
         }
       } catch (e) {
         debugPrint(e.toString());

@@ -81,6 +81,25 @@ class VideoOverlay extends StatelessWidget {
       ),
     );
 
+    final audioCompressorButton = Observer(
+      builder: (_) => Tooltip(
+        message: videoStore.audioCompressorActive
+            ? 'Disable audio compressor'
+            : 'Enable audio compressor',
+        preferBelow: false,
+        child: IconButton(
+          icon: Icon(
+            Icons.graphic_eq_rounded,
+            color: videoStore.audioCompressorActive
+                ? Colors.greenAccent
+                : surfaceColor,
+            shadows: _iconShadow,
+          ),
+          onPressed: videoStore.toggleAudioCompressor,
+        ),
+      ),
+    );
+
     final videoSettingsButton = IconButton(
       icon: Icon(Icons.settings, shadows: _iconShadow),
       color: surfaceColor,
@@ -549,6 +568,7 @@ class VideoOverlay extends StatelessWidget {
                           ),
                         ),
                       ),
+                      audioCompressorButton,
                       Builder(
                         builder: (_) {
                           // On iOS, show toggle behavior. On Android, always show enter PiP.

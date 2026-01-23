@@ -808,6 +808,14 @@ abstract class ChatStoreBase with Store {
     // Fetch assets first so they're available for all messages
     getAssets();
 
+    // Register user with Reyohoho API when emote proxy is enabled
+    if (settings.useEmoteProxy && auth.isLoggedIn) {
+      final userId = auth.user.details?.id;
+      if (userId != null) {
+        assetsStore.reyohohoApi.registerUser(userId);
+      }
+    }
+
     // Cancel existing listener to prevent duplicate message processing
     _channelListener?.cancel();
 

@@ -28,6 +28,7 @@ SettingsStore _$SettingsStoreFromJson(
   ..showOverlay = json['showOverlay'] as bool? ?? true
   ..toggleableOverlay = json['toggleableOverlay'] as bool? ?? false
   ..showLatency = json['showLatency'] as bool? ?? false
+  ..audioCompressorEnabled = json['audioCompressorEnabled'] as bool? ?? false
   ..badgeScale = (json['badgeScale'] as num?)?.toDouble() ?? 1.0
   ..emoteScale = (json['emoteScale'] as num?)?.toDouble() ?? 1.0
   ..messageScale = (json['messageScale'] as num?)?.toDouble() ?? 1.0
@@ -117,6 +118,7 @@ Map<String, dynamic> _$SettingsStoreToJson(
   'showOverlay': instance.showOverlay,
   'toggleableOverlay': instance.toggleableOverlay,
   'showLatency': instance.showLatency,
+  'audioCompressorEnabled': instance.audioCompressorEnabled,
   'badgeScale': instance.badgeScale,
   'emoteScale': instance.emoteScale,
   'messageScale': instance.messageScale,
@@ -424,6 +426,28 @@ mixin _$SettingsStore on _SettingsStoreBase, Store {
     _$showLatencyAtom.reportWrite(value, super.showLatency, () {
       super.showLatency = value;
     });
+  }
+
+  late final _$audioCompressorEnabledAtom = Atom(
+    name: '_SettingsStoreBase.audioCompressorEnabled',
+    context: context,
+  );
+
+  @override
+  bool get audioCompressorEnabled {
+    _$audioCompressorEnabledAtom.reportRead();
+    return super.audioCompressorEnabled;
+  }
+
+  @override
+  set audioCompressorEnabled(bool value) {
+    _$audioCompressorEnabledAtom.reportWrite(
+      value,
+      super.audioCompressorEnabled,
+      () {
+        super.audioCompressorEnabled = value;
+      },
+    );
   }
 
   late final _$badgeScaleAtom = Atom(
@@ -1337,6 +1361,7 @@ selectedProxyUrl: ${selectedProxyUrl},
 showOverlay: ${showOverlay},
 toggleableOverlay: ${toggleableOverlay},
 showLatency: ${showLatency},
+audioCompressorEnabled: ${audioCompressorEnabled},
 badgeScale: ${badgeScale},
 emoteScale: ${emoteScale},
 messageScale: ${messageScale},

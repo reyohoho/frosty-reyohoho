@@ -173,6 +173,30 @@ mixin _$VideoStore on VideoStoreBase, Store {
     });
   }
 
+  late final _$_audioCompressorActiveAtom = Atom(
+    name: 'VideoStoreBase._audioCompressorActive',
+    context: context,
+  );
+
+  bool get audioCompressorActive {
+    _$_audioCompressorActiveAtom.reportRead();
+    return super._audioCompressorActive;
+  }
+
+  @override
+  bool get _audioCompressorActive => audioCompressorActive;
+
+  @override
+  set _audioCompressorActive(bool value) {
+    _$_audioCompressorActiveAtom.reportWrite(
+      value,
+      super._audioCompressorActive,
+      () {
+        super._audioCompressorActive = value;
+      },
+    );
+  }
+
   late final _$updateStreamQualitiesAsyncAction = AsyncAction(
     'VideoStoreBase.updateStreamQualities',
     context: context,
@@ -206,6 +230,18 @@ mixin _$VideoStore on VideoStoreBase, Store {
   Future<void> _setStreamQualityIndex(int newStreamQualityIndex) {
     return _$_setStreamQualityIndexAsyncAction.run(
       () => super._setStreamQualityIndex(newStreamQualityIndex),
+    );
+  }
+
+  late final _$toggleAudioCompressorAsyncAction = AsyncAction(
+    'VideoStoreBase.toggleAudioCompressor',
+    context: context,
+  );
+
+  @override
+  Future<void> toggleAudioCompressor() {
+    return _$toggleAudioCompressorAsyncAction.run(
+      () => super.toggleAudioCompressor(),
     );
   }
 
