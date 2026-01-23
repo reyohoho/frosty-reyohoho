@@ -1,6 +1,7 @@
-import 'package:firebase_analytics/firebase_analytics.dart';
-import 'package:firebase_crashlytics/firebase_crashlytics.dart';
-import 'package:firebase_performance/firebase_performance.dart';
+// Firebase disabled temporarily
+// import 'package:firebase_analytics/firebase_analytics.dart';
+// import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+// import 'package:firebase_performance/firebase_performance.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 // import removed: flutter_colorpicker
@@ -69,15 +70,16 @@ class OnboardingSetup extends StatelessWidget {
                 onChanged: (newValue) {
                   settingsStore.shareCrashLogsAndAnalytics = newValue;
 
-                  FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(
-                    newValue,
-                  );
-                  FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(
-                    newValue,
-                  );
-                  FirebasePerformance.instance.setPerformanceCollectionEnabled(
-                    newValue,
-                  );
+                  // Firebase disabled temporarily
+                  // FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(
+                  //   newValue,
+                  // );
+                  // FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(
+                  //   newValue,
+                  // );
+                  // FirebasePerformance.instance.setPerformanceCollectionEnabled(
+                  //   newValue,
+                  // );
                 },
               ),
             ],

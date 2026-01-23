@@ -3,8 +3,9 @@ import 'dart:convert';
 
 import 'package:advanced_in_app_review/advanced_in_app_review.dart';
 import 'package:app_links/app_links.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+// Firebase disabled temporarily
+// import 'package:firebase_core/firebase_core.dart';
+// import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
@@ -18,7 +19,7 @@ import 'package:frosty/apis/twitch_api.dart';
 import 'package:frosty/apis/twitch_auth_interceptor.dart';
 import 'package:frosty/apis/unauthorized_interceptor.dart';
 import 'package:frosty/cache_manager.dart';
-import 'package:frosty/firebase_options.dart';
+// import 'package:frosty/firebase_options.dart';
 import 'package:frosty/screens/channel/channel.dart';
 import 'package:frosty/screens/home/home.dart';
 import 'package:frosty/screens/onboarding/onboarding_intro.dart';
@@ -38,16 +39,17 @@ void main() async {
 
   CustomCacheManager.removeOrphanedCacheFiles();
 
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  // Firebase disabled temporarily
+  // await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // Pass all uncaught "fatal" errors from the framework to Crashlytics
-  FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+  // // Pass all uncaught "fatal" errors from the framework to Crashlytics
+  // FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
 
-  // Pass all uncaught asynchronous errors that aren't handled by the Flutter framework to Crashlytics
-  PlatformDispatcher.instance.onError = (error, stack) {
-    FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
-    return true;
-  };
+  // // Pass all uncaught asynchronous errors that aren't handled by the Flutter framework to Crashlytics
+  // PlatformDispatcher.instance.onError = (error, stack) {
+  //   FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+  //   return true;
+  // };
 
   final prefs = await SharedPreferences.getInstance();
 

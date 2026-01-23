@@ -1,6 +1,7 @@
-import 'package:firebase_analytics/firebase_analytics.dart';
-import 'package:firebase_crashlytics/firebase_crashlytics.dart';
-import 'package:firebase_performance/firebase_performance.dart';
+// Firebase disabled temporarily
+// import 'package:firebase_analytics/firebase_analytics.dart';
+// import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+// import 'package:firebase_performance/firebase_performance.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
@@ -137,15 +138,16 @@ class _OtherSettingsState extends State<OtherSettings> {
             onChanged: (newValue) {
               widget.settingsStore.shareCrashLogsAndAnalytics = newValue;
 
-              FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(
-                newValue,
-              );
-              FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(
-                newValue,
-              );
-              FirebasePerformance.instance.setPerformanceCollectionEnabled(
-                newValue,
-              );
+              // Firebase disabled temporarily
+              // FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(
+              //   newValue,
+              // );
+              // FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(
+              //   newValue,
+              // );
+              // FirebasePerformance.instance.setPerformanceCollectionEnabled(
+              //   newValue,
+              // );
             },
           ),
         ),
