@@ -2,8 +2,10 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:frosty/apis/twitch_api.dart';
 import 'package:frosty/models/channel.dart';
 import 'package:frosty/models/stream.dart';
@@ -12,9 +14,6 @@ import 'package:frosty/screens/settings/stores/settings_store.dart';
 import 'package:mobx/mobx.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:simple_pip_mode/simple_pip.dart';
-import 'package:webview_flutter/webview_flutter.dart';
-import 'package:webview_flutter_android/webview_flutter_android.dart';
-import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 
 part 'video_store.g.dart';
 
@@ -38,111 +37,14 @@ abstract class VideoStoreBase with Store {
 
   var _firstTimeSettingQuality = true;
 
-  /// The video web view params used for enabling auto play.
-  late final PlatformWebViewControllerCreationParams _videoWebViewParams;
+  /// The InAppWebView controller - set when webview is created
+  InAppWebViewController? _webViewController;
 
-  /// The webview controller used for injecting JavaScript to control the webview and video player.
-  late final WebViewController videoWebViewController =
-      WebViewController.fromPlatformCreationParams(_videoWebViewParams)
-        ..setBackgroundColor(Colors.black)
-        ..setJavaScriptMode(JavaScriptMode.unrestricted)
-        ..addJavaScriptChannel(
-          'Latency',
-          onMessageReceived: (message) {
-            final receivedLatency = message.message;
-            _latency = receivedLatency;
+  /// Getter for the webview controller
+  InAppWebViewController? get webViewController => _webViewController;
 
-            if (!settingsStore.autoSyncChatDelay) return;
-
-            // Parse latency from abbreviated format: "5s" -> 5.0
-            final numericPart = receivedLatency.replaceAll(
-              RegExp(r'[^0-9.]'),
-              '',
-            );
-            final latencyAsDouble = double.tryParse(numericPart);
-
-            if (latencyAsDouble != null) {
-              settingsStore.chatDelay = latencyAsDouble;
-            }
-          },
-        )
-        ..addJavaScriptChannel(
-          'StreamQualities',
-          onMessageReceived: (message) async {
-            final data = jsonDecode(message.message) as List;
-            _availableStreamQualities = data
-                .map((item) => item as String)
-                .toList();
-            if (_firstTimeSettingQuality) {
-              _firstTimeSettingQuality = false;
-              if (settingsStore.defaultToHighestQuality) {
-                await _setStreamQualityIndex(1);
-                return;
-              }
-              final prefs = await SharedPreferences.getInstance();
-              final lastStreamQuality = prefs.getString('last_stream_quality');
-              if (lastStreamQuality == null) return;
-              setStreamQuality(lastStreamQuality);
-            }
-          },
-        )
-        ..addJavaScriptChannel(
-          'VideoPause',
-          onMessageReceived: (message) {
-            _paused = true;
-            if (Platform.isAndroid) pip.setIsPlaying(false);
-          },
-        )
-        ..addJavaScriptChannel(
-          'VideoPlaying',
-          onMessageReceived: (message) {
-            _paused = false;
-            if (Platform.isAndroid) pip.setIsPlaying(true);
-          },
-        )
-        ..addJavaScriptChannel(
-          'PipEntered',
-          onMessageReceived: (message) {
-            _overlayWasVisibleBeforePip = _overlayVisible;
-            _isInPipMode = true;
-            _overlayTimer?.cancel();
-            _overlayVisible = true;
-          },
-        )
-        ..addJavaScriptChannel(
-          'PipExited',
-          onMessageReceived: (message) {
-            _isInPipMode = false;
-            if (_overlayWasVisibleBeforePip) {
-              _updateLatencyTrackerVisibility(true);
-              _scheduleOverlayHide();
-            } else {
-              _overlayVisible = false;
-              _updateLatencyTrackerVisibility(false);
-            }
-          },
-        )
-        ..setNavigationDelegate(
-          NavigationDelegate(
-            onPageFinished: (url) async {
-              if (url != videoUrl) return;
-              // Safe evaluation of JavaScript boolean result
-              final result = await videoWebViewController
-                  .runJavaScriptReturningResult(
-                    'window._injected ? true : false',
-                  );
-              final injected = result is bool
-                  ? result
-                  : (result.toString().toLowerCase() == 'true');
-              if (injected) return;
-              await videoWebViewController.runJavaScript(
-                'window._injected = true;',
-              );
-              await initVideo();
-              _acceptContentWarning();
-            },
-          ),
-        );
+  /// Dio instance for proxy requests
+  final _dio = Dio();
 
   /// The timer that handles hiding the overlay automatically
   Timer? _overlayTimer;
@@ -211,6 +113,20 @@ abstract class VideoStoreBase with Store {
   String get videoUrl =>
       'https://player.twitch.tv/?channel=$userLogin&muted=false&parent=frosty';
 
+
+  /// InAppWebView settings for video playback
+  InAppWebViewSettings get webViewSettings => InAppWebViewSettings(
+        mediaPlaybackRequiresUserGesture: false,
+        allowsInlineMediaPlayback: true,
+        javaScriptEnabled: true,
+        transparentBackground: true,
+        supportZoom: false,
+        disableContextMenu: true,
+        useHybridComposition: !settingsStore.useTextureRendering,
+        allowsBackForwardNavigationGestures: false,
+        iframeAllowFullscreen: true,
+      );
+
   VideoStoreBase({
     required this.userLogin,
     required this.userId,
@@ -222,21 +138,6 @@ abstract class VideoStoreBase with Store {
     if (settingsStore.autoSyncChatDelay) {
       settingsStore.chatDelay = 0.0;
     }
-    // Initialize the video webview params for iOS to enable video autoplay.
-    if (WebViewPlatform.instance is WebKitWebViewPlatform) {
-      _videoWebViewParams = WebKitWebViewControllerCreationParams(
-        allowsInlineMediaPlayback: true,
-        mediaTypesRequiringUserAction: const <PlaybackMediaTypes>{},
-      );
-    } else {
-      _videoWebViewParams = const PlatformWebViewControllerCreationParams();
-    }
-
-    // Initialize the video webview params for Android to enable video autoplay.
-    if (videoWebViewController.platform is AndroidWebViewController) {
-      (videoWebViewController.platform as AndroidWebViewController)
-          .setMediaPlaybackRequiresUserGesture(false);
-    }
 
     // Initialize the [_overlayTimer] to auto-hide the overlay after a delay (default 5 seconds).
     _scheduleOverlayHide();
@@ -244,7 +145,9 @@ abstract class VideoStoreBase with Store {
     // Initialize a reaction that will reload the webview whenever the overlay is toggled.
     _disposeOverlayReaction = reaction(
       (_) => settingsStore.showOverlay,
-      (_) => videoWebViewController.loadRequest(Uri.parse(videoUrl)),
+      (_) => _webViewController?.loadUrl(
+        urlRequest: URLRequest(url: WebUri(videoUrl)),
+      ),
     );
 
     // Initialize a reaction to manage stream info timer based on video mode
@@ -305,8 +208,8 @@ abstract class VideoStoreBase with Store {
         } else {
           // Stop tracker if both settings are now disabled
           try {
-            videoWebViewController.runJavaScript(
-              'window._latencyTracker?.stop()',
+            _webViewController?.evaluateJavascript(
+              source: 'window._latencyTracker?.stop()',
             );
           } catch (e) {
             debugPrint(e.toString());
@@ -316,10 +219,187 @@ abstract class VideoStoreBase with Store {
     );
   }
 
+  /// Called when the InAppWebView is created
+  void onWebViewCreated(InAppWebViewController controller) {
+    _webViewController = controller;
+
+    // Add JavaScript handlers (equivalent to addJavaScriptChannel)
+    controller.addJavaScriptHandler(
+      handlerName: 'Latency',
+      callback: (args) {
+        if (args.isEmpty) return;
+        final receivedLatency = args[0].toString();
+        _latency = receivedLatency;
+
+        if (!settingsStore.autoSyncChatDelay) return;
+
+        // Parse latency from abbreviated format: "5s" -> 5.0
+        final numericPart = receivedLatency.replaceAll(
+          RegExp(r'[^0-9.]'),
+          '',
+        );
+        final latencyAsDouble = double.tryParse(numericPart);
+
+        if (latencyAsDouble != null) {
+          settingsStore.chatDelay = latencyAsDouble;
+        }
+      },
+    );
+
+    controller.addJavaScriptHandler(
+      handlerName: 'StreamQualities',
+      callback: (args) async {
+        if (args.isEmpty) return;
+        final data = jsonDecode(args[0].toString()) as List;
+        _availableStreamQualities =
+            data.map((item) => item as String).toList();
+        if (_firstTimeSettingQuality) {
+          _firstTimeSettingQuality = false;
+          if (settingsStore.defaultToHighestQuality) {
+            await _setStreamQualityIndex(1);
+            return;
+          }
+          final prefs = await SharedPreferences.getInstance();
+          final lastStreamQuality = prefs.getString('last_stream_quality');
+          if (lastStreamQuality == null) return;
+          setStreamQuality(lastStreamQuality);
+        }
+      },
+    );
+
+    controller.addJavaScriptHandler(
+      handlerName: 'VideoPause',
+      callback: (args) {
+        _paused = true;
+        if (Platform.isAndroid) pip.setIsPlaying(false);
+      },
+    );
+
+    controller.addJavaScriptHandler(
+      handlerName: 'VideoPlaying',
+      callback: (args) {
+        _paused = false;
+        if (Platform.isAndroid) pip.setIsPlaying(true);
+      },
+    );
+
+    controller.addJavaScriptHandler(
+      handlerName: 'PipEntered',
+      callback: (args) {
+        _overlayWasVisibleBeforePip = _overlayVisible;
+        _isInPipMode = true;
+        _overlayTimer?.cancel();
+        _overlayVisible = true;
+      },
+    );
+
+    controller.addJavaScriptHandler(
+      handlerName: 'PipExited',
+      callback: (args) {
+        _isInPipMode = false;
+        if (_overlayWasVisibleBeforePip) {
+          _updateLatencyTrackerVisibility(true);
+          _scheduleOverlayHide();
+        } else {
+          _overlayVisible = false;
+          _updateLatencyTrackerVisibility(false);
+        }
+      },
+    );
+
+  }
+
+  /// Intercepts network requests to proxy usher URLs
+  Future<WebResourceResponse?> shouldInterceptRequest(
+    WebResourceRequest request,
+  ) async {
+    // Only intercept if proxy is enabled and a proxy is selected
+    if (!settingsStore.usePlaylistProxy ||
+        settingsStore.selectedProxyUrl.isEmpty) {
+      return null;
+    }
+
+    final url = request.url.toString();
+
+    // Intercept usher.ttvnw.net requests and proxy them
+    if (url.contains('usher.ttvnw.net')) {
+      try {
+        final proxyUrl = '${settingsStore.selectedProxyUrl}/$url';
+
+        final response = await _dio.get<List<int>>(
+          proxyUrl,
+          options: Options(
+            responseType: ResponseType.bytes,
+            validateStatus: (status) => status != null && status < 500,
+            sendTimeout: const Duration(seconds: 15),
+            receiveTimeout: const Duration(seconds: 15),
+            headers: {
+              'User-Agent': request.headers?['User-Agent'] ?? 'Frosty',
+              'Accept':
+                  request.headers?['Accept'] ??
+                  'application/vnd.apple.mpegurl, application/x-mpegURL, */*',
+              'Origin': 'https://player.twitch.tv',
+              'Referer': 'https://player.twitch.tv/',
+            },
+          ),
+        );
+
+        if (response.data != null) {
+          var contentType = 'application/vnd.apple.mpegurl';
+          final responseContentType =
+              response.headers.value('content-type') ?? '';
+          if (responseContentType.isNotEmpty) {
+            contentType = responseContentType.split(';').first;
+          }
+
+          return WebResourceResponse(
+            contentType: contentType,
+            contentEncoding: 'utf-8',
+            statusCode: response.statusCode ?? 200,
+            reasonPhrase: 'OK',
+            headers: {
+              'Access-Control-Allow-Origin': '*',
+              'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+              'Access-Control-Allow-Headers': '*',
+              'Cache-Control': 'no-cache',
+            },
+            data: Uint8List.fromList(response.data!),
+          );
+        }
+      } catch (e) {
+        debugPrint('[Usher Proxy] Error: $e');
+      }
+    }
+
+    return null;
+  }
+
+  /// Called when page starts loading
+  void onLoadStart(InAppWebViewController controller, WebUri? url) {
+    // No-op, required callback
+  }
+
+  /// Called when page finishes loading
+  Future<void> onLoadStop(InAppWebViewController controller, WebUri? url) async {
+    if (url?.toString() != videoUrl) return;
+
+    // Safe evaluation of JavaScript boolean result
+    final result = await controller.evaluateJavascript(
+      source: 'window._injected ? true : false',
+    );
+    final injected =
+        result is bool ? result : (result.toString().toLowerCase() == 'true');
+    if (injected) return;
+
+    await controller.evaluateJavascript(source: 'window._injected = true;');
+    await initVideo();
+    _acceptContentWarning();
+  }
+
   @action
   Future<void> updateStreamQualities() async {
     try {
-      await videoWebViewController.runJavaScript(r'''
+      await _webViewController?.evaluateJavascript(source: r'''
       _queuePromise(async () => {
         // Open the settings → quality submenu
         (await _asyncQuerySelector('[data-a-target="player-settings-button"]')).click();
@@ -337,7 +417,7 @@ abstract class VideoStoreBase with Store {
           )
         ).map(l => l.textContent.replace(/\s+/g, ' ').trim());
 
-        StreamQualities.postMessage(JSON.stringify(qualities));
+        window.flutter_inappwebview.callHandler('StreamQualities', JSON.stringify(qualities));
 
         // Close the settings panel again
         (await _asyncQuerySelector('[data-a-target="player-settings-button"]')).click();
@@ -360,7 +440,7 @@ abstract class VideoStoreBase with Store {
   @action
   Future<void> _setStreamQualityIndex(int newStreamQualityIndex) async {
     try {
-      await videoWebViewController.runJavaScript('''
+      await _webViewController?.evaluateJavascript(source: '''
         _queuePromise(async () => {
           (await _asyncQuerySelector('[data-a-target="player-settings-button"]')).click();
           (await _asyncQuerySelector('[data-a-target="player-settings-menu-item-quality"]')).click();
@@ -376,15 +456,9 @@ abstract class VideoStoreBase with Store {
   }
 
   /// Hides the default Twitch overlay elements using CSS injection.
-  ///
-  /// This approach is far more efficient than JavaScript DOM manipulation:
-  /// - CSS rules are applied by the browser's native rendering engine
-  /// - No MutationObserver overhead watching the entire DOM tree
-  /// - Handles dynamically added elements automatically via CSS cascade
-  /// - Single one-time observer that disconnects immediately after player loads
   Future<void> _hideDefaultOverlay() async {
     try {
-      await videoWebViewController.runJavaScript('''
+      await _webViewController?.evaluateJavascript(source: '''
         {
           if (!document.getElementById('frosty-overlay-styles')) {
             const style = document.createElement('style');
@@ -404,7 +478,6 @@ abstract class VideoStoreBase with Store {
           }
 
           // Single one-time observer just to detect when player loads
-          // Disconnects immediately - CSS handles everything after
           const observer = new MutationObserver((_, obs) => {
             if (document.querySelector('.video-player__overlay')) {
               obs.disconnect();
@@ -423,7 +496,7 @@ abstract class VideoStoreBase with Store {
 
   Future<void> _acceptContentWarning() async {
     try {
-      await videoWebViewController.runJavaScript('''
+      await _webViewController?.evaluateJavascript(source: '''
         {
           (async () => {
             const warningBtn = await _asyncQuerySelector('button[data-a-target*="content-classification-gate"]', 10000);
@@ -440,15 +513,9 @@ abstract class VideoStoreBase with Store {
   }
 
   /// Sets up visibility-aware latency tracking.
-  ///
-  /// Key optimizations over previous implementation:
-  /// - Only tracks when overlay is visible (pauses when hidden)
-  /// - Properly clears setTimeout IDs to prevent accumulation
-  /// - Has explicit stop() method for cleanup
-  /// - Skips cycles entirely when overlay hidden (saves CPU)
   Future<void> _listenOnLatencyChanges() async {
     try {
-      await videoWebViewController.runJavaScript(r'''
+      await _webViewController?.evaluateJavascript(source: r'''
         window._latencyTracker = {
           CYCLE_INTERVAL: 60000,
           STATS_ACTIVE_TIME: 1500,
@@ -477,15 +544,12 @@ abstract class VideoStoreBase with Store {
 
           setOverlayVisible(visible) {
             this.overlayVisible = visible;
-            // Resume immediately when overlay becomes visible
             if (visible && this.isRunning && !this.timeoutId) {
               this._cycle();
             }
           },
 
           async _cycle() {
-            // Clear timeout ID synchronously at entry to prevent race conditions
-            // (e.g., setOverlayVisible calling _cycle while timeout is firing)
             const currentTimeoutId = this.timeoutId;
             this.timeoutId = null;
             if (currentTimeoutId) {
@@ -494,9 +558,7 @@ abstract class VideoStoreBase with Store {
 
             if (!this.isRunning) return;
 
-            // Skip cycle entirely if overlay not visible - major CPU savings
             if (!this.overlayVisible) {
-              // Check again in 5 seconds in case overlay becomes visible
               this.timeoutId = setTimeout(() => this._cycle(), 5000);
               return;
             }
@@ -506,7 +568,6 @@ abstract class VideoStoreBase with Store {
 
             await this._enableStats();
 
-            // Wait longer on first cycle for stats to populate
             const waitTime = this.cycleCount === 1 ? 3000 : this.STATS_ACTIVE_TIME;
             await new Promise(resolve => setTimeout(resolve, waitTime));
 
@@ -515,7 +576,6 @@ abstract class VideoStoreBase with Store {
 
             const totalActiveTime = Date.now() - cycleStart;
 
-            // Calculate next interval
             let nextInterval;
             if (!this.hasInitialLatency && this.cycleCount < this.MAX_INITIAL_RETRIES) {
               nextInterval = this.INITIAL_RETRY_INTERVAL;
@@ -523,7 +583,6 @@ abstract class VideoStoreBase with Store {
               nextInterval = this.CYCLE_INTERVAL - totalActiveTime;
             }
 
-            // Schedule next cycle
             this.timeoutId = setTimeout(() => this._cycle(), Math.max(nextInterval, 1000));
           },
 
@@ -548,9 +607,7 @@ abstract class VideoStoreBase with Store {
 
                 settingsBtn.click();
               });
-            } catch (error) {
-              // Silently fail - stats panel may not be available
-            }
+            } catch (error) {}
           },
 
           async _disableStats() {
@@ -574,9 +631,7 @@ abstract class VideoStoreBase with Store {
 
                 settingsBtn.click();
               });
-            } catch (error) {
-              // Silently fail
-            }
+            } catch (error) {}
           },
 
           _readLatency() {
@@ -585,7 +640,6 @@ abstract class VideoStoreBase with Store {
               if (latencyElement && latencyElement.textContent) {
                 let latencyText = latencyElement.textContent.trim();
 
-                // Convert to whole number with abbreviated unit: "4.69 sec." -> "5s"
                 const match = latencyText.match(/([0-9.]+)\s*sec/i);
                 if (match) {
                   const rounded = Math.round(parseFloat(match[1]));
@@ -593,13 +647,11 @@ abstract class VideoStoreBase with Store {
                   this.hasInitialLatency = true;
                 }
 
-                if (window.Latency) {
-                  Latency.postMessage(latencyText);
+                if (window.flutter_inappwebview) {
+                  window.flutter_inappwebview.callHandler('Latency', latencyText);
                 }
               }
-            } catch (error) {
-              // Silently fail
-            }
+            } catch (error) {}
           }
         };
 
@@ -611,23 +663,13 @@ abstract class VideoStoreBase with Store {
   }
 
   /// Updates the latency tracker's overlay visibility state.
-  ///
-  /// When overlay is hidden, the latency tracker pauses its polling cycle
-  /// to save CPU. When overlay becomes visible again, it resumes.
-  ///
-  /// However, if autoSyncChatDelay is enabled, the tracker always runs
-  /// regardless of overlay visibility to keep chat delay accurate.
   void _updateLatencyTrackerVisibility(bool visible) {
-    // Skip if latency tracking isn't active at all
     if (!settingsStore.showLatency && !settingsStore.autoSyncChatDelay) return;
 
-    // If auto-sync is enabled, always keep tracker running (don't pause on hide)
-    // to ensure chat delay stays synchronized even during long viewing sessions
     if (settingsStore.autoSyncChatDelay) {
-      // Always report visible to keep tracking active
       try {
-        videoWebViewController.runJavaScript(
-          'window._latencyTracker?.setOverlayVisible(true)',
+        _webViewController?.evaluateJavascript(
+          source: 'window._latencyTracker?.setOverlayVisible(true)',
         );
       } catch (e) {
         debugPrint(e.toString());
@@ -635,10 +677,9 @@ abstract class VideoStoreBase with Store {
       return;
     }
 
-    // Only pause/resume based on visibility if just showLatency is enabled
     try {
-      videoWebViewController.runJavaScript(
-        'window._latencyTracker?.setOverlayVisible($visible)',
+      _webViewController?.evaluateJavascript(
+        source: 'window._latencyTracker?.setOverlayVisible($visible)',
       );
     } catch (e) {
       debugPrint(e.toString());
@@ -646,19 +687,9 @@ abstract class VideoStoreBase with Store {
   }
 
   /// Performs a soft reset of JavaScript state to prevent memory accumulation.
-  ///
-  /// This runs periodically during long viewing sessions to clear accumulated
-  /// state without requiring a full page reload. Resets:
-  /// - Promise queue (clears any stale promise chains)
-  /// - Queue length counter
-  /// - Generation counter (prevents stale callbacks from decrementing length)
-  ///
-  /// Only resets if queue is idle to avoid orphaning in-flight operations
-  /// (which could leave the settings menu open).
   void _performJsSoftReset() {
     try {
-      videoWebViewController.runJavaScript('''
-        // Only reset if queue is idle to avoid orphaning in-flight operations
+      _webViewController?.evaluateJavascript(source: '''
         if (window._promiseQueueLength === 0) {
           window._PROMISE_QUEUE = Promise.resolve();
           window._promiseQueueGen = (window._promiseQueueGen || 0) + 1;
@@ -672,12 +703,11 @@ abstract class VideoStoreBase with Store {
   /// Initializes the video webview.
   @action
   Future<void> initVideo() async {
-    if (await videoWebViewController.currentUrl() == videoUrl) {
-      // Declare `window` level utility methods and add event listeners to notify the JavaScript channels when the video plays and pauses.
+    final currentUrl = await _webViewController?.getUrl();
+    if (currentUrl?.toString() == videoUrl) {
       try {
-        await videoWebViewController.runJavaScript('''
+        await _webViewController?.evaluateJavascript(source: '''
           // Promise queue with length limit and generation tracking
-          // Generation tracking prevents counter from going negative when queue resets
           window._PROMISE_QUEUE = Promise.resolve();
           window._promiseQueueLength = 0;
           window._promiseQueueGen = 0;
@@ -685,7 +715,6 @@ abstract class VideoStoreBase with Store {
           window._queuePromise = (method) => {
             window._promiseQueueLength++;
 
-            // Reset queue if it gets too long (prevents memory accumulation)
             if (window._promiseQueueLength > 30) {
               window._PROMISE_QUEUE = Promise.resolve();
               window._promiseQueueLength = 1;
@@ -700,7 +729,6 @@ abstract class VideoStoreBase with Store {
               } catch (e) {
                 console.warn('Queue promise error:', e);
               } finally {
-                // Only decrement if still same generation (not reset)
                 if (myGen === window._promiseQueueGen) {
                   window._promiseQueueLength--;
                 }
@@ -709,6 +737,7 @@ abstract class VideoStoreBase with Store {
 
             return window._PROMISE_QUEUE;
           };
+
           window._asyncQuerySelector = (selector, timeout = 30000) => new Promise((resolve) => {
             let element = document.querySelector(selector);
             if (element) {
@@ -724,10 +753,8 @@ abstract class VideoStoreBase with Store {
                 resolve(element);
               }
             });
-            // Must use subtree to detect nested elements in the player
             observer.observe(document.body, { childList: true, subtree: true });
 
-            // Always set timeout with default of 30 seconds
             timeoutId = setTimeout(() => {
               observer.disconnect();
               resolve(undefined);
@@ -737,25 +764,22 @@ abstract class VideoStoreBase with Store {
           _queuePromise(async () => {
             const videoElement = await _asyncQuerySelector("video");
 
-            // Null check in case element was not found within timeout
             if (!videoElement) {
               console.warn("Video element not found within timeout");
               return;
             }
 
-            // Prevent duplicate event listener registration
             if (!videoElement._listenersAdded) {
               videoElement._listenersAdded = true;
 
               videoElement.addEventListener("pause", () => {
-                VideoPause.postMessage("video paused");
+                window.flutter_inappwebview.callHandler('VideoPause', 'video paused');
                 if (videoElement.textTracks && videoElement.textTracks.length > 0) {
                   videoElement.textTracks[0].mode = "hidden";
                 }
               });
               videoElement.addEventListener("playing", () => {
-                VideoPlaying.postMessage("video playing");
-                // Ensure video is unmuted and captions are hidden
+                window.flutter_inappwebview.callHandler('VideoPlaying', 'video playing');
                 videoElement.muted = false;
                 videoElement.volume = 1.0;
                 if (videoElement.textTracks && videoElement.textTracks.length > 0) {
@@ -763,18 +787,16 @@ abstract class VideoStoreBase with Store {
                 }
               });
 
-              // Add PiP event listeners for iOS
               videoElement.addEventListener("enterpictureinpicture", () => {
-                PipEntered.postMessage("pip entered");
+                window.flutter_inappwebview.callHandler('PipEntered', 'pip entered');
               });
               videoElement.addEventListener("leavepictureinpicture", () => {
-                PipExited.postMessage("pip exited");
+                window.flutter_inappwebview.callHandler('PipExited', 'pip exited');
               });
             }
 
             if (!videoElement.paused) {
-              VideoPlaying.postMessage("video playing");
-              // Ensure video is unmuted and captions are hidden
+              window.flutter_inappwebview.callHandler('VideoPlaying', 'video playing');
               videoElement.muted = false;
               videoElement.volume = 1.0;
               if (videoElement.textTracks && videoElement.textTracks.length > 0) {
@@ -785,9 +807,6 @@ abstract class VideoStoreBase with Store {
         ''');
         if (settingsStore.showOverlay) {
           await _hideDefaultOverlay();
-          // Start latency tracking if either:
-          // - showLatency is enabled (user wants to see it on overlay), OR
-          // - autoSyncChatDelay is enabled (needs latency data for syncing)
           if (settingsStore.showLatency || settingsStore.autoSyncChatDelay) {
             await _listenOnLatencyChanges();
           }
@@ -811,13 +830,11 @@ abstract class VideoStoreBase with Store {
 
     if (_overlayVisible) {
       _overlayVisible = false;
-      // Notify latency tracker to pause when overlay hidden
       _updateLatencyTrackerVisibility(false);
     } else {
       updateStreamInfo(forceUpdate: true);
 
       _overlayVisible = true;
-      // Notify latency tracker to resume when overlay visible
       _updateLatencyTrackerVisibility(true);
       _scheduleOverlayHide();
     }
@@ -825,7 +842,6 @@ abstract class VideoStoreBase with Store {
 
   /// Starts the periodic stream info timer for chat-only mode.
   void _startStreamInfoTimer() {
-    // Only start if not already active
     if (_streamInfoTimer?.isActive != true) {
       _streamInfoTimer = Timer.periodic(
         const Duration(seconds: 60),
@@ -856,7 +872,6 @@ abstract class VideoStoreBase with Store {
       runInAction(() {
         _overlayVisible = false;
       });
-      // Notify latency tracker to pause when overlay auto-hides
       _updateLatencyTrackerVisibility(false);
     });
   }
@@ -864,24 +879,19 @@ abstract class VideoStoreBase with Store {
   /// Handles app resume event for immediate stream info refresh in chat-only mode.
   @action
   void handleAppResume() {
-    // Only refresh immediately in chat-only mode
     if (!settingsStore.showVideo) {
       updateStreamInfo(forceUpdate: true);
     }
   }
 
   /// Updates the stream info from the Twitch API.
-  ///
-  /// If the stream is offline, fetches channel information to show offline details.
-  /// Set [forceUpdate] to true to bypass the rate limiting check.
   @action
   Future<void> updateStreamInfo({bool forceUpdate = false}) async {
-    // Rate limiting: prevent too frequent updates unless forced
     final now = DateTime.now();
     if (!forceUpdate && _lastStreamInfoUpdate != null) {
       final timeSinceLastUpdate = now.difference(_lastStreamInfoUpdate!);
       if (timeSinceLastUpdate.inSeconds < 5) {
-        return; // Skip update if less than 5 seconds since last update
+        return;
       }
     }
 
@@ -889,21 +899,18 @@ abstract class VideoStoreBase with Store {
 
     try {
       _streamInfo = await twitchApi.getStream(userLogin: userLogin);
-      // Clear offline info when stream is live
       _offlineChannelInfo = null;
     } catch (e) {
       _overlayTimer?.cancel();
       _streamInfo = null;
       _paused = true;
 
-      // Try to fetch offline channel information
       try {
         _offlineChannelInfo = await twitchApi.getChannel(userId: userId);
       } catch (channelError) {
         _offlineChannelInfo = null;
       }
 
-      // Restart overlay timer in chat-only mode even on error
       if (!settingsStore.showVideo) {
         _scheduleOverlayHide();
       }
@@ -911,8 +918,6 @@ abstract class VideoStoreBase with Store {
   }
 
   /// Handles the toggle overlay options.
-  ///
-  /// The toggle overlay option allows switching between the custom and Twitch's overlay by long-pressing the overlay.
   @action
   void handleToggleOverlay() {
     if (settingsStore.toggleableOverlay) {
@@ -925,15 +930,9 @@ abstract class VideoStoreBase with Store {
         _scheduleOverlayHide(const Duration(seconds: 3));
       }
     }
-
-    // Stream info timer is managed automatically by the video mode reaction
   }
 
   /// Refreshes the stream webview and updates the stream info.
-  ///
-  /// Performs a hard refresh by loading about:blank first to completely clear
-  /// the webview state, then immediately reloads the video URL. This is more
-  /// reliable than a soft reload when the webview is sluggish.
   @action
   Future<void> handleRefresh() async {
     HapticFeedback.lightImpact();
@@ -941,17 +940,20 @@ abstract class VideoStoreBase with Store {
     _firstTimeSettingQuality = true;
     _isInPipMode = false;
 
-    // Stop latency tracker immediately to free up JS main thread for refresh
     try {
-      videoWebViewController.runJavaScript('window._latencyTracker?.stop()');
+      _webViewController?.evaluateJavascript(
+        source: 'window._latencyTracker?.stop()',
+      );
     } catch (e) {
-      // Ignore - may not exist yet
+      // Ignore
     }
 
-    // Hard refresh: clear everything by loading blank page first
-    await videoWebViewController.loadRequest(Uri.parse('about:blank'));
-    // Then immediately load the video URL for a fresh start
-    await videoWebViewController.loadRequest(Uri.parse(videoUrl));
+    await _webViewController?.loadUrl(
+      urlRequest: URLRequest(url: WebUri('about:blank')),
+    );
+    await _webViewController?.loadUrl(
+      urlRequest: URLRequest(url: WebUri(videoUrl)),
+    );
 
     updateStreamInfo();
   }
@@ -960,12 +962,12 @@ abstract class VideoStoreBase with Store {
   void handlePausePlay() {
     try {
       if (_paused) {
-        videoWebViewController.runJavaScript(
-          'document.getElementsByTagName("video")[0].play();',
+        _webViewController?.evaluateJavascript(
+          source: 'document.getElementsByTagName("video")[0].play();',
         );
       } else {
-        videoWebViewController.runJavaScript(
-          'document.getElementsByTagName("video")[0].pause();',
+        _webViewController?.evaluateJavascript(
+          source: 'document.getElementsByTagName("video")[0].pause();',
         );
       }
     } catch (e) {
@@ -974,16 +976,14 @@ abstract class VideoStoreBase with Store {
   }
 
   /// Initiate picture in picture if available.
-  ///
-  /// On Android, this will utilize the native Android PiP API.
-  /// On iOS, this will utilize the web picture-in-picture API.
   void requestPictureInPicture() {
     try {
       if (Platform.isAndroid) {
         pip.enterPipMode(autoEnter: true);
       } else if (Platform.isIOS) {
-        videoWebViewController.runJavaScript(
-          'document.getElementsByTagName("video")[0].requestPictureInPicture();',
+        _webViewController?.evaluateJavascript(
+          source:
+              'document.getElementsByTagName("video")[0].requestPictureInPicture();',
         );
       }
     } catch (e) {
@@ -992,16 +992,11 @@ abstract class VideoStoreBase with Store {
   }
 
   /// Toggle picture-in-picture mode.
-  ///
-  /// If not in PiP mode, enters PiP mode.
-  /// If already in PiP mode on iOS, exits PiP mode.
-  /// On Android, always enters PiP mode (no programmatic exit or state tracking).
   @action
   void togglePictureInPicture() {
     try {
       if (Platform.isIOS && _isInPipMode) {
-        // Exit PiP mode on iOS
-        videoWebViewController.runJavaScript('''
+        _webViewController?.evaluateJavascript(source: '''
           (function() {
             if (document.pictureInPictureElement) {
               document.exitPictureInPicture();
@@ -1009,7 +1004,6 @@ abstract class VideoStoreBase with Store {
           })();
           ''');
       } else {
-        // Enter PiP mode (both iOS and Android)
         requestPictureInPicture();
       }
     } catch (e) {
@@ -1019,7 +1013,6 @@ abstract class VideoStoreBase with Store {
 
   @action
   void dispose() {
-    // Disable auto PiP when leaving so that we don't enter PiP on other screens.
     if (Platform.isAndroid) {
       SimplePip.isAutoPipAvailable.then((isAutoPipAvailable) {
         if (isAutoPipAvailable) pip.setAutoPipMode(autoEnter: false);
@@ -1035,13 +1028,14 @@ abstract class VideoStoreBase with Store {
     _disposeAndroidAutoPipReaction?.call();
     _disposeLatencySettingsReaction?.call();
 
-    // Explicitly stop latency tracker as defense-in-depth.
-    // The Video widget also loads about:blank during disposal which clears
-    // all JavaScript state, but this provides an extra safety layer.
     try {
-      videoWebViewController.runJavaScript('window._latencyTracker?.stop()');
+      _webViewController?.evaluateJavascript(
+        source: 'window._latencyTracker?.stop()',
+      );
     } catch (e) {
-      // Ignore - page may already be unloading
+      // Ignore
     }
+
+    _dio.close();
   }
 }

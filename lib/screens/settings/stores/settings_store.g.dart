@@ -23,6 +23,8 @@ SettingsStore _$SettingsStoreFromJson(
   ..showVideo = json['showVideo'] as bool? ?? true
   ..defaultToHighestQuality = json['defaultToHighestQuality'] as bool? ?? false
   ..useTextureRendering = json['useTextureRendering'] as bool? ?? true
+  ..usePlaylistProxy = json['usePlaylistProxy'] as bool? ?? false
+  ..selectedProxyUrl = json['selectedProxyUrl'] as String? ?? ''
   ..showOverlay = json['showOverlay'] as bool? ?? true
   ..toggleableOverlay = json['toggleableOverlay'] as bool? ?? false
   ..showLatency = json['showLatency'] as bool? ?? false
@@ -66,6 +68,8 @@ SettingsStore _$SettingsStoreFromJson(
   ..showBTTVBadges = json['showBTTVBadges'] as bool? ?? true
   ..showFFZEmotes = json['showFFZEmotes'] as bool? ?? true
   ..showFFZBadges = json['showFFZBadges'] as bool? ?? true
+  ..useEmoteProxy = json['useEmoteProxy'] as bool? ?? false
+  ..selectedEmoteProxyUrl = json['selectedEmoteProxyUrl'] as String? ?? ''
   ..showRecentMessages = json['showRecentMessages'] as bool? ?? false
   ..persistChatTabs = json['persistChatTabs'] as bool? ?? true
   ..secondaryTabs =
@@ -100,6 +104,8 @@ Map<String, dynamic> _$SettingsStoreToJson(
   'showVideo': instance.showVideo,
   'defaultToHighestQuality': instance.defaultToHighestQuality,
   'useTextureRendering': instance.useTextureRendering,
+  'usePlaylistProxy': instance.usePlaylistProxy,
+  'selectedProxyUrl': instance.selectedProxyUrl,
   'showOverlay': instance.showOverlay,
   'toggleableOverlay': instance.toggleableOverlay,
   'showLatency': instance.showLatency,
@@ -129,6 +135,8 @@ Map<String, dynamic> _$SettingsStoreToJson(
   'showBTTVBadges': instance.showBTTVBadges,
   'showFFZEmotes': instance.showFFZEmotes,
   'showFFZBadges': instance.showFFZBadges,
+  'useEmoteProxy': instance.useEmoteProxy,
+  'selectedEmoteProxyUrl': instance.selectedEmoteProxyUrl,
   'showRecentMessages': instance.showRecentMessages,
   'persistChatTabs': instance.persistChatTabs,
   'secondaryTabs': instance.secondaryTabs,
@@ -311,6 +319,42 @@ mixin _$SettingsStore on _SettingsStoreBase, Store {
   set useTextureRendering(bool value) {
     _$useTextureRenderingAtom.reportWrite(value, super.useTextureRendering, () {
       super.useTextureRendering = value;
+    });
+  }
+
+  late final _$usePlaylistProxyAtom = Atom(
+    name: '_SettingsStoreBase.usePlaylistProxy',
+    context: context,
+  );
+
+  @override
+  bool get usePlaylistProxy {
+    _$usePlaylistProxyAtom.reportRead();
+    return super.usePlaylistProxy;
+  }
+
+  @override
+  set usePlaylistProxy(bool value) {
+    _$usePlaylistProxyAtom.reportWrite(value, super.usePlaylistProxy, () {
+      super.usePlaylistProxy = value;
+    });
+  }
+
+  late final _$selectedProxyUrlAtom = Atom(
+    name: '_SettingsStoreBase.selectedProxyUrl',
+    context: context,
+  );
+
+  @override
+  String get selectedProxyUrl {
+    _$selectedProxyUrlAtom.reportRead();
+    return super.selectedProxyUrl;
+  }
+
+  @override
+  set selectedProxyUrl(String value) {
+    _$selectedProxyUrlAtom.reportWrite(value, super.selectedProxyUrl, () {
+      super.selectedProxyUrl = value;
     });
   }
 
@@ -860,6 +904,46 @@ mixin _$SettingsStore on _SettingsStoreBase, Store {
     });
   }
 
+  late final _$useEmoteProxyAtom = Atom(
+    name: '_SettingsStoreBase.useEmoteProxy',
+    context: context,
+  );
+
+  @override
+  bool get useEmoteProxy {
+    _$useEmoteProxyAtom.reportRead();
+    return super.useEmoteProxy;
+  }
+
+  @override
+  set useEmoteProxy(bool value) {
+    _$useEmoteProxyAtom.reportWrite(value, super.useEmoteProxy, () {
+      super.useEmoteProxy = value;
+    });
+  }
+
+  late final _$selectedEmoteProxyUrlAtom = Atom(
+    name: '_SettingsStoreBase.selectedEmoteProxyUrl',
+    context: context,
+  );
+
+  @override
+  String get selectedEmoteProxyUrl {
+    _$selectedEmoteProxyUrlAtom.reportRead();
+    return super.selectedEmoteProxyUrl;
+  }
+
+  @override
+  set selectedEmoteProxyUrl(String value) {
+    _$selectedEmoteProxyUrlAtom.reportWrite(
+      value,
+      super.selectedEmoteProxyUrl,
+      () {
+        super.selectedEmoteProxyUrl = value;
+      },
+    );
+  }
+
   late final _$showRecentMessagesAtom = Atom(
     name: '_SettingsStoreBase.showRecentMessages',
     context: context,
@@ -1118,6 +1202,8 @@ launchUrlExternal: ${launchUrlExternal},
 showVideo: ${showVideo},
 defaultToHighestQuality: ${defaultToHighestQuality},
 useTextureRendering: ${useTextureRendering},
+usePlaylistProxy: ${usePlaylistProxy},
+selectedProxyUrl: ${selectedProxyUrl},
 showOverlay: ${showOverlay},
 toggleableOverlay: ${toggleableOverlay},
 showLatency: ${showLatency},
@@ -1147,6 +1233,8 @@ showBTTVEmotes: ${showBTTVEmotes},
 showBTTVBadges: ${showBTTVBadges},
 showFFZEmotes: ${showFFZEmotes},
 showFFZBadges: ${showFFZBadges},
+useEmoteProxy: ${useEmoteProxy},
+selectedEmoteProxyUrl: ${selectedEmoteProxyUrl},
 showRecentMessages: ${showRecentMessages},
 persistChatTabs: ${persistChatTabs},
 secondaryTabs: ${secondaryTabs},

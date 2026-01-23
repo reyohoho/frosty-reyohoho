@@ -65,6 +65,8 @@ abstract class _SettingsStoreBase with Store {
   static const defaultShowVideo = true;
   static const defaultDefaultToHighestQuality = false;
   static const defaultUseTextureRendering = true;
+  static const defaultUsePlaylistProxy = false;
+  static const defaultSelectedProxyUrl = '';
 
   // Overlay defaults
   static const defaultShowOverlay = true;
@@ -84,6 +86,14 @@ abstract class _SettingsStoreBase with Store {
   @observable
   var useTextureRendering = defaultUseTextureRendering;
 
+  @JsonKey(defaultValue: defaultUsePlaylistProxy)
+  @observable
+  var usePlaylistProxy = defaultUsePlaylistProxy;
+
+  @JsonKey(defaultValue: defaultSelectedProxyUrl)
+  @observable
+  var selectedProxyUrl = defaultSelectedProxyUrl;
+
   // Overlay options
   @JsonKey(defaultValue: defaultShowOverlay)
   @observable
@@ -102,6 +112,8 @@ abstract class _SettingsStoreBase with Store {
     showVideo = defaultShowVideo;
     defaultToHighestQuality = defaultDefaultToHighestQuality;
     useTextureRendering = defaultUseTextureRendering;
+    usePlaylistProxy = defaultUsePlaylistProxy;
+    selectedProxyUrl = defaultSelectedProxyUrl;
 
     showOverlay = defaultShowOverlay;
     toggleableOverlay = defaultToggleableOverlay;
@@ -154,6 +166,11 @@ abstract class _SettingsStoreBase with Store {
   static const defaultShowBTTVBadges = true;
   static const defaultShowFFZEmotes = true;
   static const defaultShowFFZBadges = true;
+
+  // Emote proxy defaults
+  static const defaultUseEmoteProxy = false;
+  static const defaultSelectedEmoteProxyUrl = '';
+  static const emoteCdnProxyUrl = 'https://cdn.rte.net.ru';
 
   // Recent messages defaults
   static const defaultShowRecentMessages = false;
@@ -277,6 +294,21 @@ abstract class _SettingsStoreBase with Store {
   @observable
   var showFFZBadges = defaultShowFFZBadges;
 
+  // Emote proxy
+  @JsonKey(defaultValue: defaultUseEmoteProxy)
+  @observable
+  var useEmoteProxy = defaultUseEmoteProxy;
+
+  @JsonKey(defaultValue: defaultSelectedEmoteProxyUrl)
+  @observable
+  var selectedEmoteProxyUrl = defaultSelectedEmoteProxyUrl;
+
+  /// Returns the proxied emote URL if proxy is enabled, otherwise the original URL.
+  String getProxiedEmoteUrl(String originalUrl) {
+    if (!useEmoteProxy || originalUrl.isEmpty) return originalUrl;
+    return '$emoteCdnProxyUrl/$originalUrl';
+  }
+
   // Recent messages
   @JsonKey(defaultValue: defaultShowRecentMessages)
   @observable
@@ -337,6 +369,9 @@ abstract class _SettingsStoreBase with Store {
     showBTTVBadges = defaultShowBTTVBadges;
     showFFZEmotes = defaultShowFFZEmotes;
     showFFZBadges = defaultShowFFZBadges;
+
+    useEmoteProxy = defaultUseEmoteProxy;
+    selectedEmoteProxyUrl = defaultSelectedEmoteProxyUrl;
 
     showRecentMessages = defaultShowRecentMessages;
 

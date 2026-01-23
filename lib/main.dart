@@ -90,6 +90,27 @@ void main() async {
   final ffzApiService = FFZApi(dioClient);
   final sevenTVApiService = SevenTVApi(dioClient);
 
+  // Set up emote proxy for third-party APIs when enabled
+  void updateEmoteApiProxy() {
+    final proxyUrl = settingsStore.useEmoteProxy
+        ? settingsStore.selectedEmoteProxyUrl
+        : null;
+    bttvApiService.proxyUrlPrefix = proxyUrl;
+    ffzApiService.proxyUrlPrefix = proxyUrl;
+    sevenTVApiService.proxyUrlPrefix = proxyUrl;
+  }
+
+  // Apply initial proxy settings
+  updateEmoteApiProxy();
+
+  // React to proxy setting changes
+  autorun((_) {
+    // Access observables to trigger reaction
+    settingsStore.useEmoteProxy;
+    settingsStore.selectedEmoteProxyUrl;
+    updateEmoteApiProxy();
+  });
+
   // Create global assets store (shared cache for global emotes/badges)
   final globalAssetsStore = GlobalAssetsStore(
     twitchApi: twitchApiService,

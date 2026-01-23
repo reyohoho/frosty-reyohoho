@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
@@ -15,6 +16,13 @@ import 'package:frosty/widgets/section_header.dart';
 import 'package:frosty/widgets/settings_page_layout.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+enum EmoteProxyStatus {
+  unknown,
+  testing,
+  available,
+  unavailable,
+}
+
 class ChatSettings extends StatefulWidget {
   final SettingsStore settingsStore;
 
@@ -26,6 +34,212 @@ class ChatSettings extends StatefulWidget {
 
 class _ChatSettingsState extends State<ChatSettings> {
   var showPreview = false;
+
+  static const List<String> _emoteProxyServers = [
+    'https://starege.rte.net.ru',
+    'https://starege3.rte.net.ru',
+    'https://starege4.rte.net.ru',
+    'https://starege5.rte.net.ru',
+  ];
+
+  final Map<String, EmoteProxyStatus> _emoteProxyStatuses = {};
+  bool _isTestingEmoteProxies = false;
+  final _dio = Dio();
+
+  @override
+  void initState() {
+    super.initState();
+    for (final proxy in _emoteProxyServers) {
+      _emoteProxyStatuses[proxy] = EmoteProxyStatus.unknown;
+    }
+  }
+
+  @override
+  void dispose() {
+    _dio.close();
+    super.dispose();
+  }
+
+  Future<void> _testEmoteProxiesAndSelectFastest() async {
+    setState(() {
+      _isTestingEmoteProxies = true;
+      for (final proxy in _emoteProxyServers) {
+        _emoteProxyStatuses[proxy] = EmoteProxyStatus.testing;
+      }
+    });
+
+    String? fastestProxy;
+    int fastestTime = 999999;
+
+    final futures = <Future<void>>[];
+
+    for (final proxy in _emoteProxyServers) {
+      futures.add(_testEmoteProxy(proxy).then((responseTime) {
+        setState(() {
+          if (responseTime != null) {
+            _emoteProxyStatuses[proxy] = EmoteProxyStatus.available;
+            if (responseTime < fastestTime) {
+              fastestTime = responseTime;
+              fastestProxy = proxy;
+            }
+          } else {
+            _emoteProxyStatuses[proxy] = EmoteProxyStatus.unavailable;
+          }
+        });
+      }));
+    }
+
+    await Future.wait(futures);
+
+    setState(() {
+      _isTestingEmoteProxies = false;
+    });
+
+    if (fastestProxy != null) {
+      widget.settingsStore.selectedEmoteProxyUrl = fastestProxy!;
+      widget.settingsStore.useEmoteProxy = true;
+    } else {
+      widget.settingsStore.useEmoteProxy = false;
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No emote proxy servers available'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<int?> _testEmoteProxy(String proxyBase) async {
+    try {
+      final stopwatch = Stopwatch()..start();
+      await _dio.head(
+        '$proxyBase/https://www.google.com',
+        options: Options(
+          sendTimeout: const Duration(seconds: 5),
+          receiveTimeout: const Duration(seconds: 5),
+          validateStatus: (status) => status != null && status < 500,
+        ),
+      );
+      stopwatch.stop();
+      return stopwatch.elapsedMilliseconds;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  void _handleEmoteProxyToggle(bool newValue) {
+    if (newValue) {
+      _testEmoteProxiesAndSelectFastest();
+    } else {
+      widget.settingsStore.useEmoteProxy = false;
+      widget.settingsStore.selectedEmoteProxyUrl = '';
+    }
+  }
+
+  Widget _buildEmoteProxyList() {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(
+                  'Emote Proxy Servers',
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                if (_isTestingEmoteProxies) ...[
+                  const SizedBox(width: 12),
+                  const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 8),
+            ...(_emoteProxyServers.map((proxy) => _buildEmoteProxyItem(proxy))),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmoteProxyItem(String proxy) {
+    final status = _emoteProxyStatuses[proxy] ?? EmoteProxyStatus.unknown;
+    final isSelected = widget.settingsStore.selectedEmoteProxyUrl == proxy;
+    final host = Uri.parse(proxy).host;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          _buildEmoteProxyStatusIcon(status, isSelected),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              host,
+              style: TextStyle(
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                color: isSelected
+                    ? Theme.of(context).colorScheme.primary
+                    : null,
+              ),
+            ),
+          ),
+          if (isSelected)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primaryContainer,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                'Active',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmoteProxyStatusIcon(EmoteProxyStatus status, bool isSelected) {
+    switch (status) {
+      case EmoteProxyStatus.testing:
+        return const SizedBox(
+          width: 16,
+          height: 16,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        );
+      case EmoteProxyStatus.available:
+        return Icon(
+          Icons.check_circle,
+          size: 16,
+          color: isSelected ? Colors.green : Colors.green.withValues(alpha: 0.6),
+        );
+      case EmoteProxyStatus.unavailable:
+        return Icon(
+          Icons.cancel,
+          size: 16,
+          color: Colors.red.withValues(alpha: 0.6),
+        );
+      case EmoteProxyStatus.unknown:
+        return Icon(
+          Icons.circle_outlined,
+          size: 16,
+          color: Colors.grey.withValues(alpha: 0.6),
+        );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -310,6 +524,19 @@ class _ChatSettingsState extends State<ChatSettings> {
             value: settingsStore.showFFZBadges,
             onChanged: (newValue) => settingsStore.showFFZBadges = newValue,
           ),
+          SettingsListSwitch(
+            title: 'Use emote proxy',
+            subtitle: Text(
+              settingsStore.useEmoteProxy &&
+                      settingsStore.selectedEmoteProxyUrl.isNotEmpty
+                  ? 'Active: ${Uri.parse(settingsStore.selectedEmoteProxyUrl).host}'
+                  : 'Routes emote requests through a proxy server for regions with blocked access.',
+            ),
+            value: settingsStore.useEmoteProxy,
+            onChanged: _isTestingEmoteProxies ? null : _handleEmoteProxyToggle,
+          ),
+          if (settingsStore.useEmoteProxy || _isTestingEmoteProxies)
+            _buildEmoteProxyList(),
           const SectionHeader('Recent messages'),
           SettingsListSwitch(
             title: 'Show historical recent messages',

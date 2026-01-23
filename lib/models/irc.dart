@@ -717,7 +717,8 @@ class IRCMessage {
     );
   }
 
-  static Widget _createBadgeWidget({
+  static Widget _createBadgeWidget(
+    BuildContext context, {
     required ChatBadge badge,
     double? size,
     Color? backgroundColor,
@@ -734,7 +735,8 @@ class IRCMessage {
         ),
       );
     } else if (isSvg == true) {
-      return SvgPicture.network(badge.url, height: size, width: size);
+      final proxiedUrl = getProxiedEmoteUrl(context, badge.url);
+      return SvgPicture.network(proxiedUrl, height: size, width: size);
     } else {
       return FrostyCachedNetworkImage(
         imageUrl: badge.url,
@@ -759,6 +761,7 @@ class IRCMessage {
         onTap: () => _showAssetDetailsBottomSheet(
           context,
           leading: _createBadgeWidget(
+            context,
             badge: badge,
             backgroundColor: backgroundColor,
             isSvg: isSvg,
@@ -771,6 +774,7 @@ class IRCMessage {
           showCopyName: false,
         ),
         child: _createBadgeWidget(
+          context,
           badge: badge,
           size: size,
           backgroundColor: backgroundColor,

@@ -1,12 +1,11 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:frosty/screens/channel/video/video_store.dart';
 import 'package:simple_pip_mode/simple_pip.dart';
-import 'package:webview_flutter/webview_flutter.dart';
-import 'package:webview_flutter_android/webview_flutter_android.dart';
 
-/// Creates a [WebView] widget that shows a channel's video stream.
+/// Creates an [InAppWebView] widget that shows a channel's video stream.
 class Video extends StatefulWidget {
   final VideoStore videoStore;
 
@@ -20,11 +19,6 @@ class _VideoState extends State<Video> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
-    if (widget.videoStore.settingsStore.showVideo) {
-      widget.videoStore.videoWebViewController.loadRequest(
-        Uri.parse(widget.videoStore.videoUrl),
-      );
-    }
     WidgetsBinding.instance.addObserver(this);
   }
 
@@ -42,26 +36,29 @@ class _VideoState extends State<Video> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    if (WebViewPlatform.instance is AndroidWebViewPlatform) {
-      return WebViewWidget.fromPlatformCreationParams(
-        params: AndroidWebViewWidgetCreationParams(
-          controller: widget.videoStore.videoWebViewController.platform,
-          displayWithHybridComposition:
-              !widget.videoStore.settingsStore.useTextureRendering,
-        ),
-      );
-    } else {
-      return WebViewWidget(
-        controller: widget.videoStore.videoWebViewController,
-      );
+    if (!widget.videoStore.settingsStore.showVideo) {
+      return const SizedBox.shrink();
     }
+
+    return InAppWebView(
+      initialUrlRequest: URLRequest(
+        url: WebUri(widget.videoStore.videoUrl),
+      ),
+      initialSettings: widget.videoStore.webViewSettings,
+      onWebViewCreated: widget.videoStore.onWebViewCreated,
+      onLoadStart: widget.videoStore.onLoadStart,
+      onLoadStop: widget.videoStore.onLoadStop,
+      shouldInterceptRequest: (controller, request) async {
+        return widget.videoStore.shouldInterceptRequest(request);
+      },
+    );
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    widget.videoStore.videoWebViewController.loadRequest(
-      Uri.parse('about:blank'),
+    widget.videoStore.webViewController?.loadUrl(
+      urlRequest: URLRequest(url: WebUri('about:blank')),
     );
 
     super.dispose();

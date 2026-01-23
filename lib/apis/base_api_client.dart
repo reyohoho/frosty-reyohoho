@@ -48,16 +48,30 @@ abstract class BaseApiClient {
   final Dio _dio;
   final String baseUrl;
 
-  const BaseApiClient(this._dio, this.baseUrl);
+  /// Optional proxy URL prefix for routing requests through a proxy server.
+  /// When set, all requests will be prefixed with this URL.
+  String? proxyUrlPrefix;
 
-  /// Builds the full URL, handling both relative endpoints and full URLs
+  BaseApiClient(this._dio, this.baseUrl);
+
+  /// Builds the full URL, handling both relative endpoints and full URLs.
+  /// Applies proxy prefix if set.
   String _buildUrl(String endpoint) {
+    String url;
     // If endpoint is already a full URL (starts with http:// or https://), use it as-is
     if (endpoint.startsWith('http://') || endpoint.startsWith('https://')) {
-      return endpoint;
+      url = endpoint;
+    } else {
+      // Otherwise, concatenate with base URL
+      url = '$baseUrl$endpoint';
     }
-    // Otherwise, concatenate with base URL
-    return '$baseUrl$endpoint';
+
+    // Apply proxy prefix if set
+    if (proxyUrlPrefix != null && proxyUrlPrefix!.isNotEmpty) {
+      return '$proxyUrlPrefix/$url';
+    }
+
+    return url;
   }
 
   /// Generic GET request with common error handling
