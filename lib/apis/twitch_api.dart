@@ -10,6 +10,8 @@ import 'package:frosty/models/followed_channel.dart';
 import 'package:frosty/models/shared_chat_session.dart';
 import 'package:frosty/models/stream.dart';
 import 'package:frosty/models/user.dart';
+import 'package:frosty/models/vod.dart';
+import 'package:frosty/models/vod_comment.dart';
 
 /// Starege proxy domains for recent messages API.
 const _recentMessagesProxyDomains = [
@@ -511,6 +513,111 @@ class TwitchApi extends BaseApiClient {
       // Log the specific error for debugging
       debugPrint('Failed to update chat color: $e');
       return false;
+    }
+  }
+
+  static const String _gqlBaseUrl = 'https://gql.twitch.tv/gql';
+
+  /// Fetches VOD comments for a specific video at a given offset.
+  ///
+  /// Uses Twitch GQL API to get chat replay comments.
+  /// [videoId] - The ID of the VOD
+  /// [contentOffsetSeconds] - The offset in seconds from video start
+  Future<VodCommentsResponse> getVodComments({
+    required String videoId,
+    required int contentOffsetSeconds,
+  }) async {
+    const persistedQueryHash =
+        'b70a3591ff0f4e0313d126c6a1502d79a1c02baebb288227c582044aa76adf6a';
+
+    final body = [
+      {
+        'operationName': 'VideoCommentsByOffsetOrCursor',
+        'variables': {
+          'videoID': videoId,
+          'contentOffsetSeconds': contentOffsetSeconds,
+        },
+        'extensions': {
+          'persistedQuery': {
+            'version': 1,
+            'sha256Hash': persistedQueryHash,
+          },
+        },
+      },
+    ];
+
+    try {
+      final response = await dio.post<List<dynamic>>(
+        _gqlBaseUrl,
+        data: body,
+        options: Options(
+          headers: {
+            'Client-ID': 'kimne78kx3ncx6brgo4mv6wki5h1ko',
+            'Content-Type': 'application/json',
+          },
+        ),
+      );
+
+      if (response.data != null && response.data!.isNotEmpty) {
+        return VodCommentsResponse.fromJson(
+          response.data!.first as Map<String, dynamic>,
+        );
+      }
+
+      return const VodCommentsResponse(
+        comments: [],
+        hasNextPage: false,
+        hasPreviousPage: false,
+      );
+    } catch (e) {
+      debugPrint('Error fetching VOD comments: $e');
+      return const VodCommentsResponse(
+        comments: [],
+        hasNextPage: false,
+        hasPreviousPage: false,
+      );
+    }
+  }
+
+  /// Returns a [VideosTwitch] object containing videos for the given user ID.
+  ///
+  /// [userId] - The ID of the user whose videos to get.
+  /// [type] - Filter by video type: 'all', 'archive', 'highlight', 'upload'. Defaults to 'all'.
+  /// [sort] - Sort order: 'time' (newest first), 'trending', 'views'. Defaults to 'time'.
+  /// [cursor] - Pagination cursor for fetching more results.
+  /// [first] - Number of videos to fetch (1-100). Defaults to 20.
+  Future<VideosTwitch> getVideos({
+    required String userId,
+    String type = 'all',
+    String sort = 'time',
+    String? cursor,
+    int first = 20,
+  }) async {
+    final queryParams = <String, String>{
+      'user_id': userId,
+      'type': type,
+      'sort': sort,
+      'first': first.toString(),
+    };
+    if (cursor != null) queryParams['after'] = cursor;
+
+    final data = await get<JsonMap>('/videos', queryParameters: queryParams);
+
+    return VideosTwitch.fromJson(data);
+  }
+
+  /// Returns a single video by its ID.
+  Future<VideoTwitch> getVideo({required String videoId}) async {
+    final data = await get<JsonMap>(
+      '/videos',
+      queryParameters: {'id': videoId},
+    );
+
+    final videoData = data['data'] as JsonList;
+    if (videoData.isNotEmpty) {
+      return VideoTwitch.fromJson(videoData.first);
+    } else {
+      throw NotFoundException('Video not found');
     }
   }
 

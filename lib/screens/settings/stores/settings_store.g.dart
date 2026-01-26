@@ -29,7 +29,8 @@ SettingsStore _$SettingsStoreFromJson(
   ..toggleableOverlay = json['toggleableOverlay'] as bool? ?? false
   ..showLatency = json['showLatency'] as bool? ?? false
   ..audioCompressorEnabled = json['audioCompressorEnabled'] as bool? ?? false
-  ..backgroundAudioEnabled = json['backgroundAudioEnabled'] as bool? ?? true
+  ..backgroundAudioEnabled = json['backgroundAudioEnabled'] as bool? ?? false
+  ..vodChatDelay = (json['vodChatDelay'] as num?)?.toDouble() ?? 0.0
   ..badgeScale = (json['badgeScale'] as num?)?.toDouble() ?? 1.0
   ..emoteScale = (json['emoteScale'] as num?)?.toDouble() ?? 1.0
   ..messageScale = (json['messageScale'] as num?)?.toDouble() ?? 1.0
@@ -121,6 +122,7 @@ Map<String, dynamic> _$SettingsStoreToJson(
   'showLatency': instance.showLatency,
   'audioCompressorEnabled': instance.audioCompressorEnabled,
   'backgroundAudioEnabled': instance.backgroundAudioEnabled,
+  'vodChatDelay': instance.vodChatDelay,
   'badgeScale': instance.badgeScale,
   'emoteScale': instance.emoteScale,
   'messageScale': instance.messageScale,
@@ -472,6 +474,24 @@ mixin _$SettingsStore on _SettingsStoreBase, Store {
         super.backgroundAudioEnabled = value;
       },
     );
+  }
+
+  late final _$vodChatDelayAtom = Atom(
+    name: '_SettingsStoreBase.vodChatDelay',
+    context: context,
+  );
+
+  @override
+  double get vodChatDelay {
+    _$vodChatDelayAtom.reportRead();
+    return super.vodChatDelay;
+  }
+
+  @override
+  set vodChatDelay(double value) {
+    _$vodChatDelayAtom.reportWrite(value, super.vodChatDelay, () {
+      super.vodChatDelay = value;
+    });
   }
 
   late final _$badgeScaleAtom = Atom(
@@ -1042,6 +1062,28 @@ mixin _$SettingsStore on _SettingsStoreBase, Store {
     );
   }
 
+  late final _$emoteProxyCacheBusterAtom = Atom(
+    name: '_SettingsStoreBase.emoteProxyCacheBuster',
+    context: context,
+  );
+
+  @override
+  int get emoteProxyCacheBuster {
+    _$emoteProxyCacheBusterAtom.reportRead();
+    return super.emoteProxyCacheBuster;
+  }
+
+  @override
+  set emoteProxyCacheBuster(int value) {
+    _$emoteProxyCacheBusterAtom.reportWrite(
+      value,
+      super.emoteProxyCacheBuster,
+      () {
+        super.emoteProxyCacheBuster = value;
+      },
+    );
+  }
+
   late final _$showRecentMessagesAtom = Atom(
     name: '_SettingsStoreBase.showRecentMessages',
     context: context,
@@ -1370,6 +1412,18 @@ mixin _$SettingsStore on _SettingsStoreBase, Store {
   }
 
   @override
+  void refreshEmoteProxyCacheBuster() {
+    final _$actionInfo = _$_SettingsStoreBaseActionController.startAction(
+      name: '_SettingsStoreBase.refreshEmoteProxyCacheBuster',
+    );
+    try {
+      return super.refreshEmoteProxyCacheBuster();
+    } finally {
+      _$_SettingsStoreBaseActionController.endAction(_$actionInfo);
+    }
+  }
+
+  @override
   String toString() {
     return '''
 themeType: ${themeType},
@@ -1387,6 +1441,7 @@ toggleableOverlay: ${toggleableOverlay},
 showLatency: ${showLatency},
 audioCompressorEnabled: ${audioCompressorEnabled},
 backgroundAudioEnabled: ${backgroundAudioEnabled},
+vodChatDelay: ${vodChatDelay},
 badgeScale: ${badgeScale},
 emoteScale: ${emoteScale},
 messageScale: ${messageScale},
@@ -1417,6 +1472,7 @@ showReyohohoBadges: ${showReyohohoBadges},
 showPaints: ${showPaints},
 useEmoteProxy: ${useEmoteProxy},
 selectedEmoteProxyUrl: ${selectedEmoteProxyUrl},
+emoteProxyCacheBuster: ${emoteProxyCacheBuster},
 showRecentMessages: ${showRecentMessages},
 showLinkPreviews: ${showLinkPreviews},
 hideLinkPreviewLinks: ${hideLinkPreviewLinks},

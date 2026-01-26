@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:frosty/models/stream.dart';
 import 'package:frosty/screens/channel/channel.dart';
+import 'package:frosty/screens/channel/vods/vod_list_screen.dart';
 import 'package:frosty/screens/home/top/categories/category_streams.dart';
 import 'package:frosty/screens/settings/stores/auth_store.dart';
 import 'package:frosty/theme.dart';
@@ -132,7 +133,19 @@ class StreamCard extends StatelessWidget {
           Row(
             spacing: 4,
             children: [
-              ProfilePicture(userLogin: streamInfo.userLogin, radius: 10),
+              GestureDetector(
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => VodListScreen(
+                      userId: streamInfo.userId,
+                      userLogin: streamInfo.userLogin,
+                      displayName: streamerName,
+                    ),
+                  ),
+                ),
+                child: ProfilePicture(userLogin: streamInfo.userLogin, radius: 10),
+              ),
               Flexible(
                 child: Tooltip(
                   message: streamerName,

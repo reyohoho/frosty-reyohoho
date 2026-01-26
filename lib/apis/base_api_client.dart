@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
 /// Common type aliases to reduce repetition
 typedef JsonMap = Map<String, dynamic>;
@@ -54,8 +55,12 @@ abstract class BaseApiClient {
 
   BaseApiClient(this._dio, this.baseUrl);
 
+  /// Protected accessor for Dio instance for subclasses that need direct access
+  @protected
+  Dio get dio => _dio;
+
   /// Builds the full URL, handling both relative endpoints and full URLs.
-  /// Applies proxy prefix if set.
+  /// Applies proxy prefix if set and adds cache-busting timestamp when proxied.
   String _buildUrl(String endpoint) {
     String url;
     // If endpoint is already a full URL (starts with http:// or https://), use it as-is
@@ -68,7 +73,11 @@ abstract class BaseApiClient {
 
     // Apply proxy prefix if set
     if (proxyUrlPrefix != null && proxyUrlPrefix!.isNotEmpty) {
-      return '$proxyUrlPrefix/$url';
+      // Add cache-busting timestamp to bypass proxy cache
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final separator = url.contains('?') ? '&' : '?';
+      final urlWithTimestamp = '$url${separator}_t=$timestamp';
+      return '$proxyUrlPrefix/$urlWithTimestamp';
     }
 
     return url;

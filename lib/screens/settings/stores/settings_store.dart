@@ -77,7 +77,10 @@ abstract class _SettingsStoreBase with Store {
   static const defaultAudioCompressorEnabled = false;
 
   // Background audio defaults
-  static const defaultBackgroundAudioEnabled = true;
+  static const defaultBackgroundAudioEnabled = false;
+
+  // VOD chat defaults
+  static const defaultVodChatDelay = 0.0;
 
   // Player options
   @JsonKey(defaultValue: defaultShowVideo)
@@ -123,6 +126,12 @@ abstract class _SettingsStoreBase with Store {
   @observable
   var backgroundAudioEnabled = defaultBackgroundAudioEnabled;
 
+  /// VOD chat delay in seconds. Positive values delay the chat,
+  /// negative values make the chat appear earlier relative to the video.
+  @JsonKey(defaultValue: defaultVodChatDelay)
+  @observable
+  var vodChatDelay = defaultVodChatDelay;
+
   @action
   void resetVideoSettings() {
     showVideo = defaultShowVideo;
@@ -136,6 +145,7 @@ abstract class _SettingsStoreBase with Store {
     showLatency = defaultShowLatency;
     audioCompressorEnabled = defaultAudioCompressorEnabled;
     backgroundAudioEnabled = defaultBackgroundAudioEnabled;
+    vodChatDelay = defaultVodChatDelay;
   }
 
   // * Chat Settings
@@ -191,6 +201,19 @@ abstract class _SettingsStoreBase with Store {
   static const defaultUseEmoteProxy = false;
   static const defaultSelectedEmoteProxyUrl = '';
   static const emoteCdnProxyUrl = 'https://cdn.rte.net.ru';
+
+  /// Cache buster timestamp for emote proxy requests.
+  /// Updated when user refreshes emotes to bypass proxy cache.
+  /// Not persisted - each app session starts with a fresh timestamp.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @observable
+  int emoteProxyCacheBuster = DateTime.now().millisecondsSinceEpoch;
+
+  /// Updates the cache buster to force reload of proxied emotes.
+  @action
+  void refreshEmoteProxyCacheBuster() {
+    emoteProxyCacheBuster = DateTime.now().millisecondsSinceEpoch;
+  }
 
   // Recent messages defaults
   static const defaultShowRecentMessages = false;
@@ -338,9 +361,10 @@ abstract class _SettingsStoreBase with Store {
   var selectedEmoteProxyUrl = defaultSelectedEmoteProxyUrl;
 
   /// Returns the proxied emote URL if proxy is enabled, otherwise the original URL.
+  /// Adds a cache buster timestamp to bypass proxy cache.
   String getProxiedEmoteUrl(String originalUrl) {
     if (!useEmoteProxy || originalUrl.isEmpty) return originalUrl;
-    return '$emoteCdnProxyUrl/$originalUrl';
+    return '$emoteCdnProxyUrl/$originalUrl?t=$emoteProxyCacheBuster';
   }
 
   // Recent messages

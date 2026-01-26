@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:frosty/models/channel.dart';
 import 'package:frosty/models/stream.dart';
+import 'package:frosty/screens/channel/vods/vod_list_screen.dart';
 import 'package:frosty/screens/home/top/categories/category_streams.dart';
 import 'package:frosty/utils.dart';
 import 'package:frosty/utils/context_extensions.dart';
@@ -14,6 +15,7 @@ class StreamInfoBar extends StatelessWidget {
   final Channel? offlineChannelInfo;
   final bool showCategory;
   final bool tappableCategory;
+  final bool tappableAvatar;
   final bool showUptime;
   final bool showViewerCount;
   final bool showOfflineIndicator;
@@ -32,6 +34,7 @@ class StreamInfoBar extends StatelessWidget {
     this.offlineChannelInfo,
     this.showCategory = true,
     this.tappableCategory = true,
+    this.tappableAvatar = true,
     this.showUptime = true,
     this.showViewerCount = true,
     this.showOfflineIndicator = true,
@@ -105,35 +108,63 @@ class StreamInfoBar extends StatelessWidget {
           );
     final secondLineSize = isCompact ? 13.0 : 14.0;
 
+    final userLogin = isOffline
+        ? (offlineChannelInfo?.broadcasterLogin.isNotEmpty == true
+              ? offlineChannelInfo?.broadcasterLogin ?? ''
+              : displayName ?? '')
+        : (streamInfo?.userLogin ?? '');
+
+    final userId = isOffline
+        ? (offlineChannelInfo?.broadcasterId ?? '')
+        : (streamInfo?.userId ?? '');
+
+    final userName = isOffline
+        ? (offlineChannelInfo?.broadcasterName ?? displayName ?? '')
+        : (streamInfo?.userName ?? '');
+
+    final profilePicture = Container(
+      decoration: isInSharedChatMode
+          ? BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Theme.of(context).colorScheme.primary,
+                width: 2,
+              ),
+            )
+          : null,
+      child: Padding(
+        padding: isInSharedChatMode
+            ? const EdgeInsets.all(1.5)
+            : EdgeInsets.zero,
+        child: ProfilePicture(
+          userLogin: userLogin,
+          radius: 16,
+        ),
+      ),
+    );
+
     return Padding(
       padding: padding,
       child: Row(
         spacing: 8,
         children: [
-          Container(
-            decoration: isInSharedChatMode
-                ? BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: Theme.of(context).colorScheme.primary,
-                      width: 2,
-                    ),
-                  )
-                : null,
-            child: Padding(
-              padding: isInSharedChatMode
-                  ? const EdgeInsets.all(1.5)
-                  : EdgeInsets.zero,
-              child: ProfilePicture(
-                userLogin: isOffline
-                    ? (offlineChannelInfo?.broadcasterLogin.isNotEmpty == true
-                          ? offlineChannelInfo?.broadcasterLogin ?? ''
-                          : displayName ?? '')
-                    : (streamInfo?.userLogin ?? ''),
-                radius: 16,
-              ),
-            ),
-          ),
+          tappableAvatar && userId.isNotEmpty
+              ? GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => VodListScreen(
+                          userId: userId,
+                          userLogin: userLogin,
+                          displayName: userName.isNotEmpty ? userName : userLogin,
+                        ),
+                      ),
+                    );
+                  },
+                  child: profilePicture,
+                )
+              : profilePicture,
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
