@@ -26,11 +26,27 @@ class _VideoState extends State<Video> with WidgetsBindingObserver {
   Future<void> didChangeAppLifecycleState(
     AppLifecycleState lifecycleState,
   ) async {
-    if (Platform.isAndroid &&
-        !await SimplePip.isAutoPipAvailable &&
-        lifecycleState == AppLifecycleState.inactive &&
-        widget.videoStore.settingsStore.showVideo) {
-      widget.videoStore.requestPictureInPicture();
+    final controller = widget.videoStore.webViewController;
+    final backgroundAudioEnabled =
+        widget.videoStore.settingsStore.backgroundAudioEnabled;
+
+    if (Platform.isAndroid) {
+      // Handle background audio playback
+      if (backgroundAudioEnabled && controller != null) {
+        if (lifecycleState == AppLifecycleState.paused ||
+            lifecycleState == AppLifecycleState.hidden) {
+          // Keep WebView running in background for audio playback
+          await controller.resume();
+        }
+      }
+
+      // Handle PiP mode
+      if (!await SimplePip.isAutoPipAvailable &&
+          lifecycleState == AppLifecycleState.inactive &&
+          widget.videoStore.settingsStore.showVideo &&
+          !backgroundAudioEnabled) {
+        widget.videoStore.requestPictureInPicture();
+      }
     }
   }
 

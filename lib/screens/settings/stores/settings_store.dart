@@ -76,6 +76,9 @@ abstract class _SettingsStoreBase with Store {
   // Audio compressor defaults
   static const defaultAudioCompressorEnabled = false;
 
+  // Background audio defaults
+  static const defaultBackgroundAudioEnabled = true;
+
   // Player options
   @JsonKey(defaultValue: defaultShowVideo)
   @observable
@@ -115,6 +118,11 @@ abstract class _SettingsStoreBase with Store {
   @observable
   var audioCompressorEnabled = defaultAudioCompressorEnabled;
 
+  // Background audio options
+  @JsonKey(defaultValue: defaultBackgroundAudioEnabled)
+  @observable
+  var backgroundAudioEnabled = defaultBackgroundAudioEnabled;
+
   @action
   void resetVideoSettings() {
     showVideo = defaultShowVideo;
@@ -127,6 +135,7 @@ abstract class _SettingsStoreBase with Store {
     toggleableOverlay = defaultToggleableOverlay;
     showLatency = defaultShowLatency;
     audioCompressorEnabled = defaultAudioCompressorEnabled;
+    backgroundAudioEnabled = defaultBackgroundAudioEnabled;
   }
 
   // * Chat Settings

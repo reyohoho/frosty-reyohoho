@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:frosty/screens/settings/stores/settings_store.dart';
 import 'package:frosty/screens/settings/widgets/settings_list_switch.dart';
@@ -123,6 +124,18 @@ class _VideoSettingsState extends State<VideoSettings> {
     }
   }
 
+  Future<void> _handleBackgroundAudioToggle(bool newValue) async {
+    if (newValue && Platform.isAndroid) {
+      // Request notification permission on Android 13+
+      final notificationPermission =
+          await FlutterForegroundTask.checkNotificationPermission();
+      if (notificationPermission != NotificationPermission.granted) {
+        await FlutterForegroundTask.requestNotificationPermission();
+      }
+    }
+    widget.settingsStore.backgroundAudioEnabled = newValue;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Observer(
@@ -188,6 +201,15 @@ class _VideoSettingsState extends State<VideoSettings> {
             ),
             value: widget.settingsStore.showLatency,
             onChanged: (newValue) => widget.settingsStore.showLatency = newValue,
+          ),
+          const SectionHeader('Audio'),
+          SettingsListSwitch(
+            title: 'Background audio playback',
+            subtitle: const Text(
+              'Continue playing audio when the screen is off or app is in background. Requires stream restart to take effect.',
+            ),
+            value: widget.settingsStore.backgroundAudioEnabled,
+            onChanged: _handleBackgroundAudioToggle,
           ),
         ],
       ),

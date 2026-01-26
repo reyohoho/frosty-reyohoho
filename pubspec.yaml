@@ -53,6 +53,7 @@ dependencies:
     flutter_cache_manager: ^3.3.0
     device_info_plus: ^12.3.0
     wakelock_plus: ^1.1.2
+    flutter_foreground_task: ^8.10.3
     simple_icons: ^14.6.1
     simple_pip_mode:
         git:

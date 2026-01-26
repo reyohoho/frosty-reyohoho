@@ -14,6 +14,8 @@ import 'package:frosty/screens/settings/stores/settings_store.dart';
 import 'package:mobx/mobx.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:simple_pip_mode/simple_pip.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 
 part 'video_store.g.dart';
 
@@ -72,6 +74,12 @@ abstract class VideoStoreBase with Store {
   /// Disposes the latency settings reaction.
   ReactionDisposer? _disposeLatencySettingsReaction;
 
+  /// Disposes the background audio wakelock reaction.
+  ReactionDisposer? _disposeBackgroundAudioReaction;
+
+  /// Whether the foreground service is currently running.
+  bool _isForegroundServiceRunning = false;
+
   /// If the video is currently paused.
   ///
   /// Does not pause or play the video, only used for rendering state of the overlay.
@@ -129,6 +137,7 @@ abstract class VideoStoreBase with Store {
         useHybridComposition: !settingsStore.useTextureRendering,
         allowsBackForwardNavigationGestures: false,
         iframeAllowFullscreen: true,
+        allowBackgroundAudioPlaying: settingsStore.backgroundAudioEnabled,
       );
 
   VideoStoreBase({
@@ -194,6 +203,22 @@ abstract class VideoStoreBase with Store {
       const Duration(minutes: 10),
       (_) => _performJsSoftReset(),
     );
+
+    // Initialize background audio management with foreground service
+    if (Platform.isAndroid) {
+      _initForegroundTask();
+
+      _disposeBackgroundAudioReaction = autorun((_) {
+        if (settingsStore.backgroundAudioEnabled && !_paused) {
+          // Start foreground service to keep audio playing in background
+          _startForegroundService();
+          WakelockPlus.enable();
+        } else if (_paused || !settingsStore.backgroundAudioEnabled) {
+          // Stop foreground service when paused or disabled
+          _stopForegroundService();
+        }
+      });
+    }
 
     // React to changes in latency-related settings mid-session
     // This handles the case where user toggles autoSyncChatDelay or showLatency
@@ -1254,6 +1279,68 @@ abstract class VideoStoreBase with Store {
     }
   }
 
+  /// Initializes the foreground task for background audio playback.
+  void _initForegroundTask() {
+    FlutterForegroundTask.init(
+      androidNotificationOptions: AndroidNotificationOptions(
+        channelId: 'background_audio_channel',
+        channelName: 'Background Audio',
+        channelDescription: 'Playing stream audio in background',
+        channelImportance: NotificationChannelImportance.LOW,
+        priority: NotificationPriority.LOW,
+        playSound: false,
+        enableVibration: false,
+        visibility: NotificationVisibility.VISIBILITY_PUBLIC,
+      ),
+      iosNotificationOptions: const IOSNotificationOptions(
+        showNotification: false,
+        playSound: false,
+      ),
+      foregroundTaskOptions: ForegroundTaskOptions(
+        eventAction: ForegroundTaskEventAction.nothing(),
+        autoRunOnBoot: false,
+        autoRunOnMyPackageReplaced: false,
+        allowWakeLock: true,
+        allowWifiLock: true,
+      ),
+    );
+  }
+
+  /// Starts the foreground service for background audio playback.
+  Future<void> _startForegroundService() async {
+    if (_isForegroundServiceRunning) return;
+
+    try {
+      final isRunning = await FlutterForegroundTask.isRunningService;
+      if (isRunning) {
+        _isForegroundServiceRunning = true;
+        return;
+      }
+
+      await FlutterForegroundTask.startService(
+        notificationTitle: 'ReFrosty',
+        notificationText: 'Playing $userLogin stream',
+        notificationIcon: null,
+        callback: _backgroundAudioCallback,
+      );
+      _isForegroundServiceRunning = true;
+    } catch (e) {
+      debugPrint('Failed to start foreground service: $e');
+    }
+  }
+
+  /// Stops the foreground service.
+  Future<void> _stopForegroundService() async {
+    if (!_isForegroundServiceRunning) return;
+
+    try {
+      await FlutterForegroundTask.stopService();
+      _isForegroundServiceRunning = false;
+    } catch (e) {
+      debugPrint('Failed to stop foreground service: $e');
+    }
+  }
+
   @action
   void dispose() {
     if (Platform.isAndroid) {
@@ -1270,6 +1357,15 @@ abstract class VideoStoreBase with Store {
     _disposeVideoModeReaction();
     _disposeAndroidAutoPipReaction?.call();
     _disposeLatencySettingsReaction?.call();
+    _disposeBackgroundAudioReaction?.call();
+
+    // Stop foreground service and disable wakelock when leaving video screen
+    if (Platform.isAndroid) {
+      _stopForegroundService();
+      if (settingsStore.backgroundAudioEnabled) {
+        WakelockPlus.disable();
+      }
+    }
 
     try {
       _webViewController?.evaluateJavascript(
@@ -1281,5 +1377,13 @@ abstract class VideoStoreBase with Store {
 
     _dio.close();
   }
+}
+
+/// Callback for the foreground service - runs in isolate.
+/// This is a no-op since we just need the service to keep the app alive.
+@pragma('vm:entry-point')
+void _backgroundAudioCallback() {
+  // The service just needs to run to keep the app process alive.
+  // The actual audio playback happens in the WebView.
 }
 

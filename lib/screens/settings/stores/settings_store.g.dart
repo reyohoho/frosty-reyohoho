@@ -29,6 +29,7 @@ SettingsStore _$SettingsStoreFromJson(
   ..toggleableOverlay = json['toggleableOverlay'] as bool? ?? false
   ..showLatency = json['showLatency'] as bool? ?? false
   ..audioCompressorEnabled = json['audioCompressorEnabled'] as bool? ?? false
+  ..backgroundAudioEnabled = json['backgroundAudioEnabled'] as bool? ?? true
   ..badgeScale = (json['badgeScale'] as num?)?.toDouble() ?? 1.0
   ..emoteScale = (json['emoteScale'] as num?)?.toDouble() ?? 1.0
   ..messageScale = (json['messageScale'] as num?)?.toDouble() ?? 1.0
@@ -119,6 +120,7 @@ Map<String, dynamic> _$SettingsStoreToJson(
   'toggleableOverlay': instance.toggleableOverlay,
   'showLatency': instance.showLatency,
   'audioCompressorEnabled': instance.audioCompressorEnabled,
+  'backgroundAudioEnabled': instance.backgroundAudioEnabled,
   'badgeScale': instance.badgeScale,
   'emoteScale': instance.emoteScale,
   'messageScale': instance.messageScale,
@@ -446,6 +448,28 @@ mixin _$SettingsStore on _SettingsStoreBase, Store {
       super.audioCompressorEnabled,
       () {
         super.audioCompressorEnabled = value;
+      },
+    );
+  }
+
+  late final _$backgroundAudioEnabledAtom = Atom(
+    name: '_SettingsStoreBase.backgroundAudioEnabled',
+    context: context,
+  );
+
+  @override
+  bool get backgroundAudioEnabled {
+    _$backgroundAudioEnabledAtom.reportRead();
+    return super.backgroundAudioEnabled;
+  }
+
+  @override
+  set backgroundAudioEnabled(bool value) {
+    _$backgroundAudioEnabledAtom.reportWrite(
+      value,
+      super.backgroundAudioEnabled,
+      () {
+        super.backgroundAudioEnabled = value;
       },
     );
   }
@@ -1362,6 +1386,7 @@ showOverlay: ${showOverlay},
 toggleableOverlay: ${toggleableOverlay},
 showLatency: ${showLatency},
 audioCompressorEnabled: ${audioCompressorEnabled},
+backgroundAudioEnabled: ${backgroundAudioEnabled},
 badgeScale: ${badgeScale},
 emoteScale: ${emoteScale},
 messageScale: ${messageScale},
