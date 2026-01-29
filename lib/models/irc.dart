@@ -1,4 +1,6 @@
 import 'dart:math' as math;
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:collection/collection.dart';
@@ -463,6 +465,7 @@ class IRCMessage {
                   text: nameText,
                   paint: userPaint.paint,
                   fallbackColor: color,
+                  source: userPaint.source,
                 ),
               ),
             ),
@@ -1338,17 +1341,191 @@ final regexEmoji = RegExp(
   unicode: true,
 );
 
-/// Widget to render text with paint gradient styling.
-class _PaintedText extends StatelessWidget {
+/// Global cache for paint images to avoid reloading on widget rebuild.
+/// Stores either a single frame or all frames for animated images.
+final _paintImageCache = <String, List<ui.FrameInfo>>{};
+final _paintImageLoadingKeys = <String>{};
+
+/// Widget to render text with paint gradient or image styling.
+class _PaintedText extends StatefulWidget {
   final String text;
   final PaintData paint;
   final Color fallbackColor;
+  final PaintSource source;
 
   const _PaintedText({
     required this.text,
     required this.paint,
     required this.fallbackColor,
+    required this.source,
   });
+
+  @override
+  State<_PaintedText> createState() => _PaintedTextState();
+}
+
+class _PaintedTextState extends State<_PaintedText> {
+  List<ui.FrameInfo>? _frames;
+  int _currentFrameIndex = 0;
+  bool _imageLoadFailed = false;
+  bool _isAnimating = false;
+
+  ui.Image? get _currentImage =>
+      _frames != null && _frames!.isNotEmpty
+          ? _frames![_currentFrameIndex].image
+          : null;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadImageIfNeeded();
+  }
+
+  @override
+  void dispose() {
+    _isAnimating = false;
+    super.dispose();
+  }
+
+  void _startAnimation() {
+    if (_frames == null || _frames!.length <= 1 || _isAnimating) return;
+
+    _isAnimating = true;
+    _animateNextFrame();
+  }
+
+  void _animateNextFrame() {
+    if (!mounted || _frames == null || _frames!.length <= 1) {
+      _isAnimating = false;
+      return;
+    }
+
+    final currentFrame = _frames![_currentFrameIndex];
+    final duration = currentFrame.duration;
+
+    Future.delayed(duration, () {
+      if (!mounted || _frames == null) {
+        _isAnimating = false;
+        return;
+      }
+
+      setState(() {
+        _currentFrameIndex = (_currentFrameIndex + 1) % _frames!.length;
+      });
+
+      _animateNextFrame();
+    });
+  }
+
+  @override
+  void didUpdateWidget(_PaintedText oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.paint.imageUrl != widget.paint.imageUrl) {
+      _frames = null;
+      _currentFrameIndex = 0;
+      _imageLoadFailed = false;
+      _isAnimating = false;
+      _loadImageIfNeeded();
+    }
+  }
+
+  void _loadImageIfNeeded() {
+    final imageUrl = widget.paint.imageUrl;
+    if (imageUrl == null || imageUrl.isEmpty) return;
+
+    // Already loaded
+    if (_frames != null) return;
+
+    // Check global cache first
+    final cachedFrames = _paintImageCache[imageUrl];
+    if (cachedFrames != null) {
+      _frames = cachedFrames;
+      _startAnimation();
+      return;
+    }
+
+    // Skip if already loading this image globally
+    if (_paintImageLoadingKeys.contains(imageUrl)) {
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (mounted && _frames == null) {
+          final frames = _paintImageCache[imageUrl];
+          if (frames != null) {
+            setState(() {
+              _frames = frames;
+            });
+            _startAnimation();
+          } else if (!_paintImageLoadingKeys.contains(imageUrl)) {
+            _loadImageIfNeeded();
+          } else {
+            _loadImageIfNeeded();
+          }
+        }
+      });
+      return;
+    }
+
+    _paintImageLoadingKeys.add(imageUrl);
+
+    final effectiveUrl = _getEffectiveImageUrl(imageUrl);
+
+    // Load image with all frames for animation support
+    _loadAnimatedImage(effectiveUrl, imageUrl);
+  }
+
+  Future<void> _loadAnimatedImage(String url, String cacheKey) async {
+    try {
+      // Use cached_network_image's cache manager to get the file
+      final file = await CustomCacheManager.instance.getSingleFile(url);
+      final bytes = await file.readAsBytes();
+
+      final codec = await ui.instantiateImageCodec(bytes);
+      final frames = <ui.FrameInfo>[];
+
+      for (var i = 0; i < codec.frameCount; i++) {
+        frames.add(await codec.getNextFrame());
+      }
+
+      _paintImageCache[cacheKey] = frames;
+      _paintImageLoadingKeys.remove(cacheKey);
+
+      if (mounted && _frames == null) {
+        setState(() {
+          _frames = frames;
+        });
+        _startAnimation();
+      }
+    } catch (e) {
+      debugPrint('PaintedText: Failed to load animated image: $e');
+      _paintImageLoadingKeys.remove(cacheKey);
+      if (mounted) {
+        setState(() {
+          _imageLoadFailed = true;
+        });
+      }
+    }
+  }
+
+  /// Gets the effective image URL, applying proxy for 7TV sources if enabled.
+  String _getEffectiveImageUrl(String imageUrl) {
+    // For reyohoho, add the CDN base URL if it's a relative path
+    if (widget.source == PaintSource.reyohoho) {
+      if (imageUrl.startsWith('/')) {
+        return 'https://cdn.rte.net.ru$imageUrl';
+      }
+      return imageUrl;
+    }
+
+    // For 7TV, add CDN base URL if it's a relative path, then proxy if enabled
+    if (widget.source == PaintSource.sevenTV) {
+      final fullUrl = imageUrl.startsWith('/')
+          ? 'https://cdn.7tv.app$imageUrl'
+          : imageUrl;
+      return getProxiedEmoteUrl(context, fullUrl);
+    }
+
+    // For other sources, proxy the URL if proxy is enabled
+    return getProxiedEmoteUrl(context, imageUrl);
+  }
 
   /// Converts a 7TV decimal color (RGBA packed as int) to a Flutter Color.
   Color _decimalToColor(int num) {
@@ -1361,32 +1538,69 @@ class _PaintedText extends StatelessWidget {
 
   /// Generates a gradient from paint data.
   Gradient? _buildGradient() {
-    if (paint.stops.isEmpty) return null;
+    if (widget.paint.stops.isEmpty) return null;
 
-    final colors = paint.stops.map((s) => _decimalToColor(s.color)).toList();
-    final stops = paint.stops.map((s) => s.at).toList();
+    var colors =
+        widget.paint.stops.map((s) => _decimalToColor(s.color)).toList();
+    var stops = widget.paint.stops.map((s) => s.at).toList();
 
-    switch (paint.function) {
+    // For repeating gradients, CSS repeating-linear-gradient repeats the pattern
+    // from first stop to last stop. Flutter TileMode.repeated repeats 0-1.
+    // We need to normalize stops and expand them to fill 0-1 range.
+    if (widget.paint.repeat && stops.isNotEmpty) {
+      final firstStop = stops.first;
+      final lastStop = stops.last;
+      final period = lastStop - firstStop;
+
+      if (period > 0 && period < 1) {
+        // Calculate how many repetitions we need to fill 0-1
+        final repetitions = (1.0 / period).ceil() + 1;
+
+        final expandedColors = <Color>[];
+        final expandedStops = <double>[];
+
+        for (var i = 0; i < repetitions; i++) {
+          final offset = i * period;
+          for (var j = 0; j < colors.length; j++) {
+            final newStop = (stops[j] - firstStop) + offset;
+            if (newStop <= 1.0) {
+              expandedColors.add(colors[j]);
+              expandedStops.add(newStop);
+            }
+          }
+        }
+
+        colors = expandedColors;
+        stops = expandedStops;
+      }
+    }
+
+    switch (widget.paint.function) {
       case 'LINEAR_GRADIENT':
-        final angle = (paint.angle ?? 0) * math.pi / 180;
+        // CSS angles: 0deg = bottom to top, 90deg = left to right
+        // Convert to radians
+        final angle = (widget.paint.angle ?? 0) * math.pi / 180;
         return LinearGradient(
           colors: colors,
           stops: stops,
+          // CSS-style angle: measured from vertical, clockwise
           begin: Alignment(
-            -1.0 * math.cos(angle),
-            -1.0 * math.sin(angle),
+            -math.sin(angle),
+            math.cos(angle),
           ),
           end: Alignment(
-            math.cos(angle),
             math.sin(angle),
+            -math.cos(angle),
           ),
-          tileMode: paint.repeat ? TileMode.repeated : TileMode.clamp,
+          tileMode: TileMode.clamp, // We handle repeat manually above
         );
       case 'RADIAL_GRADIENT':
         return RadialGradient(
           colors: colors,
           stops: stops,
-          tileMode: paint.repeat ? TileMode.repeated : TileMode.clamp,
+          // radius: 1.0 to fill the entire element (like CSS radial-gradient)
+          radius: 1.0,
+          tileMode: TileMode.clamp, // We handle repeat manually above
         );
       default:
         return null;
@@ -1395,6 +1609,53 @@ class _PaintedText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Check for image-based paint (function is 'URL' or imageUrl is present)
+    if (widget.paint.imageUrl != null && widget.paint.imageUrl!.isNotEmpty) {
+      if (_currentImage != null) {
+        final image = _currentImage!;
+
+        return ShaderMask(
+          blendMode: BlendMode.srcIn,
+          shaderCallback: (bounds) {
+            // CSS background-size: 100% 100% - stretch image to fill bounds
+            final scaleX = bounds.width / image.width.toDouble();
+            final scaleY = bounds.height / image.height.toDouble();
+
+            final matrix = Float64List(16);
+            Matrix4.identity().copyIntoArray(matrix);
+            matrix[0] = scaleX;
+            matrix[5] = scaleY;
+
+            return ImageShader(
+              image,
+              TileMode.clamp,
+              TileMode.clamp,
+              matrix,
+            );
+          },
+          child: Text(
+            widget.text,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+        );
+      }
+
+      // Image not loaded yet or failed - fall through to gradient/color/fallback
+      if (!_imageLoadFailed) {
+        // Still loading - show text with fallback color while loading
+        return Text(
+          widget.text,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: widget.fallbackColor,
+          ),
+        );
+      }
+    }
+
     final gradient = _buildGradient();
 
     // If we have a gradient, use ShaderMask
@@ -1405,7 +1666,7 @@ class _PaintedText extends StatelessWidget {
           Rect.fromLTWH(0, 0, bounds.width, bounds.height),
         ),
         child: Text(
-          text,
+          widget.text,
           style: const TextStyle(
             fontWeight: FontWeight.bold,
             color: Colors.white, // Base color for shader
@@ -1415,22 +1676,22 @@ class _PaintedText extends StatelessWidget {
     }
 
     // If we have a solid color from paint, use that
-    if (paint.color != null) {
+    if (widget.paint.color != null) {
       return Text(
-        text,
+        widget.text,
         style: TextStyle(
           fontWeight: FontWeight.bold,
-          color: _decimalToColor(paint.color!),
+          color: _decimalToColor(widget.paint.color!),
         ),
       );
     }
 
     // Fallback to default color
     return Text(
-      text,
+      widget.text,
       style: TextStyle(
         fontWeight: FontWeight.bold,
-        color: fallbackColor,
+        color: widget.fallbackColor,
       ),
     );
   }
