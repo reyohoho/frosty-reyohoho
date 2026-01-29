@@ -60,7 +60,7 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
 
   late final SettingsStore _settingsStore;
   late final TwitchApi _twitchApi;
-  final SimplePip _pip = SimplePip();
+  late final SimplePip _pip;
 
   // Cached player widget to prevent recreation on rebuilds
   late final Widget _player;
@@ -97,12 +97,34 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
     _pausedNotifier = ValueNotifier(true);
     _scheduleOverlayHide();
 
+    // Initialize SimplePip with callbacks for PIP exit detection
+    _pip = SimplePip(
+      onPipExited: _onPipExited,
+      onPipEntered: () {
+        if (mounted) {
+          setState(() => _isInPipMode = true);
+        }
+      },
+    );
+
     // Initialize foreground task for background audio on Android
     if (Platform.isAndroid) {
       _initForegroundTask();
     }
 
     _initPlayer();
+  }
+
+  /// Callback for when PIP mode is exited on Android.
+  /// This is called when user dismisses the PIP window.
+  void _onPipExited() {
+    if (mounted) {
+      setState(() => _isInPipMode = false);
+    }
+    // Stop video if setting is enabled
+    if (_settingsStore.stopVideoOnPipDismiss && !_paused) {
+      _handlePausePlay();
+    }
   }
 
   /// Initializes the foreground task for background audio playback.

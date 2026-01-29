@@ -35,7 +35,17 @@ abstract class VideoStoreBase with Store {
   final SettingsStore settingsStore;
 
   /// The [SimplePip] instance used for initiating PiP on Android.
-  final pip = SimplePip();
+  late final SimplePip pip;
+
+  /// Callback for when PIP mode is exited on Android.
+  /// This is called when user dismisses the PIP window.
+  void _onPipExited() {
+    _isInPipMode = false;
+    // Stop video if setting is enabled
+    if (settingsStore.stopVideoOnPipDismiss && !_paused) {
+      handlePausePlay();
+    }
+  }
 
   var _firstTimeSettingQuality = true;
 
@@ -147,6 +157,14 @@ abstract class VideoStoreBase with Store {
     required this.authStore,
     required this.settingsStore,
   }) {
+    // Initialize SimplePip with callbacks for PIP exit detection
+    pip = SimplePip(
+      onPipExited: _onPipExited,
+      onPipEntered: () {
+        _isInPipMode = true;
+      },
+    );
+
     // Reset chat delay to 0 if auto sync is already enabled to prevent starting with old values
     if (settingsStore.autoSyncChatDelay) {
       settingsStore.chatDelay = 0.0;

@@ -30,6 +30,7 @@ SettingsStore _$SettingsStoreFromJson(
   ..showLatency = json['showLatency'] as bool? ?? false
   ..audioCompressorEnabled = json['audioCompressorEnabled'] as bool? ?? false
   ..backgroundAudioEnabled = json['backgroundAudioEnabled'] as bool? ?? false
+  ..stopVideoOnPipDismiss = json['stopVideoOnPipDismiss'] as bool? ?? true
   ..vodChatDelay = (json['vodChatDelay'] as num?)?.toDouble() ?? 0.0
   ..badgeScale = (json['badgeScale'] as num?)?.toDouble() ?? 1.0
   ..emoteScale = (json['emoteScale'] as num?)?.toDouble() ?? 1.0
@@ -122,6 +123,7 @@ Map<String, dynamic> _$SettingsStoreToJson(
   'showLatency': instance.showLatency,
   'audioCompressorEnabled': instance.audioCompressorEnabled,
   'backgroundAudioEnabled': instance.backgroundAudioEnabled,
+  'stopVideoOnPipDismiss': instance.stopVideoOnPipDismiss,
   'vodChatDelay': instance.vodChatDelay,
   'badgeScale': instance.badgeScale,
   'emoteScale': instance.emoteScale,
@@ -476,6 +478,28 @@ mixin _$SettingsStore on _SettingsStoreBase, Store {
     );
   }
 
+  late final _$stopVideoOnPipDismissAtom = Atom(
+    name: '_SettingsStoreBase.stopVideoOnPipDismiss',
+    context: context,
+  );
+
+  @override
+  bool get stopVideoOnPipDismiss {
+    _$stopVideoOnPipDismissAtom.reportRead();
+    return super.stopVideoOnPipDismiss;
+  }
+
+  @override
+  set stopVideoOnPipDismiss(bool value) {
+    _$stopVideoOnPipDismissAtom.reportWrite(
+      value,
+      super.stopVideoOnPipDismiss,
+      () {
+        super.stopVideoOnPipDismiss = value;
+      },
+    );
+  }
+
   late final _$vodChatDelayAtom = Atom(
     name: '_SettingsStoreBase.vodChatDelay',
     context: context,
@@ -492,6 +516,28 @@ mixin _$SettingsStore on _SettingsStoreBase, Store {
     _$vodChatDelayAtom.reportWrite(value, super.vodChatDelay, () {
       super.vodChatDelay = value;
     });
+  }
+
+  late final _$emoteProxyCacheBusterAtom = Atom(
+    name: '_SettingsStoreBase.emoteProxyCacheBuster',
+    context: context,
+  );
+
+  @override
+  int get emoteProxyCacheBuster {
+    _$emoteProxyCacheBusterAtom.reportRead();
+    return super.emoteProxyCacheBuster;
+  }
+
+  @override
+  set emoteProxyCacheBuster(int value) {
+    _$emoteProxyCacheBusterAtom.reportWrite(
+      value,
+      super.emoteProxyCacheBuster,
+      () {
+        super.emoteProxyCacheBuster = value;
+      },
+    );
   }
 
   late final _$badgeScaleAtom = Atom(
@@ -1062,28 +1108,6 @@ mixin _$SettingsStore on _SettingsStoreBase, Store {
     );
   }
 
-  late final _$emoteProxyCacheBusterAtom = Atom(
-    name: '_SettingsStoreBase.emoteProxyCacheBuster',
-    context: context,
-  );
-
-  @override
-  int get emoteProxyCacheBuster {
-    _$emoteProxyCacheBusterAtom.reportRead();
-    return super.emoteProxyCacheBuster;
-  }
-
-  @override
-  set emoteProxyCacheBuster(int value) {
-    _$emoteProxyCacheBusterAtom.reportWrite(
-      value,
-      super.emoteProxyCacheBuster,
-      () {
-        super.emoteProxyCacheBuster = value;
-      },
-    );
-  }
-
   late final _$showRecentMessagesAtom = Atom(
     name: '_SettingsStoreBase.showRecentMessages',
     context: context,
@@ -1364,6 +1388,18 @@ mixin _$SettingsStore on _SettingsStoreBase, Store {
   }
 
   @override
+  void refreshEmoteProxyCacheBuster() {
+    final _$actionInfo = _$_SettingsStoreBaseActionController.startAction(
+      name: '_SettingsStoreBase.refreshEmoteProxyCacheBuster',
+    );
+    try {
+      return super.refreshEmoteProxyCacheBuster();
+    } finally {
+      _$_SettingsStoreBaseActionController.endAction(_$actionInfo);
+    }
+  }
+
+  @override
   void resetChatSettings() {
     final _$actionInfo = _$_SettingsStoreBaseActionController.startAction(
       name: '_SettingsStoreBase.resetChatSettings',
@@ -1412,18 +1448,6 @@ mixin _$SettingsStore on _SettingsStoreBase, Store {
   }
 
   @override
-  void refreshEmoteProxyCacheBuster() {
-    final _$actionInfo = _$_SettingsStoreBaseActionController.startAction(
-      name: '_SettingsStoreBase.refreshEmoteProxyCacheBuster',
-    );
-    try {
-      return super.refreshEmoteProxyCacheBuster();
-    } finally {
-      _$_SettingsStoreBaseActionController.endAction(_$actionInfo);
-    }
-  }
-
-  @override
   String toString() {
     return '''
 themeType: ${themeType},
@@ -1441,7 +1465,9 @@ toggleableOverlay: ${toggleableOverlay},
 showLatency: ${showLatency},
 audioCompressorEnabled: ${audioCompressorEnabled},
 backgroundAudioEnabled: ${backgroundAudioEnabled},
+stopVideoOnPipDismiss: ${stopVideoOnPipDismiss},
 vodChatDelay: ${vodChatDelay},
+emoteProxyCacheBuster: ${emoteProxyCacheBuster},
 badgeScale: ${badgeScale},
 emoteScale: ${emoteScale},
 messageScale: ${messageScale},
@@ -1472,7 +1498,6 @@ showReyohohoBadges: ${showReyohohoBadges},
 showPaints: ${showPaints},
 useEmoteProxy: ${useEmoteProxy},
 selectedEmoteProxyUrl: ${selectedEmoteProxyUrl},
-emoteProxyCacheBuster: ${emoteProxyCacheBuster},
 showRecentMessages: ${showRecentMessages},
 showLinkPreviews: ${showLinkPreviews},
 hideLinkPreviewLinks: ${hideLinkPreviewLinks},

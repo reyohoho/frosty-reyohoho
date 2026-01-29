@@ -79,6 +79,9 @@ abstract class _SettingsStoreBase with Store {
   // Background audio defaults
   static const defaultBackgroundAudioEnabled = false;
 
+  // Stop video on PIP dismiss defaults
+  static const defaultStopVideoOnPipDismiss = true;
+
   // VOD chat defaults
   static const defaultVodChatDelay = 0.0;
 
@@ -126,6 +129,11 @@ abstract class _SettingsStoreBase with Store {
   @observable
   var backgroundAudioEnabled = defaultBackgroundAudioEnabled;
 
+  // Stop video when PIP window is dismissed
+  @JsonKey(defaultValue: defaultStopVideoOnPipDismiss)
+  @observable
+  var stopVideoOnPipDismiss = defaultStopVideoOnPipDismiss;
+
   /// VOD chat delay in seconds. Positive values delay the chat,
   /// negative values make the chat appear earlier relative to the video.
   @JsonKey(defaultValue: defaultVodChatDelay)
@@ -145,6 +153,7 @@ abstract class _SettingsStoreBase with Store {
     showLatency = defaultShowLatency;
     audioCompressorEnabled = defaultAudioCompressorEnabled;
     backgroundAudioEnabled = defaultBackgroundAudioEnabled;
+    stopVideoOnPipDismiss = defaultStopVideoOnPipDismiss;
     vodChatDelay = defaultVodChatDelay;
   }
 

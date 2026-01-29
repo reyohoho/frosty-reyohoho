@@ -211,6 +211,18 @@ class _VideoSettingsState extends State<VideoSettings> {
             value: widget.settingsStore.backgroundAudioEnabled,
             onChanged: _handleBackgroundAudioToggle,
           ),
+          if (Platform.isAndroid)
+            const SectionHeader('Picture-in-Picture'),
+          if (Platform.isAndroid)
+            SettingsListSwitch(
+              title: 'Stop video when PIP is dismissed',
+              subtitle: const Text(
+                'Automatically pause video when the picture-in-picture window is closed.',
+              ),
+              value: widget.settingsStore.stopVideoOnPipDismiss,
+              onChanged: (newValue) =>
+                  widget.settingsStore.stopVideoOnPipDismiss = newValue,
+            ),
         ],
       ),
     );
