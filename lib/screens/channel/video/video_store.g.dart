@@ -197,6 +197,26 @@ mixin _$VideoStore on VideoStoreBase, Store {
     );
   }
 
+  late final _$_videoMirroredAtom = Atom(
+    name: 'VideoStoreBase._videoMirrored',
+    context: context,
+  );
+
+  bool get videoMirrored {
+    _$_videoMirroredAtom.reportRead();
+    return super._videoMirrored;
+  }
+
+  @override
+  bool get _videoMirrored => videoMirrored;
+
+  @override
+  set _videoMirrored(bool value) {
+    _$_videoMirroredAtom.reportWrite(value, super._videoMirrored, () {
+      super._videoMirrored = value;
+    });
+  }
+
   late final _$updateStreamQualitiesAsyncAction = AsyncAction(
     'VideoStoreBase.updateStreamQualities',
     context: context,
@@ -243,6 +263,16 @@ mixin _$VideoStore on VideoStoreBase, Store {
     return _$toggleAudioCompressorAsyncAction.run(
       () => super.toggleAudioCompressor(),
     );
+  }
+
+  late final _$toggleMirrorAsyncAction = AsyncAction(
+    'VideoStoreBase.toggleMirror',
+    context: context,
+  );
+
+  @override
+  Future<void> toggleMirror() {
+    return _$toggleMirrorAsyncAction.run(() => super.toggleMirror());
   }
 
   late final _$initVideoAsyncAction = AsyncAction(

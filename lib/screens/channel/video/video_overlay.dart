@@ -99,6 +99,25 @@ class VideoOverlay extends StatelessWidget {
       ),
     );
 
+    final mirrorButton = Observer(
+      builder: (_) => Tooltip(
+        message: videoStore.videoMirrored
+            ? 'Disable mirror'
+            : 'Enable mirror',
+        preferBelow: false,
+        child: IconButton(
+          icon: Icon(
+            Icons.flip_rounded,
+            color: videoStore.videoMirrored
+                ? Colors.greenAccent
+                : surfaceColor,
+            shadows: _iconShadow,
+          ),
+          onPressed: videoStore.toggleMirror,
+        ),
+      ),
+    );
+
     final videoSettingsButton = IconButton(
       icon: Icon(Icons.settings, shadows: _iconShadow),
       color: surfaceColor,
@@ -546,6 +565,7 @@ class VideoOverlay extends StatelessWidget {
                         ),
                       ),
                       audioCompressorButton,
+                      mirrorButton,
                       Builder(
                         builder: (_) {
                           // On iOS, show toggle behavior. On Android, always show enter PiP.

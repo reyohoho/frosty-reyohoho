@@ -137,6 +137,10 @@ abstract class VideoStoreBase with Store {
   @readonly
   var _audioCompressorActive = false;
 
+  /// Whether video is currently mirrored (horizontally flipped).
+  @readonly
+  var _videoMirrored = false;
+
   /// The video URL to use for the webview.
   String get videoUrl =>
       'https://player.twitch.tv/?channel=$userLogin&muted=false&parent=frosty';
@@ -964,6 +968,28 @@ abstract class VideoStoreBase with Store {
       debugPrint('Audio compressor toggle result: $result');
     } catch (e) {
       debugPrint('Audio compressor toggle error: $e');
+    }
+  }
+
+  /// Toggles video mirror (horizontal flip) on/off.
+  @action
+  Future<void> toggleMirror() async {
+    _videoMirrored = !_videoMirrored;
+    try {
+      final transform = _videoMirrored ? 'scaleX(-1)' : 'scaleX(1)';
+      await _webViewController?.evaluateJavascript(
+        source: '''
+          (function() {
+            const video = document.querySelector('video');
+            if (video) {
+              video.style.transform = '$transform';
+            }
+          })();
+        ''',
+      );
+      debugPrint('Video mirror toggled: $_videoMirrored');
+    } catch (e) {
+      debugPrint('Video mirror toggle error: $e');
     }
   }
 
