@@ -276,6 +276,7 @@ abstract class ChatStoreBase with Store {
   }
 
   /// Chatters matching the current mention autocomplete search term.
+  /// The broadcaster is always first in the list if they match.
   @computed
   List<String> get matchingChatters {
     if (!_showMentionAutocomplete) return const [];
@@ -284,9 +285,19 @@ abstract class ChatStoreBase with Store {
         .last
         .replaceFirst('@', '')
         .toLowerCase();
-    return chatDetailsStore.chatUsers
+
+    final results = chatDetailsStore.chatUsers
         .where((chatter) => chatter.contains(searchTerm))
         .toList();
+
+    // Always prioritize the broadcaster at the top of the list.
+    final broadcasterIndex = results.indexOf(channelName);
+    if (broadcasterIndex > 0) {
+      results.removeAt(broadcasterIndex);
+      results.insert(0, channelName);
+    }
+
+    return results;
   }
 
   /// Current bottom bar height based on visible overlays.
@@ -383,6 +394,9 @@ abstract class ChatStoreBase with Store {
     );
 
     assetsStore.init();
+
+    // Ensure the broadcaster is always in the chatters list for @mention autocomplete.
+    chatDetailsStore.chatUsers.add(channelName);
 
     _messages.add(IRCMessage.createNotice(message: 'Connecting to chat...'));
 
