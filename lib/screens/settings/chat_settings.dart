@@ -407,6 +407,32 @@ class _ChatSettingsState extends State<ChatSettings> {
             value: settingsStore.showUserNotices,
             onChanged: (newValue) => settingsStore.showUserNotices = newValue,
           ),
+          SettingsListSwitch(
+            title: 'Vibrate on mention',
+            subtitle: const Text(
+              'Vibrates when you are mentioned in chat.',
+            ),
+            value: settingsStore.mentionVibration,
+            onChanged: (newValue) => settingsStore.mentionVibration = newValue,
+          ),
+          SettingsListSwitch(
+            title: 'Sound on mention',
+            subtitle: const Text(
+              'Plays a sound when you are mentioned in chat.',
+            ),
+            value: settingsStore.mentionSound,
+            onChanged: (newValue) => settingsStore.mentionSound = newValue,
+          ),
+          if (settingsStore.mentionSound)
+            SettingsListSlider(
+              title: 'Mention sound volume',
+              trailing:
+                  '${(settingsStore.mentionSoundVolume * 100).toStringAsFixed(0)}%',
+              value: settingsStore.mentionSoundVolume,
+              divisions: 10,
+              onChanged: (newValue) =>
+                  settingsStore.mentionSoundVolume = newValue,
+            ),
           const SectionHeader('Layout'),
           SettingsListSwitch(
             title: 'Move emote menu button left',

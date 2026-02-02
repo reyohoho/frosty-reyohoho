@@ -73,6 +73,7 @@ dependencies:
     app_links: ^7.0.0
     extended_text_field: ^16.0.2
     ua_parser: ^1.0.0
+    audioplayers: ^6.1.0
 
 dev_dependencies:
     flutter_test:
@@ -131,6 +132,7 @@ flutter:
         - assets/icons/logo.svg
         - assets/fonts/
         - assets/release-notes.md
+        - assets/sounds/
 
     # An image asset can refer to one or more resolution-specific "variants", see
     # https://flutter.dev/to/resolution-aware-images

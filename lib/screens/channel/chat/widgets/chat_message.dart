@@ -585,7 +585,7 @@ class ChatMessage extends StatelessWidget {
             : Container(
                 padding: const EdgeInsets.only(left: 8, right: 12),
                 decoration: BoxDecoration(
-                  color: highlightColor.withValues(alpha: 0.1),
+                  color: highlightColor.withValues(alpha: 0.4),
                   border: Border(
                     left: BorderSide(color: highlightColor, width: 4),
                   ),

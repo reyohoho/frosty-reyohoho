@@ -12,6 +12,7 @@ import 'package:frosty/screens/channel/chat/details/chat_details_store.dart';
 import 'package:frosty/screens/channel/chat/stores/chat_assets_store.dart';
 import 'package:frosty/screens/settings/stores/auth_store.dart';
 import 'package:frosty/screens/settings/stores/settings_store.dart';
+import 'package:frosty/services/mention_notification_service.dart';
 import 'package:frosty/utils.dart';
 import 'package:mobx/mobx.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
@@ -89,6 +90,9 @@ abstract class ChatStoreBase with Store {
   }
 
   final TwitchApi twitchApi;
+
+  /// Service for handling mention notifications.
+  final _mentionNotificationService = MentionNotificationService();
 
   /// The amount of messages to free (remove) when the [_messageLimit] is reached.
   final _messagesToRemove = (_messageLimit * 0.2).toInt();
@@ -395,6 +399,9 @@ abstract class ChatStoreBase with Store {
 
     assetsStore.init();
 
+    // Initialize mention notification service
+    _mentionNotificationService.init();
+
     // Ensure the broadcaster is always in the chatters list for @mention autocomplete.
     chatDetailsStore.chatUsers.add(channelName);
 
@@ -538,6 +545,18 @@ abstract class ChatStoreBase with Store {
                 showFFZBadges: settings.showFFZBadges,
               );
             }
+
+            // Trigger mention notification for PRIVMSG when user is mentioned
+            if (parsedIRCMessage.command == Command.privateMessage &&
+                parsedIRCMessage.mention == true &&
+                (settings.mentionVibration || settings.mentionSound)) {
+              _mentionNotificationService.notify(
+                vibrationEnabled: settings.mentionVibration,
+                soundEnabled: settings.mentionSound,
+                soundVolume: settings.mentionSoundVolume,
+              );
+            }
+
             messageBuffer.add(parsedIRCMessage);
             break;
           case Command.clearChat:

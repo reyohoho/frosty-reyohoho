@@ -50,6 +50,9 @@ SettingsStore _$SettingsStoreFromJson(
   ..highlightFirstTimeChatter =
       json['highlightFirstTimeChatter'] as bool? ?? true
   ..showUserNotices = json['showUserNotices'] as bool? ?? true
+  ..mentionVibration = json['mentionVibration'] as bool? ?? false
+  ..mentionSound = json['mentionSound'] as bool? ?? false
+  ..mentionSoundVolume = (json['mentionSoundVolume'] as num?)?.toDouble() ?? 0.5
   ..emoteMenuButtonOnLeft = json['emoteMenuButtonOnLeft'] as bool? ?? false
   ..landscapeChatLeftSide = json['landscapeChatLeftSide'] as bool? ?? false
   ..landscapeForceVerticalChat =
@@ -137,6 +140,9 @@ Map<String, dynamic> _$SettingsStoreToJson(
   'chatDelay': instance.chatDelay,
   'highlightFirstTimeChatter': instance.highlightFirstTimeChatter,
   'showUserNotices': instance.showUserNotices,
+  'mentionVibration': instance.mentionVibration,
+  'mentionSound': instance.mentionSound,
+  'mentionSoundVolume': instance.mentionSoundVolume,
   'emoteMenuButtonOnLeft': instance.emoteMenuButtonOnLeft,
   'landscapeChatLeftSide': instance.landscapeChatLeftSide,
   'landscapeForceVerticalChat': instance.landscapeForceVerticalChat,
@@ -718,6 +724,60 @@ mixin _$SettingsStore on _SettingsStoreBase, Store {
   set showUserNotices(bool value) {
     _$showUserNoticesAtom.reportWrite(value, super.showUserNotices, () {
       super.showUserNotices = value;
+    });
+  }
+
+  late final _$mentionVibrationAtom = Atom(
+    name: '_SettingsStoreBase.mentionVibration',
+    context: context,
+  );
+
+  @override
+  bool get mentionVibration {
+    _$mentionVibrationAtom.reportRead();
+    return super.mentionVibration;
+  }
+
+  @override
+  set mentionVibration(bool value) {
+    _$mentionVibrationAtom.reportWrite(value, super.mentionVibration, () {
+      super.mentionVibration = value;
+    });
+  }
+
+  late final _$mentionSoundAtom = Atom(
+    name: '_SettingsStoreBase.mentionSound',
+    context: context,
+  );
+
+  @override
+  bool get mentionSound {
+    _$mentionSoundAtom.reportRead();
+    return super.mentionSound;
+  }
+
+  @override
+  set mentionSound(bool value) {
+    _$mentionSoundAtom.reportWrite(value, super.mentionSound, () {
+      super.mentionSound = value;
+    });
+  }
+
+  late final _$mentionSoundVolumeAtom = Atom(
+    name: '_SettingsStoreBase.mentionSoundVolume',
+    context: context,
+  );
+
+  @override
+  double get mentionSoundVolume {
+    _$mentionSoundVolumeAtom.reportRead();
+    return super.mentionSoundVolume;
+  }
+
+  @override
+  set mentionSoundVolume(double value) {
+    _$mentionSoundVolumeAtom.reportWrite(value, super.mentionSoundVolume, () {
+      super.mentionSoundVolume = value;
     });
   }
 
@@ -1445,6 +1505,9 @@ autoSyncChatDelay: ${autoSyncChatDelay},
 chatDelay: ${chatDelay},
 highlightFirstTimeChatter: ${highlightFirstTimeChatter},
 showUserNotices: ${showUserNotices},
+mentionVibration: ${mentionVibration},
+mentionSound: ${mentionSound},
+mentionSoundVolume: ${mentionSoundVolume},
 emoteMenuButtonOnLeft: ${emoteMenuButtonOnLeft},
 landscapeChatLeftSide: ${landscapeChatLeftSide},
 landscapeForceVerticalChat: ${landscapeForceVerticalChat},

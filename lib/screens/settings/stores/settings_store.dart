@@ -169,6 +169,9 @@ abstract class _SettingsStoreBase with Store {
   // Alert defaults
   static const defaultHighlightFirstTimeChatter = true;
   static const defaultShowUserNotices = true;
+  static const defaultMentionVibration = false;
+  static const defaultMentionSound = false;
+  static const defaultMentionSoundVolume = 0.5;
 
   // Layout defaults
   static const defaultEmoteMenuButtonOnLeft = false;
@@ -271,6 +274,18 @@ abstract class _SettingsStoreBase with Store {
   @JsonKey(defaultValue: defaultShowUserNotices)
   @observable
   var showUserNotices = defaultShowUserNotices;
+
+  @JsonKey(defaultValue: defaultMentionVibration)
+  @observable
+  var mentionVibration = defaultMentionVibration;
+
+  @JsonKey(defaultValue: defaultMentionSound)
+  @observable
+  var mentionSound = defaultMentionSound;
+
+  @JsonKey(defaultValue: defaultMentionSoundVolume)
+  @observable
+  var mentionSoundVolume = defaultMentionSoundVolume;
 
   // Layout options
   @JsonKey(defaultValue: defaultEmoteMenuButtonOnLeft)
@@ -417,6 +432,9 @@ abstract class _SettingsStoreBase with Store {
 
     highlightFirstTimeChatter = defaultHighlightFirstTimeChatter;
     showUserNotices = defaultShowUserNotices;
+    mentionVibration = defaultMentionVibration;
+    mentionSound = defaultMentionSound;
+    mentionSoundVolume = defaultMentionSoundVolume;
 
     emoteMenuButtonOnLeft = defaultEmoteMenuButtonOnLeft;
 
