@@ -497,28 +497,6 @@ mixin _$SettingsStore on _SettingsStoreBase, Store {
     });
   }
 
-  late final _$emoteProxyCacheBusterAtom = Atom(
-    name: '_SettingsStoreBase.emoteProxyCacheBuster',
-    context: context,
-  );
-
-  @override
-  int get emoteProxyCacheBuster {
-    _$emoteProxyCacheBusterAtom.reportRead();
-    return super.emoteProxyCacheBuster;
-  }
-
-  @override
-  set emoteProxyCacheBuster(int value) {
-    _$emoteProxyCacheBusterAtom.reportWrite(
-      value,
-      super.emoteProxyCacheBuster,
-      () {
-        super.emoteProxyCacheBuster = value;
-      },
-    );
-  }
-
   late final _$badgeScaleAtom = Atom(
     name: '_SettingsStoreBase.badgeScale',
     context: context,
@@ -1389,18 +1367,6 @@ mixin _$SettingsStore on _SettingsStoreBase, Store {
   }
 
   @override
-  void refreshEmoteProxyCacheBuster() {
-    final _$actionInfo = _$_SettingsStoreBaseActionController.startAction(
-      name: '_SettingsStoreBase.refreshEmoteProxyCacheBuster',
-    );
-    try {
-      return super.refreshEmoteProxyCacheBuster();
-    } finally {
-      _$_SettingsStoreBaseActionController.endAction(_$actionInfo);
-    }
-  }
-
-  @override
   void resetChatSettings() {
     final _$actionInfo = _$_SettingsStoreBaseActionController.startAction(
       name: '_SettingsStoreBase.resetChatSettings',
@@ -1467,7 +1433,6 @@ showLatency: ${showLatency},
 audioCompressorEnabled: ${audioCompressorEnabled},
 backgroundAudioEnabled: ${backgroundAudioEnabled},
 vodChatDelay: ${vodChatDelay},
-emoteProxyCacheBuster: ${emoteProxyCacheBuster},
 badgeScale: ${badgeScale},
 emoteScale: ${emoteScale},
 messageScale: ${messageScale},

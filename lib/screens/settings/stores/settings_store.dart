@@ -204,19 +204,6 @@ abstract class _SettingsStoreBase with Store {
   static const defaultSelectedEmoteProxyUrl = '';
   static const emoteCdnProxyUrl = 'https://cdn.rte.net.ru';
 
-  /// Cache buster timestamp for emote proxy requests.
-  /// Updated when user refreshes emotes to bypass proxy cache.
-  /// Not persisted - each app session starts with a fresh timestamp.
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  @observable
-  int emoteProxyCacheBuster = DateTime.now().millisecondsSinceEpoch;
-
-  /// Updates the cache buster to force reload of proxied emotes.
-  @action
-  void refreshEmoteProxyCacheBuster() {
-    emoteProxyCacheBuster = DateTime.now().millisecondsSinceEpoch;
-  }
-
   // Recent messages defaults
   static const defaultShowRecentMessages = false;
 
@@ -368,10 +355,10 @@ abstract class _SettingsStoreBase with Store {
   var selectedEmoteProxyUrl = defaultSelectedEmoteProxyUrl;
 
   /// Returns the proxied emote URL if proxy is enabled, otherwise the original URL.
-  /// Adds a cache buster timestamp to bypass proxy cache.
+  /// CDN URLs don't need cache busting since images don't change frequently.
   String getProxiedEmoteUrl(String originalUrl) {
     if (!useEmoteProxy || originalUrl.isEmpty) return originalUrl;
-    return '$emoteCdnProxyUrl/$originalUrl?t=$emoteProxyCacheBuster';
+    return '$emoteCdnProxyUrl/$originalUrl';
   }
 
   // Recent messages

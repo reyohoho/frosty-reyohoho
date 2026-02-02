@@ -270,8 +270,6 @@ class _ChatDetailsState extends State<ChatDetails> {
     setState(() => _isRefreshingAssets = true);
 
     try {
-      // Update cache buster to bypass proxy cache when emote proxy is enabled
-      widget.chatStore.settings.refreshEmoteProxyCacheBuster();
       await widget.chatStore.getAssets();
       if (mounted) {
         HapticFeedback.lightImpact();
