@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
@@ -104,7 +105,20 @@ class ReyohohoApi extends BaseApiClient {
     if (apiUrl == null) return null;
 
     try {
-      final response = await get<JsonMap?>(apiUrl);
+      final raw = await get<dynamic>(apiUrl);
+      if (raw == null) return null;
+
+      final JsonMap? response = switch (raw) {
+        JsonMap map => map,
+        String s => () {
+            try {
+              return jsonDecode(s) as JsonMap?;
+            } catch (_) {
+              return null;
+            }
+          }(),
+        _ => null,
+      };
       if (response == null) return null;
 
       final badgeUrl = response['badgeUrl'] as String?;

@@ -11,6 +11,8 @@ import 'package:frosty/models/channel.dart';
 import 'package:frosty/models/stream.dart';
 import 'package:frosty/screens/settings/stores/auth_store.dart';
 import 'package:frosty/screens/settings/stores/settings_store.dart';
+import 'package:frosty/utils/background_playback_callback.dart';
+import 'package:frosty/utils/pip_callback.dart';
 import 'package:mobx/mobx.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:simple_pip_mode/simple_pip.dart';
@@ -41,14 +43,11 @@ abstract class VideoStoreBase with Store {
   /// This is called when user dismisses the PIP window.
   void _onPipExited() {
     _isInPipMode = false;
-    // Stop video if setting is enabled
-    if (settingsStore.stopVideoOnPipDismiss && !_paused) {
+    if (!_paused) {
       handlePausePlay();
       _paused = true;
-      // Stop foreground service and wakelock immediately so background playback
-      // via notification stops when PIP is closed (do not rely on VideoPause handler).
       if (Platform.isAndroid && settingsStore.backgroundAudioEnabled) {
-        _stopForegroundService();
+        _stopForegroundService("pipExited");
         WakelockPlus.disable();
       }
     }
@@ -165,12 +164,24 @@ abstract class VideoStoreBase with Store {
     required this.settingsStore,
   }) {
     // Initialize SimplePip with callbacks for PIP exit detection
+    debugPrint('[PIP] VideoStore: registering SimplePip callbacks (onPipExited, onPipEntered)');
     pip = SimplePip(
-      onPipExited: _onPipExited,
+      onPipExited: () {
+        debugPrint('[PIP] VideoStore: onPipExited invoked (native -> Dart)');
+        _onPipExited();
+      },
       onPipEntered: () {
+        debugPrint('[PIP] VideoStore: onPipEntered invoked (native -> Dart)');
         _isInPipMode = true;
       },
     );
+    PipCallbackRegistry.registerPipExitedFromNative((event) {
+      if (event == 'dismissed') {
+        _onPipExited();
+      } else if (event == 'expanded') {
+        _isInPipMode = false;
+      }
+    });
 
     // Reset chat delay to 0 if auto sync is already enabled to prevent starting with old values
     if (settingsStore.autoSyncChatDelay) {
@@ -234,13 +245,13 @@ abstract class VideoStoreBase with Store {
       _initForegroundTask();
 
       _disposeBackgroundAudioReaction = autorun((_) {
-        if (settingsStore.backgroundAudioEnabled && !_paused) {
-          // Start foreground service to keep audio playing in background
+        if (settingsStore.backgroundAudioEnabled) {
+          // Keep foreground service running while on stream with bg playback on
           _startForegroundService();
           WakelockPlus.enable();
-        } else if (_paused || !settingsStore.backgroundAudioEnabled) {
-          // Stop foreground service when paused or disabled
-          _stopForegroundService();
+        } else if (_isForegroundServiceRunning) {
+          _stopForegroundService("_disposeBackgroundAudioReaction");
+          WakelockPlus.disable();
         }
       });
     }
@@ -340,6 +351,7 @@ abstract class VideoStoreBase with Store {
     controller.addJavaScriptHandler(
       handlerName: 'PipEntered',
       callback: (args) {
+        debugPrint('[PIP] VideoStore: PipEntered (WebView JS handler)');
         _overlayWasVisibleBeforePip = _overlayVisible;
         _isInPipMode = true;
         _overlayTimer?.cancel();
@@ -350,6 +362,7 @@ abstract class VideoStoreBase with Store {
     controller.addJavaScriptHandler(
       handlerName: 'PipExited',
       callback: (args) {
+        debugPrint('[PIP] VideoStore: PipExited (WebView JS handler)');
         _isInPipMode = false;
         if (_overlayWasVisibleBeforePip) {
           _updateLatencyTrackerVisibility(true);
@@ -1175,6 +1188,11 @@ abstract class VideoStoreBase with Store {
     if (!settingsStore.showVideo) {
       updateStreamInfo(forceUpdate: true);
     }
+    // Re-start foreground service when returning to app if background audio is on
+    if (Platform.isAndroid && settingsStore.backgroundAudioEnabled) {
+      _startForegroundService();
+      WakelockPlus.enable();
+    }
   }
 
   /// Updates the stream info from the Twitch API.
@@ -1346,28 +1364,50 @@ abstract class VideoStoreBase with Store {
         notificationTitle: 'ReFrosty',
         notificationText: 'Playing $userLogin stream',
         notificationIcon: null,
-        callback: _backgroundAudioCallback,
+        notificationButtons: const [
+          NotificationButton(id: 'pause', text: 'Pause'),
+        ],
+        callback: backgroundAudioTaskCallback,
       );
       _isForegroundServiceRunning = true;
+      BackgroundPlaybackCallbackRegistry.register(_onNotificationPauseOrDismiss);
     } catch (e) {
       debugPrint('Failed to start foreground service: $e');
     }
   }
 
+  /// Called when user taps Pause in notification or swipes notification away.
+  void _onNotificationPauseOrDismiss() {
+    if (_paused) return;
+    handlePausePlay();
+    _paused = true;
+    if (Platform.isAndroid && settingsStore.backgroundAudioEnabled) {
+      _stopForegroundService("notification");
+      WakelockPlus.disable();
+    }
+  }
+
   /// Stops the foreground service.
-  Future<void> _stopForegroundService() async {
+  Future<void> _stopForegroundService(String reason) async {
+    debugPrint(
+      '[PIP] VideoStore: _stopForegroundService called, '
+      '_isForegroundServiceRunning=$_isForegroundServiceRunning, reason=$reason',
+    );
     if (!_isForegroundServiceRunning) return;
 
+    BackgroundPlaybackCallbackRegistry.unregister();
     try {
       await FlutterForegroundTask.stopService();
       _isForegroundServiceRunning = false;
+      debugPrint('[PIP] VideoStore: foreground service stopped');
     } catch (e) {
-      debugPrint('Failed to stop foreground service: $e');
+      debugPrint('[PIP] VideoStore: failed to stop foreground service: $e');
     }
   }
 
   @action
   void dispose() {
+    PipCallbackRegistry.registerPipExitedFromNative(null);
     if (Platform.isAndroid) {
       SimplePip.isAutoPipAvailable.then((isAutoPipAvailable) {
         if (isAutoPipAvailable) pip.setAutoPipMode(autoEnter: false);
@@ -1386,7 +1426,7 @@ abstract class VideoStoreBase with Store {
 
     // Stop foreground service and disable wakelock when leaving video screen
     if (Platform.isAndroid) {
-      _stopForegroundService();
+      _stopForegroundService("dispose");
       if (settingsStore.backgroundAudioEnabled) {
         WakelockPlus.disable();
       }
@@ -1402,13 +1442,5 @@ abstract class VideoStoreBase with Store {
 
     _dio.close();
   }
-}
-
-/// Callback for the foreground service - runs in isolate.
-/// This is a no-op since we just need the service to keep the app alive.
-@pragma('vm:entry-point')
-void _backgroundAudioCallback() {
-  // The service just needs to run to keep the app process alive.
-  // The actual audio playback happens in the WebView.
 }
 

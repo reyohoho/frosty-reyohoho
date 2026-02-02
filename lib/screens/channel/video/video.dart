@@ -65,7 +65,7 @@ class _VideoState extends State<Video> with WidgetsBindingObserver {
       onLoadStart: widget.videoStore.onLoadStart,
       onLoadStop: widget.videoStore.onLoadStop,
       onConsoleMessage: (controller, consoleMessage) {
-        debugPrint('[WebView Console] ${consoleMessage.message}');
+        // debugPrint('[WebView Console] ${consoleMessage.message}');
       },
       shouldInterceptRequest: (controller, request) async {
         return widget.videoStore.shouldInterceptRequest(request);

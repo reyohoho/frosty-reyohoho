@@ -12,6 +12,8 @@ import 'package:frosty/screens/settings/stores/settings_store.dart';
 import 'package:frosty/theme.dart';
 import 'package:frosty/utils.dart';
 import 'package:frosty/utils/context_extensions.dart';
+import 'package:frosty/utils/background_playback_callback.dart';
+import 'package:frosty/utils/pip_callback.dart';
 import 'package:frosty/widgets/draggable_divider.dart';
 import 'package:frosty/widgets/profile_picture.dart';
 import 'package:intl/intl.dart';
@@ -98,14 +100,26 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
     _scheduleOverlayHide();
 
     // Initialize SimplePip with callbacks for PIP exit detection
+    debugPrint('[PIP] VodPlayer: registering SimplePip callbacks (onPipExited, onPipEntered)');
     _pip = SimplePip(
-      onPipExited: _onPipExited,
+      onPipExited: () {
+        debugPrint('[PIP] VodPlayer: onPipExited invoked (native -> Dart)');
+        _onPipExited();
+      },
       onPipEntered: () {
+        debugPrint('[PIP] VodPlayer: onPipEntered invoked (native -> Dart)');
         if (mounted) {
           setState(() => _isInPipMode = true);
         }
       },
     );
+    PipCallbackRegistry.registerPipExitedFromNative((event) {
+      if (event == 'dismissed') {
+        _onPipExited();
+      } else if (event == 'expanded' && mounted) {
+        setState(() => _isInPipMode = false);
+      }
+    });
 
     // Initialize foreground task for background audio on Android
     if (Platform.isAndroid) {
@@ -121,13 +135,10 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
     if (mounted) {
       setState(() => _isInPipMode = false);
     }
-    // Stop video if setting is enabled
-    if (_settingsStore.stopVideoOnPipDismiss && !_paused) {
+    if (!_paused) {
       _handlePausePlay();
       _paused = true;
       _pausedNotifier.value = true;
-      // Stop foreground service and wakelock immediately so background playback
-      // via notification stops when PIP is closed (do not rely on VideoPause handler).
       if (Platform.isAndroid && _settingsStore.backgroundAudioEnabled) {
         _stopForegroundService();
         WakelockPlus.disable();
@@ -177,23 +188,45 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
         notificationTitle: 'ReFrosty',
         notificationText: 'Playing VOD: ${widget.video.userName}',
         notificationIcon: null,
-        callback: _vodBackgroundAudioCallback,
+        notificationButtons: const [
+          NotificationButton(id: 'pause', text: 'Pause'),
+        ],
+        callback: backgroundAudioTaskCallback,
       );
       _isForegroundServiceRunning = true;
+      BackgroundPlaybackCallbackRegistry.register(_onNotificationPauseOrDismiss);
     } catch (e) {
       debugPrint('Failed to start foreground service: $e');
     }
   }
 
+  /// Called when user taps Pause in notification or swipes notification away.
+  void _onNotificationPauseOrDismiss() {
+    if (_paused) return;
+    _handlePausePlay();
+    _paused = true;
+    _pausedNotifier.value = true;
+    if (Platform.isAndroid && _settingsStore.backgroundAudioEnabled) {
+      _stopForegroundService();
+      WakelockPlus.disable();
+    }
+  }
+
   /// Stops the foreground service.
   Future<void> _stopForegroundService() async {
+    debugPrint(
+      '[PIP] VodPlayer: _stopForegroundService called, '
+      '_isForegroundServiceRunning=$_isForegroundServiceRunning',
+    );
     if (!_isForegroundServiceRunning) return;
 
+    BackgroundPlaybackCallbackRegistry.unregister();
     try {
       await FlutterForegroundTask.stopService();
       _isForegroundServiceRunning = false;
+      debugPrint('[PIP] VodPlayer: foreground service stopped');
     } catch (e) {
-      debugPrint('Failed to stop foreground service: $e');
+      debugPrint('[PIP] VodPlayer: failed to stop foreground service: $e');
     }
   }
 
@@ -250,6 +283,7 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
         controller.addJavaScriptHandler(
           handlerName: 'PipEntered',
           callback: (args) {
+            debugPrint('[PIP] VodPlayer: PipEntered (WebView JS handler)');
             if (mounted) {
               setState(() {
                 _isInPipMode = true;
@@ -263,6 +297,7 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
         controller.addJavaScriptHandler(
           handlerName: 'PipExited',
           callback: (args) {
+            debugPrint('[PIP] VodPlayer: PipExited (WebView JS handler)');
             if (mounted) {
               setState(() => _isInPipMode = false);
               _scheduleOverlayHide();
@@ -293,6 +328,14 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
           // Keep WebView running in background for audio playback
           await _webViewController?.resume();
         }
+      }
+
+      // Re-start foreground service when returning to app if background audio is on and video is playing
+      if (state == AppLifecycleState.resumed &&
+          backgroundAudioEnabled &&
+          !_paused) {
+        _startForegroundService();
+        WakelockPlus.enable();
       }
 
       // Check if auto-PIP is available (newer Android versions handle it automatically)
@@ -1209,6 +1252,7 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
 
   @override
   void dispose() {
+    PipCallbackRegistry.registerPipExitedFromNative(null);
     WidgetsBinding.instance.removeObserver(this);
     _overlayTimer?.cancel();
     _progressTimer?.cancel();
@@ -1233,12 +1277,4 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
     );
     super.dispose();
   }
-}
-
-/// Callback for the foreground service - runs in isolate.
-/// This is a no-op since we just need the service to keep the app alive.
-@pragma('vm:entry-point')
-void _vodBackgroundAudioCallback() {
-  // The service just needs to run to keep the app process alive.
-  // The actual audio playback happens in the WebView.
 }

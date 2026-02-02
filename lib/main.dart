@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:advanced_in_app_review/advanced_in_app_review.dart';
 import 'package:app_links/app_links.dart';
@@ -8,6 +9,8 @@ import 'package:app_links/app_links.dart';
 // import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:frosty/apis/bttv_api.dart';
@@ -22,6 +25,8 @@ import 'package:frosty/cache_manager.dart';
 // import 'package:frosty/firebase_options.dart';
 import 'package:frosty/screens/channel/channel.dart';
 import 'package:frosty/screens/home/home.dart';
+import 'package:frosty/utils/background_playback_callback.dart';
+import 'package:frosty/utils/pip_callback.dart';
 import 'package:frosty/screens/onboarding/onboarding_intro.dart';
 import 'package:frosty/screens/settings/stores/auth_store.dart';
 import 'package:frosty/screens/settings/stores/settings_store.dart';
@@ -36,6 +41,15 @@ import 'package:url_launcher/url_launcher.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  PlatformInAppWebViewController.debugLoggingSettings.enabled = false;
+
+  if (Platform.isAndroid) {
+    FlutterForegroundTask.initCommunicationPort();
+    FlutterForegroundTask.addTaskDataCallback(
+      BackgroundPlaybackCallbackRegistry.invoke,
+    );
+  }
 
   CustomCacheManager.removeOrphanedCacheFiles();
 
@@ -170,6 +184,8 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
+
+    pipEventChannelListen();
 
     AdvancedInAppReview()
         .setMinDaysBeforeRemind(7)
