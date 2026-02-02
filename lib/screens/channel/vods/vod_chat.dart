@@ -272,7 +272,7 @@ class _VodChatState extends State<VodChat> {
     });
   }
 
-  /// Renders message fragments with support for third-party emotes and link previews
+  /// Renders message fragments with support for third-party emotes, zero-width emotes, and link previews
   /// Returns a tuple of (spans, linkPreviews)
   (List<InlineSpan>, List<LinkPreviewInfo>) _renderMessageFragments(
     VodCommentMessage message,
@@ -300,36 +300,56 @@ class _VodChatState extends State<VodChat> {
             ),
           ),
         );
+        spans.add(const TextSpan(text: ' '));
       } else {
         // Check for third-party emotes and links in text
+        // Process in reverse order to handle zero-width emote stacking
         final words = fragment.text.split(' ');
-        for (var i = 0; i < words.length; i++) {
-          final word = words[i];
+        final localSpan = <InlineSpan>[];
+        var index = words.length - 1;
+
+        while (index >= 0) {
+          final word = words[index];
           final emote = _channelEmotes[word];
 
           if (emote != null) {
-            // Found a third-party emote
-            // Calculate dimensions - use emote's own size if available
-            final height = emote.height != null
-                ? emote.height! * emoteScale
-                : emoteHeight;
-            final width = emote.width != null ? emote.width! * emoteScale : null;
+            // Check if this is a zero-width emote that should stack
+            if (emote.zeroWidth && index > 0) {
+              // Process zero-width emote stack
+              index = _processZeroWidthEmoteStack(
+                localSpan,
+                words,
+                index,
+                emote,
+                emoteHeight,
+                emoteScale,
+              );
+            } else {
+              // Regular emote
+              final height = emote.height != null
+                  ? emote.height! * emoteScale
+                  : emoteHeight;
+              final width =
+                  emote.width != null ? emote.width! * emoteScale : null;
 
-            spans.add(
-              WidgetSpan(
-                alignment: PlaceholderAlignment.middle,
-                child: FrostyCachedNetworkImage(
-                  imageUrl: emote.url,
-                  height: height,
-                  width: width,
-                  useFade: false,
-                  placeholder: (_, _) => SizedBox(
-                    width: width ?? emoteHeight,
+              localSpan.add(
+                WidgetSpan(
+                  alignment: PlaceholderAlignment.middle,
+                  child: FrostyCachedNetworkImage(
+                    imageUrl: emote.url,
                     height: height,
+                    width: width,
+                    useFade: false,
+                    placeholder: (_, _) => SizedBox(
+                      width: width ?? emoteHeight,
+                      height: height,
+                    ),
                   ),
                 ),
-              ),
-            );
+              );
+              localSpan.add(const TextSpan(text: ' '));
+              index--;
+            }
           } else if (word.startsWith('http://') || word.startsWith('https://')) {
             // URL - check for link preview
             if (showLinkPreviews) {
@@ -340,7 +360,7 @@ class _VodChatState extends State<VodChat> {
             }
 
             // Add tappable link
-            spans.add(
+            localSpan.add(
               TextSpan(
                 text: _settingsStore.hideLinkPreviewLinks &&
                         showLinkPreviews &&
@@ -360,20 +380,77 @@ class _VodChatState extends State<VodChat> {
                       ),
               ),
             );
-          } else {
+            localSpan.add(const TextSpan(text: ' '));
+            index--;
+          } else if (word.isNotEmpty) {
             // Regular text
-            spans.add(TextSpan(text: word));
-          }
-
-          // Add space between words (except for last word)
-          if (i < words.length - 1) {
-            spans.add(const TextSpan(text: ' '));
+            localSpan.add(TextSpan(text: word));
+            localSpan.add(const TextSpan(text: ' '));
+            index--;
+          } else {
+            index--;
           }
         }
+
+        // Add the local span reversed to the final span
+        spans.addAll(localSpan.reversed);
       }
     }
 
     return (spans, linkPreviews);
+  }
+
+  /// Processes zero-width emote stacking and returns updated index
+  int _processZeroWidthEmoteStack(
+    List<InlineSpan> localSpan,
+    List<String> words,
+    int startIndex,
+    Emote startEmote,
+    double emoteHeight,
+    double emoteScale,
+  ) {
+    final emoteStack = <Emote>[];
+    var index = startIndex;
+
+    // Collect consecutive zero-width emotes
+    Emote? nextEmote = startEmote;
+    while (nextEmote != null && nextEmote.zeroWidth && index > 0) {
+      emoteStack.add(nextEmote);
+      index--;
+      nextEmote = _channelEmotes[words[index]];
+    }
+
+    // If there's one more emote that's NOT zero-width, add it to the base
+    if (nextEmote != null && !nextEmote.zeroWidth) {
+      emoteStack.add(nextEmote);
+      index--;
+    }
+
+    // Build the stacked emote widget
+    final children = emoteStack.reversed.map((emote) {
+      final height =
+          emote.height != null ? emote.height! * emoteScale : emoteHeight;
+      final width = emote.width != null ? emote.width! * emoteScale : null;
+      return FrostyCachedNetworkImage(
+        imageUrl: emote.url,
+        height: height,
+        width: width ?? emoteHeight,
+        useFade: false,
+      );
+    }).toList();
+
+    localSpan.add(
+      WidgetSpan(
+        alignment: PlaceholderAlignment.middle,
+        child: Stack(
+          alignment: AlignmentDirectional.center,
+          children: children,
+        ),
+      ),
+    );
+    localSpan.add(const TextSpan(text: ' '));
+
+    return index;
   }
 
   /// Gets a Reyohoho badge for a user, loading on-demand if needed.

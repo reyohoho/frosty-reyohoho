@@ -11,8 +11,8 @@ import 'package:frosty/screens/channel/vods/vod_chat.dart';
 import 'package:frosty/screens/settings/stores/settings_store.dart';
 import 'package:frosty/theme.dart';
 import 'package:frosty/utils.dart';
-import 'package:frosty/utils/context_extensions.dart';
 import 'package:frosty/utils/background_playback_callback.dart';
+import 'package:frosty/utils/context_extensions.dart';
 import 'package:frosty/utils/pip_callback.dart';
 import 'package:frosty/widgets/draggable_divider.dart';
 import 'package:frosty/widgets/profile_picture.dart';
@@ -37,7 +37,7 @@ class VodPlayerScreen extends StatefulWidget {
 }
 
 class _VodPlayerScreenState extends State<VodPlayerScreen>
-    with WidgetsBindingObserver {
+    with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   // GlobalKey to preserve WebView state across widget tree changes (e.g., PIP mode)
   final _webViewKey = GlobalKey();
   // GlobalKey to preserve VodChat state across orientation changes
@@ -70,6 +70,19 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
   // Background audio support
   bool _isForegroundServiceRunning = false;
 
+  // PiP drag state
+  double _pipDragDistance = 0;
+  bool _isPipDragging = false;
+  bool _isInPipTriggerZone = false;
+
+  // Essential constants for good UX balance
+  static const double _pipTriggerDistance = 80;
+  static const double _pipMaxDragDistance = 150;
+
+  // Animation controller for smooth spring-back
+  late AnimationController _animationController;
+  late Animation<double> _springBackAnimation;
+
   /// The video URL to use for the webview
   String get videoUrl =>
       'https://player.twitch.tv/?video=${widget.video.id}&parent=frosty&autoplay=true';
@@ -98,6 +111,19 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
     _currentTimeNotifier = ValueNotifier(0);
     _pausedNotifier = ValueNotifier(true);
     _scheduleOverlayHide();
+
+    // Initialize animation controller for smooth drag interactions
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 250),
+      vsync: this,
+    );
+    _springBackAnimation = Tween<double>(begin: 0, end: 0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
+    )..addListener(() {
+        setState(() {
+          _pipDragDistance = _springBackAnimation.value;
+        });
+      });
 
     // Initialize SimplePip with callbacks for PIP exit detection
     debugPrint('[PIP] VodPlayer: registering SimplePip callbacks (onPipExited, onPipEntered)');
@@ -459,6 +485,145 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
     } catch (e) {
       debugPrint(e.toString());
     }
+  }
+
+  // PiP swipe gesture handlers
+  void _handlePipDragStart(DragStartDetails details) {
+    // Disable drag gesture when already in PiP mode or video is paused
+    if (_isInPipMode || _paused) return;
+
+    _animationController.stop();
+    setState(() {
+      _isPipDragging = true;
+      _pipDragDistance = 0;
+      _isInPipTriggerZone = false;
+    });
+  }
+
+  void _handlePipDragUpdate(DragUpdateDetails details) {
+    if (!_isPipDragging || _isInPipMode || _paused) return;
+
+    setState(() {
+      _pipDragDistance += details.delta.dy;
+      _pipDragDistance = _pipDragDistance.clamp(0, _pipMaxDragDistance);
+
+      // Check if we've entered or exited the trigger zone for haptic feedback
+      final wasInTriggerZone = _isInPipTriggerZone;
+      _isInPipTriggerZone = _pipDragDistance >= _pipTriggerDistance;
+
+      // Provide haptic feedback when entering the trigger zone
+      if (!wasInTriggerZone && _isInPipTriggerZone) {
+        HapticFeedback.mediumImpact();
+      } else if (wasInTriggerZone && !_isInPipTriggerZone) {
+        HapticFeedback.lightImpact();
+      }
+    });
+  }
+
+  void _handlePipDragEnd(DragEndDetails details) {
+    if (!_isPipDragging || _isInPipMode || _paused) return;
+
+    final velocity = details.velocity.pixelsPerSecond.dy;
+    final shouldTriggerPip =
+        _pipDragDistance >= _pipTriggerDistance || velocity > 600;
+
+    if (shouldTriggerPip) {
+      HapticFeedback.mediumImpact();
+      _requestPictureInPicture();
+      _resetDragState();
+    } else {
+      _animateSpringBack();
+    }
+  }
+
+  void _handlePipDragCancel() {
+    if (!_isPipDragging) return;
+    _animateSpringBack();
+  }
+
+  void _resetDragState() {
+    setState(() {
+      _isPipDragging = false;
+      _pipDragDistance = 0;
+      _isInPipTriggerZone = false;
+    });
+  }
+
+  void _animateSpringBack() {
+    _springBackAnimation = Tween<double>(begin: _pipDragDistance, end: 0)
+        .animate(
+          CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
+        );
+
+    _animationController.reset();
+    _animationController.forward().then((_) {
+      _resetDragState();
+    });
+  }
+
+  /// Wraps a video widget with PiP swipe-down gesture handling.
+  Widget _buildPipGestureWrapper({required Widget child, double? aspectRatio}) {
+    return AnimatedBuilder(
+      animation: Listenable.merge([_animationController, _springBackAnimation]),
+      builder: (context, _) {
+        final currentDragDistance = _isPipDragging
+            ? _pipDragDistance
+            : _springBackAnimation.value;
+
+        final scaleFactor =
+            1.0 - (currentDragDistance / _pipMaxDragDistance * 0.1);
+
+        Widget content = child;
+        if (aspectRatio != null) {
+          content = AspectRatio(aspectRatio: aspectRatio, child: child);
+        }
+
+        return Transform.translate(
+          offset: Offset(0, currentDragDistance),
+          child: Transform.scale(
+            scale: scaleFactor.clamp(0.9, 1.0),
+            child: Stack(
+              children: [
+                GestureDetector(
+                  onPanStart: _handlePipDragStart,
+                  onPanUpdate: _handlePipDragUpdate,
+                  onPanEnd: _handlePipDragEnd,
+                  onPanCancel: _handlePipDragCancel,
+                  child: content,
+                ),
+                if (!_isInPipMode)
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      ignoring: !(_isPipDragging && _pipDragDistance > 0),
+                      child: AnimatedOpacity(
+                        opacity: (_isPipDragging && _pipDragDistance > 0)
+                            ? 1.0
+                            : 0.0,
+                        duration: const Duration(milliseconds: 150),
+                        curve: Curves.easeOut,
+                        child: Container(
+                          color: Colors.black.withValues(alpha: 0.4),
+                          child: const Center(
+                            child: Text(
+                              'Swipe down to enter picture-in-picture',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   void _startProgressTimer() {
@@ -1066,10 +1231,10 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
           bottom: false,
           child: Column(
             children: [
-              // Video with 16:9 aspect ratio
-              AspectRatio(
-                aspectRatio: 16 / 9,
+              // Video with 16:9 aspect ratio and swipe-to-PiP gesture
+              _buildPipGestureWrapper(
                 child: videoWithOverlay(),
+                aspectRatio: 16 / 9,
               ),
               // Content below video
               Expanded(
@@ -1198,9 +1363,9 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
         body: _showChat
             ? Row(
                 children: [
-                  // Video takes remaining space
+                  // Video takes remaining space with swipe-to-PiP gesture
                   Expanded(
-                    child: videoWithOverlay(),
+                    child: _buildPipGestureWrapper(child: videoWithOverlay()),
                   ),
                   // Draggable divider
                   DraggableDivider(
@@ -1231,7 +1396,7 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
                   ),
                 ],
               )
-            : videoWithOverlay(),
+            : _buildPipGestureWrapper(child: videoWithOverlay()),
       );
     }
 
@@ -1258,6 +1423,7 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
     _progressTimer?.cancel();
     _currentTimeNotifier.dispose();
     _pausedNotifier.dispose();
+    _animationController.dispose();
 
     // Stop foreground service and disable wakelock when leaving VOD player
     if (Platform.isAndroid) {
