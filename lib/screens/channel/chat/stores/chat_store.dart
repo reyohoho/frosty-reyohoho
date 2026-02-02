@@ -258,6 +258,15 @@ abstract class ChatStoreBase with Store {
   @readonly
   var _userState = const USERSTATE();
 
+  /// Whether the current user is a moderator in this channel.
+  bool get isModerator => _userState.mod;
+
+  /// Whether the current user is the channel owner.
+  bool get isChannelOwner => channelName == auth.user.details?.login;
+
+  /// Whether the current user can moderate (mod or owner).
+  bool get canModerate => isModerator || isChannelOwner;
+
   @observable
   var expandChat = false;
 
@@ -1240,6 +1249,13 @@ abstract class ChatStoreBase with Store {
   void clearNotification() {
     _notificationTimer?.cancel();
     _notification = null;
+  }
+
+  /// Adds a moderation notice message to the chat.
+  /// This is used to show feedback when moderation actions are performed.
+  @action
+  void addModerationNotice(String message) {
+    _messages.add(IRCMessage.createNotice(message: message));
   }
 
   /// Updates the sleep timer with the given [duration].

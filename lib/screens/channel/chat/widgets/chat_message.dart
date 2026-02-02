@@ -9,8 +9,18 @@ import 'package:frosty/screens/channel/chat/stores/chat_store.dart';
 import 'package:frosty/screens/channel/chat/widgets/chat_user_modal.dart';
 import 'package:frosty/screens/channel/chat/widgets/reply_thread.dart';
 import 'package:frosty/utils/modal_bottom_sheet.dart';
+import 'package:frosty/widgets/frosty_dialog.dart';
 import 'package:frosty/widgets/link_preview.dart';
 import 'package:provider/provider.dart';
+
+/// Timeout duration presets with their labels and durations in seconds.
+const _timeoutPresets = [
+  (label: '1 minute', duration: 60),
+  (label: '10 minutes', duration: 600),
+  (label: '1 hour', duration: 3600),
+  (label: '1 day', duration: 86400),
+  (label: '1 week', duration: 604800),
+];
 
 class ChatMessage extends StatelessWidget {
   final IRCMessage ircMessage;
@@ -77,6 +87,108 @@ class ChatMessage extends StatelessWidget {
     chatStore.updateNotification('Message copied');
   }
 
+  void _showTimeoutOptions(
+    BuildContext context,
+    TwitchApi twitchApi,
+    String displayName,
+  ) {
+    final moderatorId = chatStore.auth.user.details?.id;
+    final targetUserId = ircMessage.tags['user-id'];
+
+    if (moderatorId == null || targetUserId == null) return;
+
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => ListView(
+        shrinkWrap: true,
+        primary: false,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text(
+              'Timeout $displayName',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const Divider(indent: 12, endIndent: 12),
+          for (final preset in _timeoutPresets)
+            ListTile(
+              leading: const Icon(Icons.timer_outlined),
+              title: Text(preset.label),
+              onTap: () async {
+                Navigator.pop(context); // Close timeout options
+                Navigator.pop(context); // Close main modal
+
+                final success = await twitchApi.timeoutUser(
+                  broadcasterId: chatStore.channelId,
+                  moderatorId: moderatorId,
+                  userId: targetUserId,
+                  duration: preset.duration,
+                );
+
+                if (success) {
+                  chatStore.addModerationNotice(
+                    '$displayName has been timed out for ${preset.label}',
+                  );
+                } else {
+                  chatStore.updateNotification('Failed to timeout $displayName');
+                }
+              },
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _showBanConfirmation(
+    BuildContext context,
+    TwitchApi twitchApi,
+    String displayName,
+  ) {
+    final moderatorId = chatStore.auth.user.details?.id;
+    final targetUserId = ircMessage.tags['user-id'];
+
+    if (moderatorId == null || targetUserId == null) return;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => FrostyDialog(
+        title: 'Ban $displayName',
+        message:
+            'Are you sure you want to permanently ban $displayName from the channel?',
+        actions: [
+          TextButton(
+            onPressed: Navigator.of(dialogContext).pop,
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              Navigator.pop(dialogContext); // Close dialog
+              Navigator.pop(context); // Close main modal
+
+              final success = await twitchApi.banUser(
+                broadcasterId: chatStore.channelId,
+                moderatorId: moderatorId,
+                userId: targetUserId,
+              );
+
+              if (success) {
+                chatStore.addModerationNotice(
+                  '$displayName has been permanently banned',
+                );
+              } else {
+                chatStore.updateNotification('Failed to ban $displayName');
+              }
+            },
+            child: const Text('Ban'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void onLongPressMessage(BuildContext context, TextStyle defaultTextStyle) {
     HapticFeedback.lightImpact();
 
@@ -85,6 +197,15 @@ class ChatMessage extends StatelessWidget {
       copyMessage();
       return;
     }
+
+    final twitchApi = context.read<TwitchApi>();
+    final canModerate = chatStore.canModerate;
+    final isOwnMessage =
+        ircMessage.user == chatStore.auth.user.details?.login;
+    final messageId = ircMessage.tags['id'];
+    final targetUserId = ircMessage.tags['user-id'];
+    final displayName = ircMessage.tags['display-name'] ?? ircMessage.user ?? '';
+    final moderatorId = chatStore.auth.user.details?.id;
 
     showModalBottomSheetWithProperFocus(
       context: context,
@@ -160,6 +281,39 @@ class ChatMessage extends StatelessWidget {
             leading: const Icon(Icons.reply),
             title: const Text('Reply to message'),
           ),
+          // Moderation options - only show if user can moderate and it's not their own message
+          if (canModerate && !isOwnMessage && messageId != null && moderatorId != null)
+            ListTile(
+              onTap: () async {
+                Navigator.pop(context);
+                final success = await twitchApi.deleteMessage(
+                  broadcasterId: chatStore.channelId,
+                  moderatorId: moderatorId,
+                  messageId: messageId,
+                );
+                if (success) {
+                  chatStore.addModerationNotice(
+                    'Message from $displayName deleted',
+                  );
+                } else {
+                  chatStore.updateNotification('Failed to delete message');
+                }
+              },
+              leading: const Icon(Icons.delete_outline_rounded),
+              title: const Text('Delete message'),
+            ),
+          if (canModerate && !isOwnMessage && targetUserId != null && moderatorId != null)
+            ListTile(
+              onTap: () => _showTimeoutOptions(context, twitchApi, displayName),
+              leading: const Icon(Icons.timer_outlined),
+              title: Text('Timeout $displayName'),
+            ),
+          if (canModerate && !isOwnMessage && targetUserId != null && moderatorId != null)
+            ListTile(
+              onTap: () => _showBanConfirmation(context, twitchApi, displayName),
+              leading: const Icon(Icons.gavel_rounded),
+              title: Text('Ban $displayName'),
+            ),
         ],
       ),
     );

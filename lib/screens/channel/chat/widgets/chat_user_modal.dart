@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
+import 'package:frosty/apis/twitch_api.dart';
 import 'package:frosty/screens/channel/chat/stores/chat_store.dart';
 import 'package:frosty/screens/channel/chat/widgets/chat_message.dart';
 import 'package:frosty/utils.dart';
@@ -8,6 +9,7 @@ import 'package:frosty/widgets/alert_message.dart';
 import 'package:frosty/widgets/frosty_scrollbar.dart';
 import 'package:frosty/widgets/profile_picture.dart';
 import 'package:frosty/widgets/user_actions_modal.dart';
+import 'package:provider/provider.dart';
 
 class ChatUserModal extends StatefulWidget {
   final ChatStore chatStore;
@@ -70,15 +72,46 @@ class _ChatUserModalState extends State<ChatUserModal> {
                   ),
                 IconButton(
                   tooltip: 'More',
-                  onPressed: () => showModalBottomSheetWithProperFocus(
-                    context: context,
-                    builder: (context) => UserActionsModal(
-                      authStore: widget.chatStore.auth,
-                      name: name,
-                      userLogin: widget.username,
-                      userId: widget.userId,
-                    ),
-                  ),
+                  onPressed: () {
+                    final chatStore = widget.chatStore;
+                    final twitchApi = context.read<TwitchApi>();
+                    final moderatorId = chatStore.auth.user.details?.id;
+
+                    showModalBottomSheetWithProperFocus(
+                      context: context,
+                      builder: (context) => UserActionsModal(
+                        authStore: chatStore.auth,
+                        name: name,
+                        userLogin: widget.username,
+                        userId: widget.userId,
+                        canModerate: chatStore.canModerate,
+                        onTimeout: chatStore.canModerate && moderatorId != null
+                            ? (duration) => twitchApi.timeoutUser(
+                                  broadcasterId: chatStore.channelId,
+                                  moderatorId: moderatorId,
+                                  userId: widget.userId,
+                                  duration: duration,
+                                )
+                            : null,
+                        onBan: chatStore.canModerate && moderatorId != null
+                            ? () => twitchApi.banUser(
+                                  broadcasterId: chatStore.channelId,
+                                  moderatorId: moderatorId,
+                                  userId: widget.userId,
+                                )
+                            : null,
+                        onUnban: chatStore.canModerate && moderatorId != null
+                            ? () => twitchApi.unbanUser(
+                                  broadcasterId: chatStore.channelId,
+                                  moderatorId: moderatorId,
+                                  userId: widget.userId,
+                                )
+                            : null,
+                        onModerationNotice: chatStore.addModerationNotice,
+                        onError: chatStore.updateNotification,
+                      ),
+                    );
+                  },
                   icon: Icon(Icons.adaptive.more_rounded),
                 ),
               ],

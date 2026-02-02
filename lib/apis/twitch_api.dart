@@ -457,6 +457,123 @@ class TwitchApi extends BaseApiClient {
     }
   }
 
+  /// Bans a user from the specified channel.
+  /// [broadcasterId] - The ID of the channel to ban the user from
+  /// [moderatorId] - The ID of the moderator performing the action
+  /// [userId] - The ID of the user to ban
+  /// [reason] - Optional reason for the ban
+  /// Returns true on success or false on failure.
+  Future<bool> banUser({
+    required String broadcasterId,
+    required String moderatorId,
+    required String userId,
+    String? reason,
+  }) async {
+    try {
+      await post<dynamic>(
+        '/moderation/bans',
+        queryParameters: {
+          'broadcaster_id': broadcasterId,
+          'moderator_id': moderatorId,
+        },
+        data: {
+          'data': {
+            'user_id': userId,
+            if (reason != null && reason.isNotEmpty) 'reason': reason,
+          },
+        },
+      );
+      return true;
+    } on ApiException {
+      return false;
+    }
+  }
+
+  /// Times out a user in the specified channel.
+  /// [broadcasterId] - The ID of the channel to timeout the user in
+  /// [moderatorId] - The ID of the moderator performing the action
+  /// [userId] - The ID of the user to timeout
+  /// [duration] - The duration of the timeout in seconds (max 1209600 = 2 weeks)
+  /// [reason] - Optional reason for the timeout
+  /// Returns true on success or false on failure.
+  Future<bool> timeoutUser({
+    required String broadcasterId,
+    required String moderatorId,
+    required String userId,
+    required int duration,
+    String? reason,
+  }) async {
+    try {
+      await post<dynamic>(
+        '/moderation/bans',
+        queryParameters: {
+          'broadcaster_id': broadcasterId,
+          'moderator_id': moderatorId,
+        },
+        data: {
+          'data': {
+            'user_id': userId,
+            'duration': duration,
+            if (reason != null && reason.isNotEmpty) 'reason': reason,
+          },
+        },
+      );
+      return true;
+    } on ApiException {
+      return false;
+    }
+  }
+
+  /// Removes a ban or timeout from a user in the specified channel.
+  /// [broadcasterId] - The ID of the channel to unban the user from
+  /// [moderatorId] - The ID of the moderator performing the action
+  /// [userId] - The ID of the user to unban
+  /// Returns true on success or false on failure.
+  Future<bool> unbanUser({
+    required String broadcasterId,
+    required String moderatorId,
+    required String userId,
+  }) async {
+    try {
+      await delete<dynamic>(
+        '/moderation/bans',
+        queryParameters: {
+          'broadcaster_id': broadcasterId,
+          'moderator_id': moderatorId,
+          'user_id': userId,
+        },
+      );
+      return true;
+    } on ApiException {
+      return false;
+    }
+  }
+
+  /// Deletes a specific chat message.
+  /// [broadcasterId] - The ID of the channel the message was sent in
+  /// [moderatorId] - The ID of the moderator performing the action
+  /// [messageId] - The ID of the message to delete
+  /// Returns true on success or false on failure.
+  Future<bool> deleteMessage({
+    required String broadcasterId,
+    required String moderatorId,
+    required String messageId,
+  }) async {
+    try {
+      await delete<dynamic>(
+        '/moderation/chat',
+        queryParameters: {
+          'broadcaster_id': broadcasterId,
+          'moderator_id': moderatorId,
+          'message_id': messageId,
+        },
+      );
+      return true;
+    } on ApiException {
+      return false;
+    }
+  }
+
   Future<SharedChatSession?> getSharedChatSession({
     required String broadcasterId,
   }) async {
