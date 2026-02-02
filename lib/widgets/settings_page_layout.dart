@@ -37,15 +37,19 @@ class _SettingsPageLayoutState extends State<SettingsPageLayout> {
 
   @override
   Widget build(BuildContext context) {
-    final isPortrait = context.isPortrait;
+    // Get the original view padding (unaffected by MediaQuery.removePadding)
+    final view = View.of(context);
+    final topPadding = view.padding.top / view.devicePixelRatio;
+    
+    // Calculate header height dynamically: status bar + toolbar
+    final headerHeight = topPadding + kToolbarHeight;
 
-    // Responsive values based on orientation
     final listPadding = EdgeInsets.only(
-      top: isPortrait ? 116 : 92,
+      top: headerHeight + 8,
       bottom: widget.hasBottomPadding ? context.safePaddingBottom + 8 : 0,
     );
-
-    final borderTop = isPortrait ? 108 : 84;
+    
+    final borderTop = headerHeight;
 
     final content = Stack(
       children: [
