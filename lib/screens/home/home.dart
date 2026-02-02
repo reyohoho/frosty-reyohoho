@@ -10,6 +10,7 @@ import 'package:frosty/screens/settings/settings.dart';
 import 'package:frosty/screens/settings/stores/auth_store.dart';
 import 'package:frosty/screens/settings/stores/settings_store.dart';
 import 'package:frosty/screens/settings/widgets/release_notes.dart';
+import 'package:frosty/utils/display_cutout.dart';
 import 'package:frosty/widgets/blurred_container.dart';
 import 'package:frosty/widgets/profile_picture.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -53,6 +54,10 @@ class _HomeState extends State<Home> {
   void initState() {
     super.initState();
     checkAndShowReleaseNotes();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final settingsStore = context.read<SettingsStore>();
+      applyDisplayUnderCutout(settingsStore.landscapeDisplayUnderCutout);
+    });
   }
 
   @override

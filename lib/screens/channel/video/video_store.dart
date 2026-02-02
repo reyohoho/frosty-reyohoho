@@ -44,6 +44,13 @@ abstract class VideoStoreBase with Store {
     // Stop video if setting is enabled
     if (settingsStore.stopVideoOnPipDismiss && !_paused) {
       handlePausePlay();
+      _paused = true;
+      // Stop foreground service and wakelock immediately so background playback
+      // via notification stops when PIP is closed (do not rely on VideoPause handler).
+      if (Platform.isAndroid && settingsStore.backgroundAudioEnabled) {
+        _stopForegroundService();
+        WakelockPlus.disable();
+      }
     }
   }
 

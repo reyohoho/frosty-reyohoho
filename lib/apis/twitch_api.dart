@@ -518,25 +518,33 @@ class TwitchApi extends BaseApiClient {
 
   static const String _gqlBaseUrl = 'https://gql.twitch.tv/gql';
 
-  /// Fetches VOD comments for a specific video at a given offset.
+  /// Fetches VOD comments for a specific video at a given offset or cursor.
   ///
   /// Uses Twitch GQL API to get chat replay comments.
   /// [videoId] - The ID of the VOD
-  /// [contentOffsetSeconds] - The offset in seconds from video start
+  /// [contentOffsetSeconds] - The offset in seconds from video start (used when [cursor] is null)
+  /// [cursor] - Pagination cursor from previous response (fetches next page when provided)
   Future<VodCommentsResponse> getVodComments({
     required String videoId,
-    required int contentOffsetSeconds,
+    int? contentOffsetSeconds,
+    String? cursor,
   }) async {
     const persistedQueryHash =
         'b70a3591ff0f4e0313d126c6a1502d79a1c02baebb288227c582044aa76adf6a';
 
+    final variables = <String, dynamic>{
+      'videoID': videoId,
+    };
+    if (cursor != null) {
+      variables['cursor'] = cursor;
+    } else if (contentOffsetSeconds != null) {
+      variables['contentOffsetSeconds'] = contentOffsetSeconds;
+    }
+
     final body = [
       {
         'operationName': 'VideoCommentsByOffsetOrCursor',
-        'variables': {
-          'videoID': videoId,
-          'contentOffsetSeconds': contentOffsetSeconds,
-        },
+        'variables': variables,
         'extensions': {
           'persistedQuery': {
             'version': 1,

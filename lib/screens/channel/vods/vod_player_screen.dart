@@ -124,6 +124,14 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
     // Stop video if setting is enabled
     if (_settingsStore.stopVideoOnPipDismiss && !_paused) {
       _handlePausePlay();
+      _paused = true;
+      _pausedNotifier.value = true;
+      // Stop foreground service and wakelock immediately so background playback
+      // via notification stops when PIP is closed (do not rely on VideoPause handler).
+      if (Platform.isAndroid && _settingsStore.backgroundAudioEnabled) {
+        _stopForegroundService();
+        WakelockPlus.disable();
+      }
     }
   }
 
@@ -736,6 +744,12 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
                   right: 0,
                   child: SafeArea(
                     bottom: false,
+                    left: !(_settingsStore.landscapeDisplayUnderCutout &&
+                        MediaQuery.orientationOf(context) ==
+                            Orientation.landscape),
+                    right: !(_settingsStore.landscapeDisplayUnderCutout &&
+                        MediaQuery.orientationOf(context) ==
+                            Orientation.landscape),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       child: Row(
@@ -847,6 +861,12 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
                   right: 0,
                   child: SafeArea(
                     top: false,
+                    left: !(_settingsStore.landscapeDisplayUnderCutout &&
+                        MediaQuery.orientationOf(context) ==
+                            Orientation.landscape),
+                    right: !(_settingsStore.landscapeDisplayUnderCutout &&
+                        MediaQuery.orientationOf(context) ==
+                            Orientation.landscape),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [

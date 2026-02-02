@@ -136,7 +136,7 @@ class _VodChatState extends State<VodChat> {
 
   void _startFetchTimer() {
     _fetchTimer?.cancel();
-    _fetchTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+    _fetchTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!widget.pausedNotifier.value) {
         _fetchComments(widget.currentTimeNotifier.value.toInt());
       }
@@ -191,8 +191,8 @@ class _VodChatState extends State<VodChat> {
   Future<void> _fetchComments(int offsetSeconds) async {
     if (_isLoading) return;
 
-    // Don't refetch if we're close to the last fetched offset
-    if ((_lastFetchedOffset - offsetSeconds).abs() < 20 &&
+    // Don't refetch if we're close to the last fetched offset (5 sec window for high-activity VODs)
+    if ((_lastFetchedOffset - offsetSeconds).abs() < 5 &&
         _lastFetchedOffset != -1) {
       return;
     }
@@ -200,15 +200,33 @@ class _VodChatState extends State<VodChat> {
     setState(() => _isLoading = true);
 
     try {
-      final response = await widget.twitchApi.getVodComments(
+      final allComments = <VodComment>[];
+      VodCommentsResponse? response = await widget.twitchApi.getVodComments(
         videoId: widget.videoId,
         contentOffsetSeconds: offsetSeconds,
       );
 
+      const maxPages = 50; // Safety limit for very high-activity VODs
+      var pageCount = 0;
+
+      while (response != null && pageCount < maxPages) {
+        allComments.addAll(response.comments);
+        if (!response.hasNextPage ||
+            response.cursor == null ||
+            response.cursor!.isEmpty) {
+          break;
+        }
+        response = await widget.twitchApi.getVodComments(
+          videoId: widget.videoId,
+          cursor: response.cursor,
+        );
+        pageCount++;
+      }
+
       if (mounted) {
         setState(() {
           // Filter out duplicates and add new comments
-          for (final comment in response.comments) {
+          for (final comment in allComments) {
             if (!_comments.any((c) => c.id == comment.id)) {
               _comments.add(comment);
             }
@@ -242,9 +260,9 @@ class _VodChatState extends State<VodChat> {
     final secs = seconds % 60;
 
     if (hours > 0) {
-      return '${hours}:${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
+      return '$hours:${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
     }
-    return '${minutes}:${secs.toString().padLeft(2, '0')}';
+    return '$minutes:${secs.toString().padLeft(2, '0')}';
   }
 
   void _adjustDelay(double delta) {
@@ -275,7 +293,7 @@ class _VodChatState extends State<VodChat> {
               imageUrl: fragment.emote!.url3x,
               height: emoteHeight,
               useFade: false,
-              placeholder: (_, __) => SizedBox(
+              placeholder: (_, _) => SizedBox(
                 width: emoteHeight,
                 height: emoteHeight,
               ),
@@ -305,7 +323,7 @@ class _VodChatState extends State<VodChat> {
                   height: height,
                   width: width,
                   useFade: false,
-                  placeholder: (_, __) => SizedBox(
+                  placeholder: (_, _) => SizedBox(
                     width: width ?? emoteHeight,
                     height: height,
                   ),
@@ -573,15 +591,6 @@ class _VodChatState extends State<VodChat> {
                     ),
                   ],
                   const Spacer(),
-                  if (_isLoading)
-                    SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: theme.colorScheme.primary,
-                      ),
-                    ),
                   // Delay settings button
                   IconButton(
                     icon: Icon(

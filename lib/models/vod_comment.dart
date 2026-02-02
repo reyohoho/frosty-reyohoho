@@ -148,10 +148,14 @@ class VodCommentsResponse {
   final bool hasNextPage;
   final bool hasPreviousPage;
 
+  /// Cursor for fetching the next page (when [hasNextPage] is true).
+  final String? cursor;
+
   const VodCommentsResponse({
     required this.comments,
     required this.hasNextPage,
     required this.hasPreviousPage,
+    this.cursor,
   });
 
   factory VodCommentsResponse.fromJson(Map<String, dynamic> json) {
@@ -182,6 +186,7 @@ class VodCommentsResponse {
           .toList(),
       hasNextPage: pageInfo['hasNextPage'] as bool? ?? false,
       hasPreviousPage: pageInfo['hasPreviousPage'] as bool? ?? false,
+      cursor: pageInfo['endCursor'] as String?,
     );
   }
 }

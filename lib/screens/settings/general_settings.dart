@@ -1,8 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 // import removed: flutter_colorpicker
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:frosty/screens/settings/stores/settings_store.dart';
 import 'package:frosty/screens/settings/widgets/settings_list_switch.dart';
+import 'package:frosty/utils/display_cutout.dart';
 import 'package:frosty/widgets/accent_color_setting.dart';
 import 'package:frosty/widgets/external_browser_setting.dart';
 // import removed: frosty/widgets/dialog.dart
@@ -36,6 +39,20 @@ class GeneralSettings extends StatelessWidget {
           ),
           const SectionHeader('Links'),
           ExternalBrowserSetting(settingsStore: settingsStore),
+          if (Platform.isAndroid) ...[
+            const SectionHeader('Display'),
+            SettingsListSwitch(
+              title: 'Display under cutout in landscape',
+              subtitle: const Text(
+                'Allows the app to draw under the display cutout (notch) when in landscape. Android 9 (API 28) and above.',
+              ),
+              value: settingsStore.landscapeDisplayUnderCutout,
+              onChanged: (newValue) {
+                settingsStore.landscapeDisplayUnderCutout = newValue;
+                applyDisplayUnderCutout(newValue);
+              },
+            ),
+          ],
         ],
       ),
     );

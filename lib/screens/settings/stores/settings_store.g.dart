@@ -61,6 +61,8 @@ SettingsStore _$SettingsStoreFromJson(
         json['landscapeCutout'],
       ) ??
       LandscapeCutoutType.none
+  ..landscapeDisplayUnderCutout =
+      json['landscapeDisplayUnderCutout'] as bool? ?? false
   ..chatWidth = (json['chatWidth'] as num?)?.toDouble() ?? 0.2
   ..fullScreenChatOverlayOpacity =
       (json['fullScreenChatOverlayOpacity'] as num?)?.toDouble() ?? 0.5
@@ -141,6 +143,7 @@ Map<String, dynamic> _$SettingsStoreToJson(
   'landscapeChatLeftSide': instance.landscapeChatLeftSide,
   'landscapeForceVerticalChat': instance.landscapeForceVerticalChat,
   'landscapeCutout': _$LandscapeCutoutTypeEnumMap[instance.landscapeCutout]!,
+  'landscapeDisplayUnderCutout': instance.landscapeDisplayUnderCutout,
   'chatWidth': instance.chatWidth,
   'fullScreenChatOverlayOpacity': instance.fullScreenChatOverlayOpacity,
   'autocomplete': instance.autocomplete,
@@ -848,6 +851,28 @@ mixin _$SettingsStore on _SettingsStoreBase, Store {
     });
   }
 
+  late final _$landscapeDisplayUnderCutoutAtom = Atom(
+    name: '_SettingsStoreBase.landscapeDisplayUnderCutout',
+    context: context,
+  );
+
+  @override
+  bool get landscapeDisplayUnderCutout {
+    _$landscapeDisplayUnderCutoutAtom.reportRead();
+    return super.landscapeDisplayUnderCutout;
+  }
+
+  @override
+  set landscapeDisplayUnderCutout(bool value) {
+    _$landscapeDisplayUnderCutoutAtom.reportWrite(
+      value,
+      super.landscapeDisplayUnderCutout,
+      () {
+        super.landscapeDisplayUnderCutout = value;
+      },
+    );
+  }
+
   late final _$chatWidthAtom = Atom(
     name: '_SettingsStoreBase.chatWidth',
     context: context,
@@ -1484,6 +1509,7 @@ emoteMenuButtonOnLeft: ${emoteMenuButtonOnLeft},
 landscapeChatLeftSide: ${landscapeChatLeftSide},
 landscapeForceVerticalChat: ${landscapeForceVerticalChat},
 landscapeCutout: ${landscapeCutout},
+landscapeDisplayUnderCutout: ${landscapeDisplayUnderCutout},
 chatWidth: ${chatWidth},
 fullScreenChatOverlayOpacity: ${fullScreenChatOverlayOpacity},
 autocomplete: ${autocomplete},

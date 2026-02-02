@@ -58,6 +58,7 @@ abstract class _SettingsStoreBase with Store {
     showThumbnails = defaultShowThumbnails;
 
     launchUrlExternal = defaultLaunchUrlExternal;
+    landscapeDisplayUnderCutout = defaultLandscapeDisplayUnderCutout;
   }
 
   // * Video Settings
@@ -185,6 +186,7 @@ abstract class _SettingsStoreBase with Store {
   static const defaultLandscapeChatLeftSide = false;
   static const defaultLandscapeForceVerticalChat = false;
   static const defaultLandscapeCutout = LandscapeCutoutType.none;
+  static const defaultLandscapeDisplayUnderCutout = false;
   static const defaultChatWidth = 0.2;
   static const defaultFullScreenChatOverlayOpacity = 0.5;
 
@@ -309,6 +311,11 @@ abstract class _SettingsStoreBase with Store {
   @JsonKey(defaultValue: defaultLandscapeCutout)
   @observable
   var landscapeCutout = defaultLandscapeCutout;
+
+  /// When true, in landscape the app draws under the display cutout (notch).
+  @JsonKey(defaultValue: defaultLandscapeDisplayUnderCutout)
+  @observable
+  var landscapeDisplayUnderCutout = defaultLandscapeDisplayUnderCutout;
 
   @JsonKey(defaultValue: defaultChatWidth)
   @observable
