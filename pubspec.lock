@@ -1262,6 +1262,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.4.0"
+  ua_parser:
+    dependency: "direct main"
+    description:
+      name: ua_parser
+      sha256: ba0860887b6924c76497ba9871344ebf7ee4672cbcfd01fabf29e0d97da76e2e
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.0"
   universal_io:
     dependency: transitive
     description:

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:frosty/screens/settings/account/widgets/profile_card.dart';
+import 'package:frosty/screens/settings/account/user_agent_debug_screen.dart';
 import 'package:frosty/screens/settings/chat_settings.dart';
 import 'package:frosty/screens/settings/general_settings.dart';
 import 'package:frosty/screens/settings/other_settings.dart';
@@ -88,6 +89,16 @@ class Settings extends StatelessWidget {
               children: [
                 const SectionHeader('Account', isFirst: true),
                 ProfileCard(authStore: context.read<AuthStore>()),
+                ListTile(
+                  leading: const Icon(Icons.bug_report_outlined),
+                  title: const Text('Debug: check User-agent'),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const UserAgentDebugScreen(),
+                    ),
+                  ),
+                ),
                 const SectionHeader('Customize'),
                 SettingsTileRoute(
                   leading: const Icon(Icons.settings_outlined),
