@@ -2,6 +2,19 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
+/// Android: no audio focus request so stream WebView audio keeps playing.
+/// iOS: [mixWithOthers] so mention ping does not take over [AVAudioSession] and pause WKWebView.
+final AudioContext _mentionAudioContext = AudioContext(
+  android: const AudioContextAndroid(
+    audioFocus: AndroidAudioFocus.none,
+    contentType: AndroidContentType.sonification,
+    usageType: AndroidUsageType.notification,
+  ),
+  iOS: AudioContextIOS(
+    options: {AVAudioSessionOptions.mixWithOthers},
+  ),
+);
+
 /// Service for handling mention notifications (vibration and sound).
 class MentionNotificationService {
   static final MentionNotificationService _instance =
@@ -19,9 +32,9 @@ class MentionNotificationService {
     if (_isInitialized) return;
     _audioPlayer = AudioPlayer();
     _audioPlayer?.setReleaseMode(ReleaseMode.stop);
+    await _audioPlayer?.setAudioContext(_mentionAudioContext);
 
     await rootBundle.load('assets/sounds/mention.ogg');
-
 
     _isInitialized = true;
   }
