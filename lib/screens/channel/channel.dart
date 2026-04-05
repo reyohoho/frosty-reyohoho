@@ -539,120 +539,116 @@ class _VideoChatState extends State<VideoChat>
                               )
                             : SafeArea(
                                 bottom: false,
-                                left: !settingsStore
+                                left:
+                                    !settingsStore
                                         .landscapeDisplayUnderCutout &&
                                     settingsStore.landscapeCutout !=
                                         LandscapeCutoutType.left &&
                                     settingsStore.landscapeCutout !=
                                         LandscapeCutoutType.both,
-                                right: !settingsStore
+                                right:
+                                    !settingsStore
                                         .landscapeDisplayUnderCutout &&
                                     settingsStore.landscapeCutout !=
                                         LandscapeCutoutType.right &&
                                     settingsStore.landscapeCutout !=
                                         LandscapeCutoutType.both,
                                 child: LayoutBuilder(
-                                      builder: (context, constraints) {
-                                        final availableWidth =
-                                            constraints.maxWidth;
-                                        final chatWidth = _chatStore.expandChat
-                                            ? 0.5
-                                            : settingsStore.chatWidth;
+                                  builder: (context, constraints) {
+                                    final availableWidth = constraints.maxWidth;
+                                    final chatWidth = _chatStore.expandChat
+                                        ? 0.5
+                                        : settingsStore.chatWidth;
 
-                                        // Create the landscape chat container with proper styling
-                                        final chatContainer = AnimatedContainer(
-                                          curve: Curves.ease,
-                                          duration: _isDividerDragging
-                                              ? Duration.zero
-                                              : const Duration(
-                                                  milliseconds: 200,
-                                                ),
-                                          width: availableWidth * chatWidth,
-                                          color: settingsStore.fullScreen
-                                              ? Colors.black.withValues(
-                                                  alpha: settingsStore
-                                                      .fullScreenChatOverlayOpacity,
-                                                )
-                                              : context.scaffoldColor,
-                                          child: chat,
-                                        );
+                                    // Create the landscape chat container with proper styling
+                                    final chatContainer = AnimatedContainer(
+                                      curve: Curves.ease,
+                                      duration: _isDividerDragging
+                                          ? Duration.zero
+                                          : const Duration(milliseconds: 200),
+                                      width: availableWidth * chatWidth,
+                                      color: settingsStore.fullScreen
+                                          ? Colors.black.withValues(
+                                              alpha: settingsStore
+                                                  .fullScreenChatOverlayOpacity,
+                                            )
+                                          : context.scaffoldColor,
+                                      child: chat,
+                                    );
 
-                                        final draggableDivider = Observer(
-                                          builder: (_) => DraggableDivider(
-                                            currentWidth: chatWidth,
-                                            maxWidth: 0.6,
-                                            isResizableOnLeft: settingsStore
-                                                .landscapeChatLeftSide,
-                                            showHandle:
-                                                _videoStore.overlayVisible,
-                                            onDragStart: () {
-                                              setState(() {
-                                                _isDividerDragging = true;
-                                              });
-                                            },
-                                            onDrag: (newWidth) {
-                                              if (!_chatStore.expandChat) {
-                                                settingsStore.chatWidth =
-                                                    newWidth;
-                                              }
-                                            },
-                                            onDragEnd: () {
-                                              setState(() {
-                                                _isDividerDragging = false;
-                                              });
-                                            },
-                                          ),
-                                        );
+                                    final draggableDivider = Observer(
+                                      builder: (_) => DraggableDivider(
+                                        currentWidth: chatWidth,
+                                        minWidth: 0.1,
+                                        maxWidth: 0.6,
+                                        isResizableOnLeft:
+                                            settingsStore.landscapeChatLeftSide,
+                                        showHandle: _videoStore.overlayVisible,
+                                        onDragStart: () {
+                                          setState(() {
+                                            _isDividerDragging = true;
+                                          });
+                                        },
+                                        onDrag: (newWidth) {
+                                          if (!_chatStore.expandChat) {
+                                            settingsStore.chatWidth = newWidth;
+                                          }
+                                        },
+                                        onDragEnd: () {
+                                          setState(() {
+                                            _isDividerDragging = false;
+                                          });
+                                        },
+                                      ),
+                                    );
 
-                                        return Stack(
-                                          children: [
-                                            Row(
-                                              children:
-                                                  settingsStore
-                                                      .landscapeChatLeftSide
-                                                  ? [
-                                                      chatContainer,
-                                                      Expanded(
-                                                        child:
-                                                            _buildPipGestureWrapper(
-                                                              child: video,
-                                                            ),
-                                                      ),
-                                                    ]
-                                                  : [
-                                                      Expanded(
-                                                        child:
-                                                            _buildPipGestureWrapper(
-                                                              child: video,
-                                                            ),
-                                                      ),
-                                                      chatContainer,
-                                                    ],
-                                            ),
-                                            Positioned(
-                                              top: 0,
-                                              bottom: 0,
-                                              left:
-                                                  settingsStore
-                                                      .landscapeChatLeftSide
-                                                  ? (availableWidth *
-                                                            chatWidth) -
-                                                        12
-                                                  : null,
-                                              right:
-                                                  !settingsStore
-                                                      .landscapeChatLeftSide
-                                                  ? (availableWidth *
-                                                            chatWidth) -
-                                                        12
-                                                  : null,
-                                              child: draggableDivider,
-                                            ),
-                                          ],
-                                        );
-                                      },
-                                    ),
-                                  )
+                                    return Stack(
+                                      children: [
+                                        Row(
+                                          children:
+                                              settingsStore
+                                                  .landscapeChatLeftSide
+                                              ? [
+                                                  chatContainer,
+                                                  Expanded(
+                                                    child:
+                                                        _buildPipGestureWrapper(
+                                                          child: video,
+                                                        ),
+                                                  ),
+                                                ]
+                                              : [
+                                                  Expanded(
+                                                    child:
+                                                        _buildPipGestureWrapper(
+                                                          child: video,
+                                                        ),
+                                                  ),
+                                                  chatContainer,
+                                                ],
+                                        ),
+                                        Positioned(
+                                          top: 0,
+                                          bottom: 0,
+                                          left:
+                                              settingsStore
+                                                  .landscapeChatLeftSide
+                                              ? (availableWidth * chatWidth) -
+                                                    12
+                                              : null,
+                                          right:
+                                              !settingsStore
+                                                  .landscapeChatLeftSide
+                                              ? (availableWidth * chatWidth) -
+                                                    12
+                                              : null,
+                                          child: draggableDivider,
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                ),
+                              )
                       : SafeArea(child: chat),
                 );
               }
@@ -703,7 +699,9 @@ class _VideoChatState extends State<VideoChat>
       return PipWidget(
         pipLayout: PipActionsLayout.mediaOnlyPause,
         onPipAction: (_) {
-          debugPrint('[PIP] Channel: PipWidget onPipAction (play/pause tapped in PIP)');
+          debugPrint(
+            '[PIP] Channel: PipWidget onPipAction (play/pause tapped in PIP)',
+          );
           _videoStore.handlePausePlay();
         },
         pipChild: player,
