@@ -48,9 +48,7 @@ abstract class SearchStoreBase with Store {
     final prefs = await SharedPreferences.getInstance();
 
     // Retrieve the search history from local storage. If it doesn't exist, use an empty list.
-    _searchHistory =
-        prefs.getStringList('search_history')?.asObservable() ??
-        ObservableList<String>();
+    _searchHistory = prefs.getStringList('search_history')?.asObservable() ?? ObservableList<String>();
 
     // Create a reaction that will limit the history to 8 entries and update it to local storage automatically.
     autorun((_) {
@@ -59,9 +57,7 @@ abstract class SearchStoreBase with Store {
     });
 
     // Add a listener to update the cancel button visibility whenever the text changes.
-    textEditingController.addListener(
-      () => _searchText = textEditingController.text,
-    );
+    textEditingController.addListener(() => _searchText = textEditingController.text);
   }
 
   /// Debounced handler for search-as-you-type.
@@ -113,13 +109,9 @@ abstract class SearchStoreBase with Store {
     }).asObservable();
 
     // Fetch and set the categories that match the query.
-    _categoryFuture = twitchApi.searchCategories(query: query).then((
-      categories,
-    ) {
+    _categoryFuture = twitchApi.searchCategories(query: query).then((categories) {
       // Move exact matches to the first result
-      final matchingIndex = categories.data.indexWhere(
-        (c) => c.name.toLowerCase() == query.toLowerCase(),
-      );
+      final matchingIndex = categories.data.indexWhere((c) => c.name.toLowerCase() == query.toLowerCase());
       if (matchingIndex >= 1) {
         final matchingCategory = categories.data.removeAt(matchingIndex);
         categories.data.insert(0, matchingCategory);

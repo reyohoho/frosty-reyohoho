@@ -33,10 +33,7 @@ abstract class HomeStoreBase with Store {
   HomeStoreBase({required this.authStore}) {
     // Setup a reaction that will return to the first tab when logging in/out.
     // This will prevent an out of range index error when last visiting the search screen and logging out.
-    _disposeReaction = reaction(
-      (_) => authStore.isLoggedIn,
-      (_) => _selectedIndex = 0,
-    );
+    _disposeReaction = reaction((_) => authStore.isLoggedIn, (_) => _selectedIndex = 0);
   }
 
   @action
@@ -51,43 +48,21 @@ abstract class HomeStoreBase with Store {
       if (authStore.isLoggedIn) {
         if (index == 0 && followedScrollController.hasClients) {
           // If on the followed tab and tapping the followed tab, scroll to the top.
-          followedScrollController.animateTo(
-            0.0,
-            duration: duration,
-            curve: Curves.easeOut,
-          );
-        } else if (index == 1 &&
-            topSectionScrollControllers[topSectionCurrentIndex].hasClients) {
+          followedScrollController.animateTo(0.0, duration: duration, curve: Curves.easeOut);
+        } else if (index == 1 && topSectionScrollControllers[topSectionCurrentIndex].hasClients) {
           // If on the top section, scroll to the top of the tab based on the current top tab.
-          topSectionScrollControllers[topSectionCurrentIndex].animateTo(
-            0.0,
-            duration: duration,
-            curve: Curves.easeOut,
-          );
+          topSectionScrollControllers[topSectionCurrentIndex].animateTo(0.0, duration: duration, curve: Curves.easeOut);
         } else if (searchScrollController.hasClients) {
           // If on the search tab and tapping the search tab, scroll to the top.
-          searchScrollController.animateTo(
-            0.0,
-            duration: duration,
-            curve: Curves.easeOut,
-          );
+          searchScrollController.animateTo(0.0, duration: duration, curve: Curves.easeOut);
         }
       } else {
-        if (index == 0 &&
-            topSectionScrollControllers[topSectionCurrentIndex].hasClients) {
+        if (index == 0 && topSectionScrollControllers[topSectionCurrentIndex].hasClients) {
           // If on the top section, scroll to the top of the tab based on the current top tab.
-          topSectionScrollControllers[topSectionCurrentIndex].animateTo(
-            0.0,
-            duration: duration,
-            curve: Curves.easeOut,
-          );
+          topSectionScrollControllers[topSectionCurrentIndex].animateTo(0.0, duration: duration, curve: Curves.easeOut);
         } else if (searchScrollController.hasClients) {
           // If on the search tab and tapping the search tab, scroll to the top.
-          searchScrollController.animateTo(
-            0.0,
-            duration: duration,
-            curve: Curves.easeOut,
-          );
+          searchScrollController.animateTo(0.0, duration: duration, curve: Curves.easeOut);
         }
       }
     }

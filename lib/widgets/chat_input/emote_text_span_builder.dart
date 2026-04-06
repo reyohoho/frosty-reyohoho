@@ -18,18 +18,10 @@ class EmoteTextSpanBuilder extends SpecialTextSpanBuilder {
   /// The height to render emotes at.
   final double emoteSize;
 
-  EmoteTextSpanBuilder({
-    required this.emoteToObject,
-    required this.userEmoteToObject,
-    required this.emoteSize,
-  });
+  EmoteTextSpanBuilder({required this.emoteToObject, required this.userEmoteToObject, required this.emoteSize});
 
   @override
-  TextSpan build(
-    String data, {
-    TextStyle? textStyle,
-    SpecialTextGestureTapCallback? onTap,
-  }) {
+  TextSpan build(String data, {TextStyle? textStyle, SpecialTextGestureTapCallback? onTap}) {
     if (data.isEmpty) {
       return TextSpan(text: '', style: textStyle);
     }
@@ -99,12 +91,7 @@ class EmoteTextSpanBuilder extends SpecialTextSpanBuilder {
       alignment: PlaceholderAlignment.middle,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 1),
-        child: FrostyCachedNetworkImage(
-          imageUrl: emote.url,
-          height: height,
-          width: width,
-          useFade: false,
-        ),
+        child: FrostyCachedNetworkImage(imageUrl: emote.url, height: height, width: width, useFade: false),
       ),
     );
   }

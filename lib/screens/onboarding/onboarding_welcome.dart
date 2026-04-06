@@ -26,13 +26,7 @@ class OnboardingWelcome extends StatelessWidget {
                 (index, sentence) => Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: ListTile(
-                    leading: Text(
-                      '${index + 1}.',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    leading: Text('${index + 1}.', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                     title: Text(sentence),
                   ),
                 ),

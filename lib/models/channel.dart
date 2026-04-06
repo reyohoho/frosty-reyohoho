@@ -23,8 +23,7 @@ class Channel {
     required this.gameName,
   });
 
-  factory Channel.fromJson(Map<String, dynamic> json) =>
-      _$ChannelFromJson(json);
+  factory Channel.fromJson(Map<String, dynamic> json) => _$ChannelFromJson(json);
 }
 
 // Object for Twitch channel search query.
@@ -44,6 +43,5 @@ class ChannelQuery {
     required this.startedAt,
   });
 
-  factory ChannelQuery.fromJson(Map<String, dynamic> json) =>
-      _$ChannelQueryFromJson(json);
+  factory ChannelQuery.fromJson(Map<String, dynamic> json) => _$ChannelQueryFromJson(json);
 }

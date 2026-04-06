@@ -23,10 +23,7 @@ class RecentEmotesPanel extends StatelessWidget {
         title: 'Clear recent emotes',
         message: 'Are you sure you want to clear your recent emotes?',
         actions: [
-          TextButton(
-            onPressed: Navigator.of(context).pop,
-            child: const Text('Cancel'),
-          ),
+          TextButton(onPressed: Navigator.of(context).pop, child: const Text('Cancel')),
           FilledButton(
             onPressed: () {
               chatStore.assetsStore.recentEmotes.clear();
@@ -51,10 +48,7 @@ class RecentEmotesPanel extends StatelessWidget {
           child: CustomScrollView(
             slivers: [
               if (chatStore.assetsStore.recentEmotes.isEmpty)
-                const SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: AlertMessage(message: 'No recent emotes'),
-                )
+                const SliverFillRemaining(hasScrollBody: false, child: AlertMessage(message: 'No recent emotes'))
               else
                 SliverGrid.builder(
                   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -71,15 +65,11 @@ class RecentEmotesPanel extends StatelessWidget {
                       ...chatStore.assetsStore.userEmoteToObject.values,
                     ];
                     final matchingEmotes = validEmotes.where(
-                      (existingEmote) =>
-                          existingEmote.name == emote.name &&
-                          existingEmote.type == emote.type,
+                      (existingEmote) => existingEmote.name == emote.name && existingEmote.type == emote.type,
                     );
 
                     return InkWell(
-                      onTap: matchingEmotes.isNotEmpty
-                          ? () => chatStore.addEmote(emote)
-                          : null,
+                      onTap: matchingEmotes.isNotEmpty ? () => chatStore.addEmote(emote) : null,
                       onLongPress: () {
                         HapticFeedback.lightImpact();
 
@@ -93,17 +83,10 @@ class RecentEmotesPanel extends StatelessWidget {
                         padding: const EdgeInsets.all(8),
                         child: Center(
                           child: FrostyCachedNetworkImage(
-                            imageUrl: matchingEmotes.isNotEmpty
-                                ? matchingEmotes.first.url
-                                : emote.url,
-                            color: matchingEmotes.isNotEmpty
-                                ? null
-                                : const Color.fromRGBO(255, 255, 255, 0.5),
-                            colorBlendMode: matchingEmotes.isNotEmpty
-                                ? null
-                                : BlendMode.modulate,
-                            height:
-                                emote.height?.toDouble() ?? defaultEmoteSize,
+                            imageUrl: matchingEmotes.isNotEmpty ? matchingEmotes.first.url : emote.url,
+                            color: matchingEmotes.isNotEmpty ? null : const Color.fromRGBO(255, 255, 255, 0.5),
+                            colorBlendMode: matchingEmotes.isNotEmpty ? null : BlendMode.modulate,
+                            height: emote.height?.toDouble() ?? defaultEmoteSize,
                             width: emote.width?.toDouble(),
                           ),
                         ),

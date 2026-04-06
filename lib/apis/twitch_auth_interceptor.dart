@@ -25,7 +25,6 @@ class TwitchAuthInterceptor extends Interceptor {
     final url = uri.toString();
 
     // Add headers for Twitch Helix API and OAuth endpoints
-    return url.startsWith('https://api.twitch.tv/helix') ||
-        url.startsWith('https://id.twitch.tv/oauth2');
+    return url.startsWith('https://api.twitch.tv/helix') || url.startsWith('https://id.twitch.tv/oauth2');
   }
 }

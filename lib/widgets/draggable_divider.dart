@@ -179,10 +179,7 @@ class _DraggableDividerState extends State<DraggableDivider> {
                     child: Container(
                       width: 2,
                       height: _isDragging ? 20.0 : 16.0,
-                      decoration: BoxDecoration(
-                        color: colorScheme.onPrimary,
-                        borderRadius: BorderRadius.circular(1),
-                      ),
+                      decoration: BoxDecoration(color: colorScheme.onPrimary, borderRadius: BorderRadius.circular(1)),
                     ),
                   ),
                 ),

@@ -23,18 +23,14 @@ class _VideoState extends State<Video> with WidgetsBindingObserver {
   }
 
   @override
-  Future<void> didChangeAppLifecycleState(
-    AppLifecycleState lifecycleState,
-  ) async {
+  Future<void> didChangeAppLifecycleState(AppLifecycleState lifecycleState) async {
     final controller = widget.videoStore.webViewController;
-    final backgroundAudioEnabled =
-        widget.videoStore.settingsStore.backgroundAudioEnabled;
+    final backgroundAudioEnabled = widget.videoStore.settingsStore.backgroundAudioEnabled;
 
     if (Platform.isAndroid) {
       // Handle background audio playback
       if (backgroundAudioEnabled && controller != null) {
-        if (lifecycleState == AppLifecycleState.paused ||
-            lifecycleState == AppLifecycleState.hidden) {
+        if (lifecycleState == AppLifecycleState.paused || lifecycleState == AppLifecycleState.hidden) {
           // Keep WebView running in background for audio playback
           await controller.resume();
         }
@@ -57,9 +53,7 @@ class _VideoState extends State<Video> with WidgetsBindingObserver {
     }
 
     return InAppWebView(
-      initialUrlRequest: URLRequest(
-        url: WebUri(widget.videoStore.videoUrl),
-      ),
+      initialUrlRequest: URLRequest(url: WebUri(widget.videoStore.videoUrl)),
       initialSettings: widget.videoStore.webViewSettings,
       onWebViewCreated: widget.videoStore.onWebViewCreated,
       onLoadStart: widget.videoStore.onLoadStart,
@@ -76,9 +70,7 @@ class _VideoState extends State<Video> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    widget.videoStore.webViewController?.loadUrl(
-      urlRequest: URLRequest(url: WebUri('about:blank')),
-    );
+    widget.videoStore.webViewController?.loadUrl(urlRequest: URLRequest(url: WebUri('about:blank')));
 
     super.dispose();
   }

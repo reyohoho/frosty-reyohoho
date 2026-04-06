@@ -27,10 +27,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 class VodPlayerScreen extends StatefulWidget {
   final VideoTwitch video;
 
-  const VodPlayerScreen({
-    super.key,
-    required this.video,
-  });
+  const VodPlayerScreen({super.key, required this.video});
 
   @override
   State<VodPlayerScreen> createState() => _VodPlayerScreenState();
@@ -89,17 +86,17 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
 
   /// InAppWebView settings for video playback
   InAppWebViewSettings get webViewSettings => InAppWebViewSettings(
-        mediaPlaybackRequiresUserGesture: false,
-        allowsInlineMediaPlayback: true,
-        javaScriptEnabled: true,
-        transparentBackground: true,
-        supportZoom: false,
-        disableContextMenu: true,
-        useHybridComposition: !_settingsStore.useTextureRendering,
-        allowsBackForwardNavigationGestures: false,
-        iframeAllowFullscreen: true,
-        allowBackgroundAudioPlaying: _settingsStore.backgroundAudioEnabled,
-      );
+    mediaPlaybackRequiresUserGesture: false,
+    allowsInlineMediaPlayback: true,
+    javaScriptEnabled: true,
+    transparentBackground: true,
+    supportZoom: false,
+    disableContextMenu: true,
+    useHybridComposition: !_settingsStore.useTextureRendering,
+    allowsBackForwardNavigationGestures: false,
+    iframeAllowFullscreen: true,
+    allowBackgroundAudioPlaying: _settingsStore.backgroundAudioEnabled,
+  );
 
   @override
   void initState() {
@@ -117,16 +114,19 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
       duration: const Duration(milliseconds: 250),
       vsync: this,
     );
-    _springBackAnimation = Tween<double>(begin: 0, end: 0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
-    )..addListener(() {
-        setState(() {
-          _pipDragDistance = _springBackAnimation.value;
+    _springBackAnimation =
+        Tween<double>(begin: 0, end: 0).animate(
+          CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
+        )..addListener(() {
+          setState(() {
+            _pipDragDistance = _springBackAnimation.value;
+          });
         });
-      });
 
     // Initialize SimplePip with callbacks for PIP exit detection
-    debugPrint('[PIP] VodPlayer: registering SimplePip callbacks (onPipExited, onPipEntered)');
+    debugPrint(
+      '[PIP] VodPlayer: registering SimplePip callbacks (onPipExited, onPipEntered)',
+    );
     _pip = SimplePip(
       onPipExited: () {
         debugPrint('[PIP] VodPlayer: onPipExited invoked (native -> Dart)');
@@ -220,7 +220,9 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
         callback: backgroundAudioTaskCallback,
       );
       _isForegroundServiceRunning = true;
-      BackgroundPlaybackCallbackRegistry.register(_onNotificationPauseOrDismiss);
+      BackgroundPlaybackCallbackRegistry.register(
+        _onNotificationPauseOrDismiss,
+      );
     } catch (e) {
       debugPrint('Failed to start foreground service: $e');
     }
@@ -478,8 +480,7 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
         _pip.enterPipMode(autoEnter: true);
       } else if (Platform.isIOS) {
         _webViewController?.evaluateJavascript(
-          source:
-              'document.querySelector("video")?.requestPictureInPicture();',
+          source: 'document.querySelector("video")?.requestPictureInPicture();',
         );
       }
     } catch (e) {
@@ -657,7 +658,8 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
 
   Future<void> _initVideo() async {
     try {
-      await _webViewController?.evaluateJavascript(source: '''
+      await _webViewController?.evaluateJavascript(
+        source: '''
         (async function() {
           const video = await new Promise((resolve) => {
             const checkVideo = () => {
@@ -692,10 +694,12 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
             video.volume = 1.0;
           }
         })();
-      ''');
+      ''',
+      );
 
       // Hide default Twitch overlay - show only video
-      await _webViewController?.evaluateJavascript(source: '''
+      await _webViewController?.evaluateJavascript(
+        source: '''
         {
           if (!document.getElementById('frosty-vod-styles')) {
             const style = document.createElement('style');
@@ -714,7 +718,8 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
             document.head.appendChild(style);
           }
         }
-      ''');
+      ''',
+      );
     } catch (e) {
       debugPrint(e.toString());
     }
@@ -737,7 +742,11 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
     final video = widget.video;
     final isLandscape = context.isLandscape;
 
-    final surfaceColor = context.watch<FrostyThemes>().dark.colorScheme.onSurface;
+    final surfaceColor = context
+        .watch<FrostyThemes>()
+        .dark
+        .colorScheme
+        .onSurface;
 
     const iconShadow = [
       Shadow(
@@ -837,13 +846,15 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
         ),
         onPressed: () {
           if (Platform.isIOS && _isInPipMode) {
-            _webViewController?.evaluateJavascript(source: '''
+            _webViewController?.evaluateJavascript(
+              source: '''
               (function() {
                 if (document.pictureInPictureElement) {
                   document.exitPictureInPicture();
                 }
               })();
-            ''');
+            ''',
+            );
           } else {
             _requestPictureInPicture();
           }
@@ -891,7 +902,9 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
               activeTrackColor: Theme.of(context).colorScheme.primary,
               inactiveTrackColor: Colors.white.withValues(alpha: 0.3),
               thumbColor: Theme.of(context).colorScheme.primary,
-              overlayColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+              overlayColor: Theme.of(
+                context,
+              ).colorScheme.primary.withValues(alpha: 0.2),
               trackHeight: 3,
               thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
             ),
@@ -952,18 +965,23 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
                   right: 0,
                   child: SafeArea(
                     bottom: false,
-                    left: !(_settingsStore.landscapeDisplayUnderCutout &&
-                        MediaQuery.orientationOf(context) ==
-                            Orientation.landscape),
-                    right: !(_settingsStore.landscapeDisplayUnderCutout &&
-                        MediaQuery.orientationOf(context) ==
-                            Orientation.landscape),
+                    left:
+                        !(_settingsStore.landscapeDisplayUnderCutout &&
+                            MediaQuery.orientationOf(context) ==
+                                Orientation.landscape),
+                    right:
+                        !(_settingsStore.landscapeDisplayUnderCutout &&
+                            MediaQuery.orientationOf(context) ==
+                                Orientation.landscape),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       child: Row(
                         children: [
                           backButton,
-                          ProfilePicture(userLogin: video.userLogin, radius: 14),
+                          ProfilePicture(
+                            userLogin: video.userLogin,
+                            radius: 14,
+                          ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Column(
@@ -971,7 +989,10 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  getReadableName(video.userName, video.userLogin),
+                                  getReadableName(
+                                    video.userName,
+                                    video.userLogin,
+                                  ),
                                   style: TextStyle(
                                     color: surfaceColor,
                                     fontWeight: FontWeight.w600,
@@ -1069,12 +1090,14 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
                   right: 0,
                   child: SafeArea(
                     top: false,
-                    left: !(_settingsStore.landscapeDisplayUnderCutout &&
-                        MediaQuery.orientationOf(context) ==
-                            Orientation.landscape),
-                    right: !(_settingsStore.landscapeDisplayUnderCutout &&
-                        MediaQuery.orientationOf(context) ==
-                            Orientation.landscape),
+                    left:
+                        !(_settingsStore.landscapeDisplayUnderCutout &&
+                            MediaQuery.orientationOf(context) ==
+                                Orientation.landscape),
+                    right:
+                        !(_settingsStore.landscapeDisplayUnderCutout &&
+                            MediaQuery.orientationOf(context) ==
+                                Orientation.landscape),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -1109,9 +1132,10 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
                                       child: Text(
                                         video.videoType == VideoType.archive
                                             ? 'VOD'
-                                            : video.videoType == VideoType.highlight
-                                                ? 'Highlight'
-                                                : 'Upload',
+                                            : video.videoType ==
+                                                  VideoType.highlight
+                                            ? 'Highlight'
+                                            : 'Upload',
                                         style: const TextStyle(
                                           color: Colors.white,
                                           fontSize: 10,
@@ -1130,8 +1154,9 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
                                           color: surfaceColor,
                                         ),
                                         Text(
-                                          NumberFormat.compact()
-                                              .format(video.viewCount),
+                                          NumberFormat.compact().format(
+                                            video.viewCount,
+                                          ),
                                           style: TextStyle(
                                             color: surfaceColor,
                                             fontSize: 12,
@@ -1153,8 +1178,9 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
                                         ),
                                         Text(
                                           DateFormat('dd.MM.yy').format(
-                                            DateTime.parse(video.createdAt)
-                                                .toLocal(),
+                                            DateTime.parse(
+                                              video.createdAt,
+                                            ).toLocal(),
                                           ),
                                           style: TextStyle(
                                             color: surfaceColor,
@@ -1187,7 +1213,8 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
                                   },
                                 ),
                               ),
-                              if (Platform.isAndroid || Platform.isIOS) pipButton,
+                              if (Platform.isAndroid || Platform.isIOS)
+                                pipButton,
                               if (!isIPad()) rotateButton,
                             ],
                           ),
@@ -1269,7 +1296,8 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
                                   ),
                                   const SizedBox(width: 12),
                                   Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         video.userName,
@@ -1280,9 +1308,9 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
                                       Text(
                                         '${NumberFormat.compact().format(video.viewCount)} views',
                                         style: TextStyle(
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .outline,
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.outline,
                                           fontSize: 13,
                                         ),
                                       ),
@@ -1297,11 +1325,15 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
                                 runSpacing: 8,
                                 children: [
                                   Chip(
-                                    avatar:
-                                        const Icon(Icons.calendar_today, size: 16),
+                                    avatar: const Icon(
+                                      Icons.calendar_today,
+                                      size: 16,
+                                    ),
                                     label: Text(
                                       DateFormat('dd MMM yyyy, HH:mm').format(
-                                        DateTime.parse(video.createdAt).toLocal(),
+                                        DateTime.parse(
+                                          video.createdAt,
+                                        ).toLocal(),
                                       ),
                                     ),
                                     visualDensity: VisualDensity.compact,
@@ -1315,17 +1347,19 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
                                     avatar: Icon(
                                       video.videoType == VideoType.archive
                                           ? Icons.live_tv
-                                          : video.videoType == VideoType.highlight
-                                              ? Icons.star
-                                              : Icons.upload,
+                                          : video.videoType ==
+                                                VideoType.highlight
+                                          ? Icons.star
+                                          : Icons.upload,
                                       size: 16,
                                     ),
                                     label: Text(
                                       video.videoType == VideoType.archive
                                           ? 'Past Broadcast'
-                                          : video.videoType == VideoType.highlight
-                                              ? 'Highlight'
-                                              : 'Upload',
+                                          : video.videoType ==
+                                                VideoType.highlight
+                                          ? 'Highlight'
+                                          : 'Upload',
                                     ),
                                     visualDensity: VisualDensity.compact,
                                   ),
@@ -1338,7 +1372,8 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
                                 Text(video.description!),
                               ],
                               SizedBox(
-                                height: MediaQuery.of(context).padding.bottom + 16,
+                                height:
+                                    MediaQuery.of(context).padding.bottom + 16,
                               ),
                             ],
                           ),
@@ -1370,7 +1405,6 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
                   // Draggable divider
                   DraggableDivider(
                     currentWidth: chatWidth,
-                    minWidth: 0.15,
                     maxWidth: 0.5,
                     isResizableOnLeft: false,
                     onDrag: (newWidth) {

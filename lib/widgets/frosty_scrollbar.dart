@@ -18,12 +18,7 @@ class FrostyScrollbar extends StatelessWidget {
   /// Use this to prevent the scrollbar from going under app bars or nav bars.
   final EdgeInsets? padding;
 
-  const FrostyScrollbar({
-    super.key,
-    this.controller,
-    required this.child,
-    this.padding,
-  });
+  const FrostyScrollbar({super.key, this.controller, required this.child, this.padding});
 
   @override
   Widget build(BuildContext context) {
@@ -31,9 +26,7 @@ class FrostyScrollbar extends StatelessWidget {
       controller: controller,
       thickness: 5,
       radius: const Radius.circular(2.5),
-      thumbColor: Theme.of(
-        context,
-      ).colorScheme.onSurface.withValues(alpha: 0.3),
+      thumbColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
       interactive: true,
       minThumbLength: 48,
       padding: padding,

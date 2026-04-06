@@ -42,8 +42,7 @@ class StreamCard extends StatelessWidget {
     // Generate a unique cache key for the thumbnail URL that updates every 5 minutes.
     // This ensures the image is refreshed periodically to reflect the latest content.
     final time = DateTime.now();
-    final cacheKey =
-        '${streamInfo.thumbnailUrl}-${time.day}-${time.hour}-${time.minute ~/ 5}';
+    final cacheKey = '${streamInfo.thumbnailUrl}-${time.day}-${time.hour}-${time.minute ~/ 5}';
 
     // Calculate the width and height of the thumbnail based on the device width and the stream card size setting.
     // Constraint the resolution to 1920x1080 since that's the max resolution of the Twitch API.
@@ -55,27 +54,17 @@ class StreamCard extends StatelessWidget {
     final thumbnail = AspectRatio(
       aspectRatio: 16 / 9,
       child: FrostyCachedNetworkImage(
-        imageUrl: streamInfo.thumbnailUrl.replaceFirst(
-          '-{width}x{height}',
-          '-${thumbnailWidth}x$thumbnailHeight',
-        ),
+        imageUrl: streamInfo.thumbnailUrl.replaceFirst('-{width}x{height}', '-${thumbnailWidth}x$thumbnailHeight'),
         cacheKey: cacheKey,
-        placeholder: (context, url) => const SkeletonLoader(
-          borderRadius: BorderRadius.all(Radius.circular(8)),
-        ),
+        placeholder: (context, url) => const SkeletonLoader(borderRadius: BorderRadius.all(Radius.circular(8))),
         useOldImageOnUrlChange: true,
       ),
     );
 
-    final streamerName = getReadableName(
-      streamInfo.userName,
-      streamInfo.userLogin,
-    );
+    final streamerName = getReadableName(streamInfo.userName, streamInfo.userLogin);
 
     final streamTitle = streamInfo.title.trim();
-    final category = streamInfo.gameName.isNotEmpty
-        ? streamInfo.gameName
-        : 'No Category';
+    final category = streamInfo.gameName.isNotEmpty ? streamInfo.gameName : 'No Category';
 
     const subFontSize = 14.0;
 
@@ -90,8 +79,7 @@ class StreamCard extends StatelessWidget {
             onLongPress: () => showDialog(
               context: context,
               builder: (context) => FrostyPhotoViewDialog(
-                imageUrl: streamInfo
-                    .thumbnailUrl, // Pass original URL with {width}x{height} placeholder
+                imageUrl: streamInfo.thumbnailUrl, // Pass original URL with {width}x{height} placeholder
                 cacheKey: cacheKey,
               ),
             ),
@@ -111,11 +99,7 @@ class StreamCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
-                  color: context
-                      .watch<FrostyThemes>()
-                      .dark
-                      .colorScheme
-                      .onSurface,
+                  color: context.watch<FrostyThemes>().dark.colorScheme.onSurface,
                 ),
               ),
             ),
@@ -153,11 +137,7 @@ class StreamCard extends StatelessWidget {
                   child: Text(
                     streamerName,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: fontColor,
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: fontColor),
                   ),
                 ),
               ),
@@ -169,10 +149,7 @@ class StreamCard extends StatelessWidget {
             child: Text(
               streamTitle,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: subFontSize,
-                color: fontColor?.withValues(alpha: 0.8),
-              ),
+              style: TextStyle(fontSize: subFontSize, color: fontColor?.withValues(alpha: 0.8)),
             ),
           ),
           if (showCategory) ...[
@@ -180,10 +157,7 @@ class StreamCard extends StatelessWidget {
               onTap: streamInfo.gameName.isNotEmpty
                   ? () => Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            CategoryStreams(categoryId: streamInfo.gameId),
-                      ),
+                      MaterialPageRoute(builder: (context) => CategoryStreams(categoryId: streamInfo.gameId)),
                     )
                   : null,
               child: Tooltip(
@@ -192,10 +166,7 @@ class StreamCard extends StatelessWidget {
                 child: Text(
                   category,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: subFontSize,
-                    color: fontColor?.withValues(alpha: 0.8),
-                  ),
+                  style: TextStyle(fontSize: subFontSize, color: fontColor?.withValues(alpha: 0.8)),
                 ),
               ),
             ),
@@ -216,11 +187,8 @@ class StreamCard extends StatelessWidget {
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => VideoChat(
-            userId: streamInfo.userId,
-            userName: streamInfo.userName,
-            userLogin: streamInfo.userLogin,
-          ),
+          builder: (context) =>
+              VideoChat(userId: streamInfo.userId, userName: streamInfo.userName, userLogin: streamInfo.userLogin),
         ),
       ),
       onLongPress: () {
@@ -242,12 +210,8 @@ class StreamCard extends StatelessWidget {
         padding: EdgeInsets.only(
           top: 8,
           bottom: 8,
-          left: showThumbnail
-              ? 16 + MediaQuery.of(context).padding.left
-              : 4 + MediaQuery.of(context).padding.left,
-          right: showThumbnail
-              ? 16 + MediaQuery.of(context).padding.right
-              : 4 + MediaQuery.of(context).padding.right,
+          left: showThumbnail ? 16 + MediaQuery.of(context).padding.left : 4 + MediaQuery.of(context).padding.left,
+          right: showThumbnail ? 16 + MediaQuery.of(context).padding.right : 4 + MediaQuery.of(context).padding.right,
         ),
         child: Row(
           children: [

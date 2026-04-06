@@ -15,11 +15,16 @@ class VodListScreen extends StatefulWidget {
   final String userLogin;
   final String displayName;
 
+  /// When this list replaced the channel screen, pass a builder that returns a new channel
+  /// screen so back recreates it (fresh stream player).
+  final Widget Function()? restoreChannelBuilder;
+
   const VodListScreen({
     super.key,
     required this.userId,
     required this.userLogin,
     required this.displayName,
+    this.restoreChannelBuilder,
   });
 
   @override
@@ -46,8 +51,7 @@ class _VodListScreenState extends State<VodListScreen> {
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent - 200) {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
       _store.loadMore();
     }
   }
@@ -70,10 +74,7 @@ class _VodListScreenState extends State<VodListScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.all(16),
-            child: Text(
-              'Sort by',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
+            child: Text('Sort by', style: Theme.of(context).textTheme.titleMedium),
           ),
           ...VodSortType.values.map(
             (sortType) => Observer(
@@ -95,6 +96,17 @@ class _VodListScreenState extends State<VodListScreen> {
     );
   }
 
+  void _leaveVodList() {
+    final restore = widget.restoreChannelBuilder;
+    if (restore != null) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(builder: (_) => restore()),
+      );
+    } else {
+      Navigator.of(context).pop();
+    }
+  }
+
   void _showFilterOptions() {
     showModalBottomSheet(
       context: context,
@@ -103,10 +115,7 @@ class _VodListScreenState extends State<VodListScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.all(16),
-            child: Text(
-              'Filter by type',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
+            child: Text('Filter by type', style: Theme.of(context).textTheme.titleMedium),
           ),
           ...VodFilterType.values.map(
             (filterType) => Observer(
@@ -132,22 +141,23 @@ class _VodListScreenState extends State<VodListScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      extendBody: true,
-      extendBodyBehindAppBar: true,
-      body: Stack(
+    return PopScope(
+      canPop: widget.restoreChannelBuilder == null,
+      onPopInvokedWithResult: (bool didPop, dynamic result) {
+        if (didPop) return;
+        _leaveVodList();
+      },
+      child: Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        extendBody: true,
+        extendBodyBehindAppBar: true,
+        body: Stack(
         children: [
           // VOD list content
           Observer(
             builder: (_) {
               if (_store.error != null && _store.videos.isEmpty) {
-                return Center(
-                  child: AlertMessage(
-                    message: 'Failed to load videos',
-                    vertical: true,
-                  ),
-                );
+                return Center(child: AlertMessage(message: 'Failed to load videos', vertical: true));
               }
 
               final videos = _store.filteredVideos;
@@ -157,19 +167,13 @@ class _VodListScreenState extends State<VodListScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
-                        Icons.video_library_outlined,
-                        size: 64,
-                        color: theme.colorScheme.outline,
-                      ),
+                      Icon(Icons.video_library_outlined, size: 64, color: theme.colorScheme.outline),
                       const SizedBox(height: 16),
                       Text(
                         _store.searchQuery.isNotEmpty
                             ? 'No videos matching "${_store.searchQuery}"'
                             : 'No videos available',
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          color: theme.colorScheme.outline,
-                        ),
+                        style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.outline),
                       ),
                     ],
                   ),
@@ -202,14 +206,7 @@ class _VodListScreenState extends State<VodListScreen> {
                     return VodCard(
                       video: video,
                       onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => VodPlayerScreen(
-                              video: video,
-                            ),
-                          ),
-                        );
+                        Navigator.push(context, MaterialPageRoute(builder: (context) => VodPlayerScreen(video: video)));
                       },
                     );
                   },
@@ -232,12 +229,7 @@ class _VodListScreenState extends State<VodListScreen> {
               child: Container(
                 decoration: BoxDecoration(
                   border: Border(
-                    bottom: BorderSide(
-                      color: theme.colorScheme.outlineVariant.withValues(
-                        alpha: 0.3,
-                      ),
-                      width: 0.5,
-                    ),
+                    bottom: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3), width: 0.5),
                   ),
                 ),
                 child: Column(
@@ -251,12 +243,9 @@ class _VodListScreenState extends State<VodListScreen> {
                           IconButton(
                             tooltip: 'Back',
                             icon: Icon(Icons.adaptive.arrow_back_rounded),
-                            onPressed: Navigator.of(context).pop,
+                            onPressed: _leaveVodList,
                           ),
-                          ProfilePicture(
-                            userLogin: widget.userLogin,
-                            radius: 14,
-                          ),
+                          ProfilePicture(userLogin: widget.userLogin, radius: 14),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
@@ -267,11 +256,7 @@ class _VodListScreenState extends State<VodListScreen> {
                           ),
                           IconButton(
                             tooltip: 'Search',
-                            icon: Icon(
-                              _showSearch
-                                  ? Icons.search_off_rounded
-                                  : Icons.search_rounded,
-                            ),
+                            icon: Icon(_showSearch ? Icons.search_off_rounded : Icons.search_rounded),
                             onPressed: _toggleSearch,
                           ),
                           IconButton(
@@ -290,9 +275,7 @@ class _VodListScreenState extends State<VodListScreen> {
                     // Search bar (when visible)
                     AnimatedCrossFade(
                       duration: const Duration(milliseconds: 200),
-                      crossFadeState: _showSearch
-                          ? CrossFadeState.showFirst
-                          : CrossFadeState.showSecond,
+                      crossFadeState: _showSearch ? CrossFadeState.showFirst : CrossFadeState.showSecond,
                       firstChild: Padding(
                         padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                         child: TextField(
@@ -311,17 +294,13 @@ class _VodListScreenState extends State<VodListScreen> {
                                   )
                                 : null,
                             isDense: true,
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 10,
-                            ),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(24),
                               borderSide: BorderSide.none,
                             ),
                             filled: true,
-                            fillColor: theme.colorScheme.surfaceContainerHighest
-                                .withValues(alpha: 0.5),
+                            fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
                           ),
                         ),
                       ),
@@ -359,6 +338,7 @@ class _VodListScreenState extends State<VodListScreen> {
           ),
         ],
       ),
+      ),
     );
   }
 
@@ -369,4 +349,3 @@ class _VodListScreenState extends State<VodListScreen> {
     super.dispose();
   }
 }
-

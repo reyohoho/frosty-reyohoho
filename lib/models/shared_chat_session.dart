@@ -18,8 +18,7 @@ class SharedChatSession {
     required this.updatedAt,
   });
 
-  factory SharedChatSession.fromJson(Map<String, dynamic> json) =>
-      _$SharedChatSessionFromJson(json);
+  factory SharedChatSession.fromJson(Map<String, dynamic> json) => _$SharedChatSessionFromJson(json);
 }
 
 @JsonSerializable(fieldRename: FieldRename.snake, createToJson: false)
@@ -28,6 +27,5 @@ class Participant {
 
   Participant({required this.broadcasterId});
 
-  factory Participant.fromJson(Map<String, dynamic> json) =>
-      _$ParticipantFromJson(json);
+  factory Participant.fromJson(Map<String, dynamic> json) => _$ParticipantFromJson(json);
 }

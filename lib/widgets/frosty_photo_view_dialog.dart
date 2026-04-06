@@ -10,18 +10,13 @@ class FrostyPhotoViewDialog extends StatefulWidget {
   final String imageUrl;
   final String? cacheKey;
 
-  const FrostyPhotoViewDialog({
-    super.key,
-    required this.imageUrl,
-    this.cacheKey,
-  });
+  const FrostyPhotoViewDialog({super.key, required this.imageUrl, this.cacheKey});
 
   @override
   State<FrostyPhotoViewDialog> createState() => _FrostyPhotoViewDialogState();
 }
 
-class _FrostyPhotoViewDialogState extends State<FrostyPhotoViewDialog>
-    with TickerProviderStateMixin {
+class _FrostyPhotoViewDialogState extends State<FrostyPhotoViewDialog> with TickerProviderStateMixin {
   PhotoViewScaleState photoViewScaleState = PhotoViewScaleState.initial;
   bool _isFullResolution = false;
   String? _currentCacheKey;
@@ -42,25 +37,17 @@ class _FrostyPhotoViewDialogState extends State<FrostyPhotoViewDialog>
   void initState() {
     super.initState();
     _currentCacheKey = widget.cacheKey;
-    _resetController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 200),
-    );
+    _resetController = AnimationController(vsync: this, duration: const Duration(milliseconds: 200));
     _resetAnimation = Tween<double>(begin: 0, end: 0).animate(_resetController)
       ..addListener(() => setState(() => _dragOffset = _resetAnimation.value));
-    _exitController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 220),
-    );
-    _exitTranslateAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+    _exitController = AnimationController(vsync: this, duration: const Duration(milliseconds: 220));
+    _exitTranslateAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _exitController, curve: Curves.easeOut))..addListener(() => setState(() {}));
+    _exitOpacityAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(
       CurvedAnimation(parent: _exitController, curve: Curves.easeOut),
-    )..addListener(() => setState(() {}));
-    _exitOpacityAnimation =
-        Tween<double>(begin: 1.0, end: 0.0).animate(
-          CurvedAnimation(parent: _exitController, curve: Curves.easeOut),
-        )..addListener(
-          () => setState(() => _imageOpacity = _exitOpacityAnimation.value),
-        );
+    )..addListener(() => setState(() => _imageOpacity = _exitOpacityAnimation.value));
   }
 
   void _toggleResolution() {
@@ -87,10 +74,7 @@ class _FrostyPhotoViewDialogState extends State<FrostyPhotoViewDialog>
 
     final screenHeight = MediaQuery.of(context).size.height;
     final fadeDistance = screenHeight * 0.20; // 20% of screen height
-    final buttonsOpacity = (1.0 - (_dragOffset.abs() / fadeDistance)).clamp(
-      0.0,
-      1.0,
-    );
+    final buttonsOpacity = (1.0 - (_dragOffset.abs() / fadeDistance)).clamp(0.0, 1.0);
 
     return Stack(
       alignment: Alignment.topCenter,
@@ -112,16 +96,13 @@ class _FrostyPhotoViewDialogState extends State<FrostyPhotoViewDialog>
             // Reset swipe direction for new drag
             _swipeDirection = 1.0;
           },
-          onVerticalDragUpdate:
-              photoViewScaleState == PhotoViewScaleState.initial
+          onVerticalDragUpdate: photoViewScaleState == PhotoViewScaleState.initial
               ? (details) => setState(() => _dragOffset += details.delta.dy)
               : null,
           onVerticalDragEnd: photoViewScaleState == PhotoViewScaleState.initial
               ? (details) {
                   final velocity = details.velocity.pixelsPerSecond.dy;
-                  final shouldDismiss =
-                      (_dragOffset.abs() > fadeDistance) ||
-                      velocity.abs() > 700;
+                  final shouldDismiss = (_dragOffset.abs() > fadeDistance) || velocity.abs() > 700;
                   if (shouldDismiss) {
                     // Determine swipe direction based on drag offset and velocity
                     _swipeDirection = _dragOffset > 0 ? 1.0 : -1.0;
@@ -131,31 +112,19 @@ class _FrostyPhotoViewDialogState extends State<FrostyPhotoViewDialog>
                     // run exit animation: translate in swipe direction by 30% of screen and fade out
                     _exitController
                       ..value = 0.0
-                      ..forward().whenComplete(
-                        () => Navigator.of(context).pop(),
-                      );
+                      ..forward().whenComplete(() => Navigator.of(context).pop());
                     return;
                   }
 
                   // animate back to zero
-                  _resetAnimation = Tween<double>(
-                    begin: _dragOffset,
-                    end: 0.0,
-                  ).animate(_resetController);
+                  _resetAnimation = Tween<double>(begin: _dragOffset, end: 0.0).animate(_resetController);
                   _resetController
                     ..value = 0.0
                     ..forward();
                 }
               : null,
           child: Transform.translate(
-            offset: Offset(
-              0,
-              _dragOffset +
-                  (_exitTranslateAnimation.value *
-                      screenHeight *
-                      0.25 *
-                      _swipeDirection),
-            ),
+            offset: Offset(0, _dragOffset + (_exitTranslateAnimation.value * screenHeight * 0.25 * _swipeDirection)),
             child: Opacity(
               opacity: _imageOpacity,
               child: PhotoView(
@@ -164,11 +133,8 @@ class _FrostyPhotoViewDialogState extends State<FrostyPhotoViewDialog>
                   cacheKey: _currentCacheKey,
                   cacheManager: CustomCacheManager.instance,
                 ),
-                scaleStateChangedCallback: (value) =>
-                    setState(() => photoViewScaleState = value),
-                backgroundDecoration: const BoxDecoration(
-                  color: Colors.transparent,
-                ),
+                scaleStateChangedCallback: (value) => setState(() => photoViewScaleState = value),
+                backgroundDecoration: const BoxDecoration(color: Colors.transparent),
               ),
             ),
           ),
@@ -178,10 +144,7 @@ class _FrostyPhotoViewDialogState extends State<FrostyPhotoViewDialog>
           opacity: buttonsOpacity,
           duration: const Duration(milliseconds: 100),
           child: IconButton(
-            icon: Icon(
-              Icons.close,
-              color: context.watch<FrostyThemes>().dark.colorScheme.onSurface,
-            ),
+            icon: Icon(Icons.close, color: context.watch<FrostyThemes>().dark.colorScheme.onSurface),
             onPressed: Navigator.of(context).pop,
           ),
         ),
@@ -204,13 +167,7 @@ class _FrostyPhotoViewDialogState extends State<FrostyPhotoViewDialog>
                     onPressed: _toggleResolution,
                     child: Text(
                       _isFullResolution ? 'View thumbnail' : 'View original',
-                      style: TextStyle(
-                        color: context
-                            .watch<FrostyThemes>()
-                            .dark
-                            .colorScheme
-                            .onSurface,
-                      ),
+                      style: TextStyle(color: context.watch<FrostyThemes>().dark.colorScheme.onSurface),
                     ),
                   ),
                 ),

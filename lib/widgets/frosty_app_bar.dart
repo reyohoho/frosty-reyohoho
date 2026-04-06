@@ -5,12 +5,7 @@ class FrostyAppBar extends StatelessWidget implements PreferredSizeWidget {
   final bool? centerTitle;
   final List<Widget>? actions;
 
-  const FrostyAppBar({
-    super.key,
-    required this.title,
-    this.centerTitle,
-    this.actions,
-  });
+  const FrostyAppBar({super.key, required this.title, this.centerTitle, this.actions});
 
   @override
   Widget build(BuildContext context) {

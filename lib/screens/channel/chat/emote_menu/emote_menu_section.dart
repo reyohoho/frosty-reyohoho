@@ -12,19 +12,13 @@ class EmoteMenuSection extends StatefulWidget {
   final List<Emote> emotes;
   final bool disabled;
 
-  const EmoteMenuSection({
-    super.key,
-    required this.chatStore,
-    required this.emotes,
-    this.disabled = false,
-  });
+  const EmoteMenuSection({super.key, required this.chatStore, required this.emotes, this.disabled = false});
 
   @override
   State<EmoteMenuSection> createState() => _EmoteMenuSectionState();
 }
 
-class _EmoteMenuSectionState extends State<EmoteMenuSection>
-    with AutomaticKeepAliveClientMixin {
+class _EmoteMenuSectionState extends State<EmoteMenuSection> with AutomaticKeepAliveClientMixin {
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -42,9 +36,7 @@ class _EmoteMenuSectionState extends State<EmoteMenuSection>
         ),
         padding: EdgeInsets.zero,
         itemBuilder: (context, index) => InkWell(
-          onTap: widget.disabled
-              ? null
-              : () => widget.chatStore.addEmote(widget.emotes[index]),
+          onTap: widget.disabled ? null : () => widget.chatStore.addEmote(widget.emotes[index]),
           onLongPress: () {
             HapticFeedback.lightImpact();
 
@@ -59,12 +51,9 @@ class _EmoteMenuSectionState extends State<EmoteMenuSection>
             child: Center(
               child: FrostyCachedNetworkImage(
                 imageUrl: widget.emotes[index].url,
-                height:
-                    widget.emotes[index].height?.toDouble() ?? defaultEmoteSize,
+                height: widget.emotes[index].height?.toDouble() ?? defaultEmoteSize,
                 width: widget.emotes[index].width?.toDouble(),
-                color: widget.disabled
-                    ? const Color.fromRGBO(255, 255, 255, 0.5)
-                    : null,
+                color: widget.disabled ? const Color.fromRGBO(255, 255, 255, 0.5) : null,
                 colorBlendMode: widget.disabled ? BlendMode.modulate : null,
               ),
             ),

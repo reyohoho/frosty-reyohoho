@@ -69,9 +69,7 @@ class UserActionsModal extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             child: Text(
               'Timeout $name',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
           const Divider(indent: 12, endIndent: 12),
@@ -86,9 +84,7 @@ class UserActionsModal extends StatelessWidget {
                   if (context.mounted) {
                     Navigator.pop(context); // Close main modal
                     if (success) {
-                      onModerationNotice?.call(
-                        '$name has been timed out for ${preset.label}',
-                      );
+                      onModerationNotice?.call('$name has been timed out for ${preset.label}');
                     } else {
                       onError?.call('Failed to timeout $name');
                     }
@@ -108,10 +104,7 @@ class UserActionsModal extends StatelessWidget {
         title: 'Ban $name',
         message: 'Are you sure you want to permanently ban $name from the channel?',
         actions: [
-          TextButton(
-            onPressed: Navigator.of(context).pop,
-            child: const Text('Cancel'),
-          ),
+          TextButton(onPressed: Navigator.of(context).pop, child: const Text('Cancel')),
           FilledButton(
             onPressed: () async {
               Navigator.pop(context); // Close dialog
@@ -141,10 +134,7 @@ class UserActionsModal extends StatelessWidget {
         title: 'Unban $name',
         message: 'Are you sure you want to unban $name?',
         actions: [
-          TextButton(
-            onPressed: Navigator.of(context).pop,
-            child: const Text('Cancel'),
-          ),
+          TextButton(onPressed: Navigator.of(context).pop, child: const Text('Cancel')),
           FilledButton(
             onPressed: () async {
               Navigator.pop(context); // Close dialog
@@ -180,8 +170,7 @@ class UserActionsModal extends StatelessWidget {
             onTap: () {
               if (isPinned == true) {
                 context.read<SettingsStore>().pinnedChannelIds = [
-                  ...context.read<SettingsStore>().pinnedChannelIds
-                    ..remove(userId),
+                  ...context.read<SettingsStore>().pinnedChannelIds..remove(userId),
                 ];
               } else {
                 context.read<SettingsStore>().pinnedChannelIds = [
@@ -214,17 +203,11 @@ class UserActionsModal extends StatelessWidget {
         if (authStore.isLoggedIn)
           ListTile(
             leading: const Icon(Icons.block_rounded),
-            onTap: () => authStore
-                .showBlockDialog(
-                  context,
-                  targetUser: name,
-                  targetUserId: userId,
-                )
-                .then((_) {
-                  if (context.mounted) {
-                    Navigator.pop(context);
-                  }
-                }),
+            onTap: () => authStore.showBlockDialog(context, targetUser: name, targetUserId: userId).then((_) {
+              if (context.mounted) {
+                Navigator.pop(context);
+              }
+            }),
             title: Text('Block $name'),
           ),
         ListTile(
@@ -246,10 +229,7 @@ class UserActionsModal extends StatelessWidget {
                     surfaceTintColor: Colors.transparent,
                     systemOverlayStyle: SystemUiOverlayStyle(
                       statusBarColor: Colors.transparent,
-                      statusBarIconBrightness:
-                          theme.brightness == Brightness.dark
-                          ? Brightness.light
-                          : Brightness.dark,
+                      statusBarIconBrightness: theme.brightness == Brightness.dark ? Brightness.light : Brightness.dark,
                     ),
                     leading: IconButton(
                       tooltip: 'Back',
@@ -263,25 +243,15 @@ class UserActionsModal extends StatelessWidget {
                       // WebView content
                       Positioned.fill(
                         child: Padding(
-                          padding: EdgeInsets.only(
-                            top:
-                                MediaQuery.of(context).padding.top +
-                                kToolbarHeight,
-                          ),
+                          padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top + kToolbarHeight),
                           child: WebViewWidget(
                             controller: WebViewController()
                               ..setJavaScriptMode(JavaScriptMode.unrestricted)
-                              ..loadRequest(
-                                Uri.parse(
-                                  'https://www.twitch.tv/$userLogin/report',
-                                ),
-                              )
+                              ..loadRequest(Uri.parse('https://www.twitch.tv/$userLogin/report'))
                               ..setNavigationDelegate(
                                 NavigationDelegate(
                                   onWebResourceError: (error) {
-                                    debugPrint(
-                                      'WebView error: ${error.description}',
-                                    );
+                                    debugPrint('WebView error: ${error.description}');
                                   },
                                 ),
                               ),

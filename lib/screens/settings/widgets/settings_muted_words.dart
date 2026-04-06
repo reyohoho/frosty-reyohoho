@@ -65,9 +65,7 @@ class _SettingsMutedWordsState extends State<SettingsMutedWords> {
                       decoration: InputDecoration(
                         hintText: 'Enter keywords to mute',
                         suffixIcon: IconButton(
-                          tooltip: textController.text.isEmpty
-                              ? 'Cancel'
-                              : 'Add keyword',
+                          tooltip: textController.text.isEmpty ? 'Cancel' : 'Add keyword',
                           onPressed: () {
                             if (textController.text.isEmpty) {
                               textFieldFocusNode.unfocus();
@@ -81,21 +79,14 @@ class _SettingsMutedWordsState extends State<SettingsMutedWords> {
                     ),
                   ),
                   if (settingsStore.mutedWords.isEmpty)
-                    const Expanded(
-                      child: AlertMessage(
-                        message: 'No muted keywords',
-                        vertical: true,
-                      ),
-                    ),
+                    const Expanded(child: AlertMessage(message: 'No muted keywords', vertical: true)),
                   Expanded(
                     child: FrostyScrollbar(
                       child: ListView.builder(
                         itemCount: settingsStore.mutedWords.length,
                         itemBuilder: (context, index) {
                           return ListTile(
-                            title: Text(
-                              settingsStore.mutedWords.elementAt(index),
-                            ),
+                            title: Text(settingsStore.mutedWords.elementAt(index)),
                             trailing: IconButton(
                               icon: const Icon(Icons.delete),
                               onPressed: () {
@@ -104,8 +95,7 @@ class _SettingsMutedWordsState extends State<SettingsMutedWords> {
                                   context: context,
                                   builder: (context) => FrostyDialog(
                                     title: 'Delete keyword',
-                                    message:
-                                        'Are you sure you want to delete this keyword?',
+                                    message: 'Are you sure you want to delete this keyword?',
                                     actions: [
                                       TextButton(
                                         onPressed: () {

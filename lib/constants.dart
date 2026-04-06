@@ -7,16 +7,7 @@ const clientId = String.fromEnvironment('CLIENT_ID');
 const secret = String.fromEnvironment('SECRET');
 
 /// BTTV emotes with zero width to allow for overlaying other emotes.
-const zeroWidthEmotes = [
-  'SoSnowy',
-  'IceCold',
-  'SantaHat',
-  'TopHat',
-  'ReinDeer',
-  'CandyCane',
-  'cvMask',
-  'cvHazmat',
-];
+const zeroWidthEmotes = ['SoSnowy', 'IceCold', 'SantaHat', 'TopHat', 'ReinDeer', 'CandyCane', 'cvMask', 'cvHazmat'];
 
 /// Regex for matching strings that contain lower or upper case English characters.
 final regexEnglish = RegExp(r'[a-zA-Z]');
@@ -28,28 +19,16 @@ final regexImageUrl = RegExp(
 );
 
 /// Regex for matching direct video URLs.
-final regexVideoUrl = RegExp(
-  r'https?://[a-zA-Z0-9./\-_%@?&=:+~]+(?:\.mp4|\.mov)',
-  caseSensitive: false,
-);
+final regexVideoUrl = RegExp(r'https?://[a-zA-Z0-9./\-_%@?&=:+~]+(?:\.mp4|\.mov)', caseSensitive: false);
 
 /// Regex for matching 7TV emote page URLs.
-final regex7TVEmote = RegExp(
-  r'https?://7tv\.app/emotes/([a-zA-Z0-9]+)',
-  caseSensitive: false,
-);
+final regex7TVEmote = RegExp(r'https?://7tv\.app/emotes/([a-zA-Z0-9]+)', caseSensitive: false);
 
 /// Regex for matching Imgur URLs.
-final regexImgur = RegExp(
-  r'https?://(?:www\.)?imgur\.com/([a-zA-Z0-9]+)',
-  caseSensitive: false,
-);
+final regexImgur = RegExp(r'https?://(?:www\.)?imgur\.com/([a-zA-Z0-9]+)', caseSensitive: false);
 
 /// Regex for matching Kappa.lol URLs.
-final regexKappaLol = RegExp(
-  r'https?://(?:[a-zA-Z0-9]+\.)?kappa\.lol/([a-zA-Z0-9]+)',
-  caseSensitive: false,
-);
+final regexKappaLol = RegExp(r'https?://(?:[a-zA-Z0-9]+\.)?kappa\.lol/([a-zA-Z0-9]+)', caseSensitive: false);
 
 /// CDN domains that need proxying for link previews.
 const linkPreviewProxyDomains = [

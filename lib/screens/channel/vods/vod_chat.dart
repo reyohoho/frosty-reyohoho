@@ -102,15 +102,9 @@ class _VodChatState extends State<VodChat> {
       // Load channel-specific emotes in parallel
       final futures = await Future.wait([
         // BTTV returns List<Emote> directly
-        bttvApi
-            .getEmotesChannel(id: widget.channelId)
-            .then<List<Emote>>((list) => list)
-            .catchError((_) => <Emote>[]),
+        bttvApi.getEmotesChannel(id: widget.channelId).then<List<Emote>>((list) => list).catchError((_) => <Emote>[]),
         // FFZ returns (RoomFFZ, List<Emote>) tuple
-        ffzApi
-            .getRoomInfo(id: widget.channelId)
-            .then<List<Emote>>((result) => result.$2)
-            .catchError((_) => <Emote>[]),
+        ffzApi.getRoomInfo(id: widget.channelId).then<List<Emote>>((result) => result.$2).catchError((_) => <Emote>[]),
         // 7TV returns (String, List<Emote>) tuple
         sevenTVApi
             .getEmotesChannel(id: widget.channelId)
@@ -192,8 +186,7 @@ class _VodChatState extends State<VodChat> {
     if (_isLoading) return;
 
     // Don't refetch if we're close to the last fetched offset (5 sec window for high-activity VODs)
-    if ((_lastFetchedOffset - offsetSeconds).abs() < 5 &&
-        _lastFetchedOffset != -1) {
+    if ((_lastFetchedOffset - offsetSeconds).abs() < 5 && _lastFetchedOffset != -1) {
       return;
     }
 
@@ -211,15 +204,10 @@ class _VodChatState extends State<VodChat> {
 
       while (response != null && pageCount < maxPages) {
         allComments.addAll(response.comments);
-        if (!response.hasNextPage ||
-            response.cursor == null ||
-            response.cursor!.isEmpty) {
+        if (!response.hasNextPage || response.cursor == null || response.cursor!.isEmpty) {
           break;
         }
-        response = await widget.twitchApi.getVodComments(
-          videoId: widget.videoId,
-          cursor: response.cursor,
-        );
+        response = await widget.twitchApi.getVodComments(videoId: widget.videoId, cursor: response.cursor);
         pageCount++;
       }
 
@@ -233,9 +221,7 @@ class _VodChatState extends State<VodChat> {
           }
 
           // Sort by offset
-          _comments.sort(
-            (a, b) => a.contentOffsetSeconds.compareTo(b.contentOffsetSeconds),
-          );
+          _comments.sort((a, b) => a.contentOffsetSeconds.compareTo(b.contentOffsetSeconds));
 
           // Keep only comments within reasonable range (last 5 minutes)
           final minOffset = offsetSeconds - 300;
@@ -267,16 +253,13 @@ class _VodChatState extends State<VodChat> {
 
   void _adjustDelay(double delta) {
     setState(() {
-      _settingsStore.vodChatDelay =
-          (_settingsStore.vodChatDelay + delta).clamp(-300.0, 300.0);
+      _settingsStore.vodChatDelay = (_settingsStore.vodChatDelay + delta).clamp(-300.0, 300.0);
     });
   }
 
   /// Renders message fragments with support for third-party emotes, zero-width emotes, and link previews
   /// Returns a tuple of (spans, linkPreviews)
-  (List<InlineSpan>, List<LinkPreviewInfo>) _renderMessageFragments(
-    VodCommentMessage message,
-  ) {
+  (List<InlineSpan>, List<LinkPreviewInfo>) _renderMessageFragments(VodCommentMessage message) {
     final spans = <InlineSpan>[];
     final linkPreviews = <LinkPreviewInfo>[];
     final emoteScale = _settingsStore.emoteScale;
@@ -293,10 +276,7 @@ class _VodChatState extends State<VodChat> {
               imageUrl: fragment.emote!.url3x,
               height: emoteHeight,
               useFade: false,
-              placeholder: (_, _) => SizedBox(
-                width: emoteHeight,
-                height: emoteHeight,
-              ),
+              placeholder: (_, _) => SizedBox(width: emoteHeight, height: emoteHeight),
             ),
           ),
         );
@@ -316,21 +296,11 @@ class _VodChatState extends State<VodChat> {
             // Check if this is a zero-width emote that should stack
             if (emote.zeroWidth && index > 0) {
               // Process zero-width emote stack
-              index = _processZeroWidthEmoteStack(
-                localSpan,
-                words,
-                index,
-                emote,
-                emoteHeight,
-                emoteScale,
-              );
+              index = _processZeroWidthEmoteStack(localSpan, words, index, emote, emoteHeight, emoteScale);
             } else {
               // Regular emote
-              final height = emote.height != null
-                  ? emote.height! * emoteScale
-                  : emoteHeight;
-              final width =
-                  emote.width != null ? emote.width! * emoteScale : null;
+              final height = emote.height != null ? emote.height! * emoteScale : emoteHeight;
+              final width = emote.width != null ? emote.width! * emoteScale : null;
 
               localSpan.add(
                 WidgetSpan(
@@ -340,10 +310,7 @@ class _VodChatState extends State<VodChat> {
                     height: height,
                     width: width,
                     useFade: false,
-                    placeholder: (_, _) => SizedBox(
-                      width: width ?? emoteHeight,
-                      height: height,
-                    ),
+                    placeholder: (_, _) => SizedBox(width: width ?? emoteHeight, height: height),
                   ),
                 ),
               );
@@ -362,22 +329,17 @@ class _VodChatState extends State<VodChat> {
             // Add tappable link
             localSpan.add(
               TextSpan(
-                text: _settingsStore.hideLinkPreviewLinks &&
-                        showLinkPreviews &&
-                        detectLinkPreview(word) != null
+                text: _settingsStore.hideLinkPreviewLinks && showLinkPreviews && detectLinkPreview(word) != null
                     ? '[link]'
                     : word,
-                style: TextStyle(
-                  color: Theme.of(_context!).colorScheme.primary,
-                  decoration: TextDecoration.underline,
-                ),
+                style: TextStyle(color: Theme.of(_context!).colorScheme.primary, decoration: TextDecoration.underline),
                 recognizer: TapGestureRecognizer()
                   ..onTap = () => launchUrl(
-                        Uri.parse(word),
-                        mode: _settingsStore.launchUrlExternal
-                            ? LaunchMode.externalApplication
-                            : LaunchMode.inAppBrowserView,
-                      ),
+                    Uri.parse(word),
+                    mode: _settingsStore.launchUrlExternal
+                        ? LaunchMode.externalApplication
+                        : LaunchMode.inAppBrowserView,
+                  ),
               ),
             );
             localSpan.add(const TextSpan(text: ' '));
@@ -428,24 +390,15 @@ class _VodChatState extends State<VodChat> {
 
     // Build the stacked emote widget
     final children = emoteStack.reversed.map((emote) {
-      final height =
-          emote.height != null ? emote.height! * emoteScale : emoteHeight;
+      final height = emote.height != null ? emote.height! * emoteScale : emoteHeight;
       final width = emote.width != null ? emote.width! * emoteScale : null;
-      return FrostyCachedNetworkImage(
-        imageUrl: emote.url,
-        height: height,
-        width: width ?? emoteHeight,
-        useFade: false,
-      );
+      return FrostyCachedNetworkImage(imageUrl: emote.url, height: height, width: width ?? emoteHeight, useFade: false);
     }).toList();
 
     localSpan.add(
       WidgetSpan(
         alignment: PlaceholderAlignment.middle,
-        child: Stack(
-          alignment: AlignmentDirectional.center,
-          children: children,
-        ),
+        child: Stack(alignment: AlignmentDirectional.center, children: children),
       ),
     );
     localSpan.add(const TextSpan(text: ' '));
@@ -501,9 +454,7 @@ class _VodChatState extends State<VodChat> {
     final ffzBadges = _globalAssetsStore.ffzBadges[commenterUserId];
     if (ffzBadges != null) {
       for (final badge in ffzBadges) {
-        final bgColor = badge.color != null
-            ? Color(int.parse(badge.color!.replaceFirst('#', '0xFF')))
-            : null;
+        final bgColor = badge.color != null ? Color(int.parse(badge.color!.replaceFirst('#', '0xFF'))) : null;
 
         badges.add(
           Padding(
@@ -518,12 +469,7 @@ class _VodChatState extends State<VodChat> {
                       useFade: false,
                     ),
                   )
-                : FrostyCachedNetworkImage(
-                    imageUrl: badge.url,
-                    width: badgeSize,
-                    height: badgeSize,
-                    useFade: false,
-                  ),
+                : FrostyCachedNetworkImage(imageUrl: badge.url, width: badgeSize, height: badgeSize, useFade: false),
           ),
         );
       }
@@ -535,12 +481,7 @@ class _VodChatState extends State<VodChat> {
       badges.add(
         Padding(
           padding: const EdgeInsets.only(right: 3),
-          child: FrostyCachedNetworkImage(
-            imageUrl: bttvBadge.url,
-            width: badgeSize,
-            height: badgeSize,
-            useFade: false,
-          ),
+          child: FrostyCachedNetworkImage(imageUrl: bttvBadge.url, width: badgeSize, height: badgeSize, useFade: false),
         ),
       );
     }
@@ -589,9 +530,7 @@ class _VodChatState extends State<VodChat> {
     // Positive delay = chat is behind video, so we subtract delay from video time
     // Negative delay = chat is ahead of video, so we add to video time (subtracting negative)
     final adjustedTime = currentTime - chatDelay.toInt();
-    final visibleComments = _comments
-        .where((c) => c.contentOffsetSeconds <= adjustedTime + 2)
-        .toList();
+    final visibleComments = _comments.where((c) => c.contentOffsetSeconds <= adjustedTime + 2).toList();
 
     // With reverse: true, new messages automatically appear at the bottom
     // when autoScroll is enabled (scroll position stays at 0)
@@ -601,16 +540,9 @@ class _VodChatState extends State<VodChat> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.chat_bubble_outline,
-              size: 48,
-              color: theme.colorScheme.outline,
-            ),
+            Icon(Icons.chat_bubble_outline, size: 48, color: theme.colorScheme.outline),
             const SizedBox(height: 8),
-            Text(
-              'No chat messages',
-              style: TextStyle(color: theme.colorScheme.outline),
-            ),
+            Text('No chat messages', style: TextStyle(color: theme.colorScheme.outline)),
           ],
         ),
       );
@@ -622,37 +554,23 @@ class _VodChatState extends State<VodChat> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            border: Border(
-              bottom: BorderSide(
-                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
-              ),
-            ),
+            border: Border(bottom: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3))),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Row(
                 children: [
-                  Icon(
-                    Icons.chat,
-                    size: 16,
-                    color: theme.colorScheme.primary,
-                  ),
+                  Icon(Icons.chat, size: 16, color: theme.colorScheme.primary),
                   const SizedBox(width: 8),
                   Text(
                     'Chat Replay',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: theme.colorScheme.onSurface,
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface),
                   ),
                   if (chatDelay != 0) ...[
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
                         color: theme.colorScheme.primaryContainer,
                         borderRadius: BorderRadius.circular(8),
@@ -670,12 +588,7 @@ class _VodChatState extends State<VodChat> {
                   const Spacer(),
                   // Delay settings button
                   IconButton(
-                    icon: Icon(
-                      _showDelayControls
-                          ? Icons.timer_off_outlined
-                          : Icons.timer_outlined,
-                      size: 18,
-                    ),
+                    icon: Icon(_showDelayControls ? Icons.timer_off_outlined : Icons.timer_outlined, size: 18),
                     tooltip: 'Chat sync delay',
                     onPressed: () {
                       setState(() => _showDelayControls = !_showDelayControls);
@@ -701,32 +614,17 @@ class _VodChatState extends State<VodChat> {
                   padding: const EdgeInsets.only(top: 8),
                   child: Row(
                     children: [
-                      Text(
-                        'Delay:',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: theme.colorScheme.outline,
-                        ),
-                      ),
+                      Text('Delay:', style: TextStyle(fontSize: 12, color: theme.colorScheme.outline)),
                       const SizedBox(width: 8),
                       // -10s button
-                      _DelayButton(
-                        label: '-10',
-                        onPressed: () => _adjustDelay(-10),
-                      ),
+                      _DelayButton(label: '-10', onPressed: () => _adjustDelay(-10)),
                       const SizedBox(width: 4),
                       // -1s button
-                      _DelayButton(
-                        label: '-1',
-                        onPressed: () => _adjustDelay(-1),
-                      ),
+                      _DelayButton(label: '-1', onPressed: () => _adjustDelay(-1)),
                       const SizedBox(width: 8),
                       // Current delay display
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: theme.colorScheme.surfaceContainerHighest,
                           borderRadius: BorderRadius.circular(4),
@@ -743,16 +641,10 @@ class _VodChatState extends State<VodChat> {
                       ),
                       const SizedBox(width: 8),
                       // +1s button
-                      _DelayButton(
-                        label: '+1',
-                        onPressed: () => _adjustDelay(1),
-                      ),
+                      _DelayButton(label: '+1', onPressed: () => _adjustDelay(1)),
                       const SizedBox(width: 4),
                       // +10s button
-                      _DelayButton(
-                        label: '+10',
-                        onPressed: () => _adjustDelay(10),
-                      ),
+                      _DelayButton(label: '+10', onPressed: () => _adjustDelay(10)),
                       const SizedBox(width: 8),
                       // Reset button
                       if (chatDelay != 0)
@@ -790,15 +682,13 @@ class _VodChatState extends State<VodChat> {
             itemCount: visibleComments.length,
             itemBuilder: (context, index) {
               // With reverse: true, we need to reverse the index to show oldest at top
-              final comment =
-                  visibleComments[visibleComments.length - 1 - index];
+              final comment = visibleComments[visibleComments.length - 1 - index];
               final userColor = _parseColor(comment.message.userColor);
               final badgeScale = _settingsStore.badgeScale;
               final badgeSize = 16.0 * badgeScale;
 
               // Render message and collect link previews
-              final (messageSpans, linkPreviews) =
-                  _renderMessageFragments(comment.message);
+              final (messageSpans, linkPreviews) = _renderMessageFragments(comment.message);
 
               // Build badges list
               final badgeSpans = <InlineSpan>[];
@@ -806,8 +696,7 @@ class _VodChatState extends State<VodChat> {
               // Twitch badges
               for (final badge in comment.message.userBadges) {
                 final badgeKey = '${badge.setID}/${badge.version}';
-                final chatBadge =
-                    _globalAssetsStore.twitchGlobalBadges[badgeKey];
+                final chatBadge = _globalAssetsStore.twitchGlobalBadges[badgeKey];
 
                 if (chatBadge != null) {
                   badgeSpans.add(
@@ -834,27 +723,16 @@ class _VodChatState extends State<VodChat> {
               // Build the message widget
               Widget messageWidget = RichText(
                 text: TextSpan(
-                  style: TextStyle(
-                    fontSize: 13 * _settingsStore.messageScale,
-                    color: theme.colorScheme.onSurface,
-                  ),
+                  style: TextStyle(fontSize: 13 * _settingsStore.messageScale, color: theme.colorScheme.onSurface),
                   children: [
                     // Twitch badges
                     ...badgeSpans,
                     // Custom badges as WidgetSpans
-                    ...customBadges.map(
-                      (badge) => WidgetSpan(
-                        alignment: PlaceholderAlignment.middle,
-                        child: badge,
-                      ),
-                    ),
+                    ...customBadges.map((badge) => WidgetSpan(alignment: PlaceholderAlignment.middle, child: badge)),
                     // Username
                     TextSpan(
                       text: comment.commenter.displayName,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        color: userColor,
-                      ),
+                      style: TextStyle(fontWeight: FontWeight.w600, color: userColor),
                     ),
                     const TextSpan(text: ': '),
                     // Message fragments (with third-party emote and link support)
@@ -933,10 +811,7 @@ class _DelayButton extends StatelessWidget {
   final String label;
   final VoidCallback onPressed;
 
-  const _DelayButton({
-    required this.label,
-    required this.onPressed,
-  });
+  const _DelayButton({required this.label, required this.onPressed});
 
   @override
   Widget build(BuildContext context) {
@@ -951,16 +826,10 @@ class _DelayButton extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           child: Text(
             label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-              color: theme.colorScheme.onSurface,
-            ),
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: theme.colorScheme.onSurface),
           ),
         ),
       ),
     );
   }
 }
-
-

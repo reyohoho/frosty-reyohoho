@@ -68,6 +68,9 @@ extension ContextExtensions on BuildContext {
   /// Gets TwitchApi from provider
   TwitchApi get twitchApi => read<TwitchApi>();
 
+  /// Gets StaregeDomain from provider
+  String? get staregeDomain => read<String>();
+
   /// Gets AuthStore from provider
   AuthStore get authStore => read<AuthStore>();
 

@@ -28,10 +28,7 @@ class Search extends StatefulWidget {
 const double _kSearchBarHeight = 80.0;
 
 class _SearchState extends State<Search> {
-  late final _searchStore = SearchStore(
-    authStore: context.read<AuthStore>(),
-    twitchApi: context.read<TwitchApi>(),
-  );
+  late final _searchStore = SearchStore(authStore: context.read<AuthStore>(), twitchApi: context.read<TwitchApi>());
 
   @override
   Widget build(BuildContext context) {
@@ -48,22 +45,13 @@ class _SearchState extends State<Search> {
                     controller: widget.scrollController,
                     slivers: [
                       SliverToBoxAdapter(
-                        child: SizedBox(
-                          height:
-                              MediaQuery.of(context).padding.top +
-                              _kSearchBarHeight,
-                        ),
+                        child: SizedBox(height: MediaQuery.of(context).padding.top + _kSearchBarHeight),
                       ),
                       SliverFillRemaining(
                         hasScrollBody: false,
                         child: Padding(
-                          padding: EdgeInsets.only(
-                            bottom: MediaQuery.of(context).padding.bottom,
-                          ),
-                          child: const AlertMessage(
-                            message: 'No recent searches',
-                            vertical: true,
-                          ),
+                          padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom),
+                          child: const AlertMessage(message: 'No recent searches', vertical: true),
                         ),
                       ),
                     ],
@@ -79,9 +67,7 @@ class _SearchState extends State<Search> {
                   child: ListView(
                     controller: widget.scrollController,
                     padding: EdgeInsets.only(
-                      top:
-                          MediaQuery.of(context).padding.top +
-                          _kSearchBarHeight,
+                      top: MediaQuery.of(context).padding.top + _kSearchBarHeight,
                       bottom: MediaQuery.of(context).padding.bottom,
                     ),
                     children: [
@@ -93,15 +79,8 @@ class _SearchState extends State<Search> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const SectionHeader(
-                              'History',
-                              padding: EdgeInsets.zero,
-                              isFirst: true,
-                            ),
-                            TextButton(
-                              onPressed: _searchStore.searchHistory.clear,
-                              child: const Text('Clear'),
-                            ),
+                            const SectionHeader('History', padding: EdgeInsets.zero, isFirst: true),
+                            TextButton(onPressed: _searchStore.searchHistory.clear, child: const Text('Clear')),
                           ],
                         ),
                       ),
@@ -110,18 +89,11 @@ class _SearchState extends State<Search> {
                           leading: const Icon(Icons.history_rounded),
                           title: Text(searchTerm),
                           onTap: () {
-                            _searchStore.textEditingController.text =
-                                searchTerm;
+                            _searchStore.textEditingController.text = searchTerm;
                             _searchStore.handleQuery(searchTerm);
-                            _searchStore.textEditingController.selection =
-                                TextSelection.fromPosition(
-                                  TextPosition(
-                                    offset: _searchStore
-                                        .textEditingController
-                                        .text
-                                        .length,
-                                  ),
-                                );
+                            _searchStore.textEditingController.selection = TextSelection.fromPosition(
+                              TextPosition(offset: _searchStore.textEditingController.text.length),
+                            );
                           },
                         ),
                       ),
@@ -154,10 +126,7 @@ class _SearchState extends State<Search> {
                         ),
                       ),
                     ),
-                    SearchResultsChannels(
-                      searchStore: _searchStore,
-                      query: _searchStore.searchText,
-                    ),
+                    SearchResultsChannels(searchStore: _searchStore, query: _searchStore.searchText),
                     SliverToBoxAdapter(
                       child: Builder(
                         builder: (context) => SectionHeader(
@@ -206,14 +175,10 @@ class _SearchState extends State<Search> {
                         decoration: InputDecoration(
                           prefixIcon: const Icon(Icons.search_rounded),
                           hintText: 'Search channels or categories',
-                          suffixIcon:
-                              _searchStore.textFieldFocusNode.hasFocus ||
-                                  _searchStore.searchText.isNotEmpty
+                          suffixIcon: _searchStore.textFieldFocusNode.hasFocus || _searchStore.searchText.isNotEmpty
                               ? IconButton(
                                   icon: const Icon(Icons.close_rounded),
-                                  tooltip: _searchStore.searchText.isEmpty
-                                      ? 'Cancel'
-                                      : 'Clear',
+                                  tooltip: _searchStore.searchText.isEmpty ? 'Cancel' : 'Clear',
                                   onPressed: () {
                                     if (_searchStore.searchText.isEmpty) {
                                       _searchStore.textFieldFocusNode.unfocus();
@@ -224,26 +189,17 @@ class _SearchState extends State<Search> {
                                     if (widget.scrollController.hasClients) {
                                       widget.scrollController.animateTo(
                                         0,
-                                        duration: const Duration(
-                                          milliseconds: 150,
-                                        ),
+                                        duration: const Duration(milliseconds: 150),
                                         curve: Curves.easeOut,
                                       );
                                     }
                                     // After the frame (when content swaps), re-evaluate border state
-                                    WidgetsBinding.instance.addPostFrameCallback((
-                                      _,
-                                    ) {
+                                    WidgetsBinding.instance.addPostFrameCallback((_) {
                                       if (widget.scrollController.hasClients) {
                                         // Nudge listeners even if already at zero
-                                        final offset =
-                                            widget.scrollController.offset;
-                                        final target = (offset == 0)
-                                            ? 0.01
-                                            : 0.0;
-                                        widget.scrollController.jumpTo(
-                                          (offset == 0) ? target : 0.0,
-                                        );
+                                        final offset = widget.scrollController.offset;
+                                        final target = (offset == 0) ? 0.01 : 0.0;
+                                        widget.scrollController.jumpTo((offset == 0) ? target : 0.0);
                                         if (target == 0.01) {
                                           widget.scrollController.jumpTo(0.0);
                                         }
@@ -279,10 +235,6 @@ class _SearchTopPadding extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SliverToBoxAdapter(
-      child: SizedBox(
-        height: MediaQuery.of(context).padding.top + _kSearchBarHeight,
-      ),
-    );
+    return SliverToBoxAdapter(child: SizedBox(height: MediaQuery.of(context).padding.top + _kSearchBarHeight));
   }
 }

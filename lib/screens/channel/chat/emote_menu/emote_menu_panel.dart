@@ -9,12 +9,7 @@ class EmoteMenuPanel extends StatelessWidget {
   final List<Emote>? emotes;
   final Map<String, List<Emote>>? twitchEmotes;
 
-  const EmoteMenuPanel({
-    super.key,
-    required this.chatStore,
-    this.emotes,
-    this.twitchEmotes,
-  });
+  const EmoteMenuPanel({super.key, required this.chatStore, this.emotes, this.twitchEmotes});
 
   @override
   Widget build(BuildContext context) {
@@ -41,22 +36,17 @@ class EmoteMenuPanel extends StatelessWidget {
       return FrostyPageView(
         headers: [if (channelEmotes.isNotEmpty) 'Channel', 'Global'],
         children: [
-          if (channelEmotes.isNotEmpty)
-            EmoteMenuSection(chatStore: chatStore, emotes: channelEmotes),
+          if (channelEmotes.isNotEmpty) EmoteMenuSection(chatStore: chatStore, emotes: channelEmotes),
           EmoteMenuSection(chatStore: chatStore, emotes: globalEmotes),
         ],
       );
     } else {
       final isSubbed = chatStore.userState.subscriber;
 
-      twitchEmotes?.removeWhere(
-        (key, value) => key.toLowerCase() == chatStore.channelName,
-      );
+      twitchEmotes?.removeWhere((key, value) => key.toLowerCase() == chatStore.channelName);
 
       return FrostyPageView(
-        headers: twitchEmotes!.keys
-            .map((header) => header.split(' ')[0])
-            .toList(),
+        headers: twitchEmotes!.keys.map((header) => header.split(' ')[0]).toList(),
         children: twitchEmotes!.entries
             .map(
               (e) => EmoteMenuSection(

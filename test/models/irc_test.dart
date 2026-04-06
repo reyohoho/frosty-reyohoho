@@ -106,10 +106,7 @@ void main() {
         expect(msg.localEmotes!.containsKey('LUL'), isTrue);
 
         // Verify emote URLs are constructed correctly
-        expect(
-          msg.localEmotes!['Kappa']!.url,
-          contains('static-cdn.jtvnw.net/emoticons/v2/25'),
-        );
+        expect(msg.localEmotes!['Kappa']!.url, contains('static-cdn.jtvnw.net/emoticons/v2/25'));
       });
 
       test('handles multiple instances of same emote', () {
@@ -145,10 +142,7 @@ void main() {
 
     group('mention detection', () {
       test('detects when message mentions logged-in user', () {
-        final msg = IRCMessage.fromString(
-          mentionMessage,
-          userLogin: 'targetuser',
-        );
+        final msg = IRCMessage.fromString(mentionMessage, userLogin: 'targetuser');
 
         expect(msg.mention, isTrue);
       });
@@ -165,10 +159,7 @@ void main() {
       });
 
       test('no mention when user is not mentioned', () {
-        final msg = IRCMessage.fromString(
-          basicPrivmsg,
-          userLogin: 'someotheruser',
-        );
+        final msg = IRCMessage.fromString(basicPrivmsg, userLogin: 'someotheruser');
 
         expect(msg.mention, isFalse);
       });
@@ -256,22 +247,12 @@ void main() {
         message: 'testuser',
       );
 
-      IRCMessage.clearChat(
-        messages: messages,
-        bufferedMessages: bufferedMessages,
-        ircMessage: clearChatMsg,
-      );
+      IRCMessage.clearChat(messages: messages, bufferedMessages: bufferedMessages, ircMessage: clearChatMsg);
 
       // testuser's message should be marked as clearChat
-      expect(
-        messages.where((m) => m.user == 'testuser').first.command,
-        Command.clearChat,
-      );
+      expect(messages.where((m) => m.user == 'testuser').first.command, Command.clearChat);
       // Other users' messages should be unchanged
-      expect(
-        messages.where((m) => m.user == 'moduser').first.command,
-        Command.privateMessage,
-      );
+      expect(messages.where((m) => m.user == 'moduser').first.command, Command.privateMessage);
     });
 
     test('adds ban-duration tag to affected messages', () {
@@ -282,28 +263,16 @@ void main() {
         message: 'testuser',
       );
 
-      IRCMessage.clearChat(
-        messages: messages,
-        bufferedMessages: bufferedMessages,
-        ircMessage: clearChatMsg,
-      );
+      IRCMessage.clearChat(messages: messages, bufferedMessages: bufferedMessages, ircMessage: clearChatMsg);
 
       final affectedMessage = messages.where((m) => m.user == 'testuser').first;
       expect(affectedMessage.tags['ban-duration'], '300');
     });
 
     test('clears entire chat when no target user', () {
-      final clearAllMsg = IRCMessage(
-        raw: '',
-        command: Command.clearChat,
-        tags: {},
-      );
+      final clearAllMsg = IRCMessage(raw: '', command: Command.clearChat, tags: {});
 
-      IRCMessage.clearChat(
-        messages: messages,
-        bufferedMessages: bufferedMessages,
-        ircMessage: clearAllMsg,
-      );
+      IRCMessage.clearChat(messages: messages, bufferedMessages: bufferedMessages, ircMessage: clearAllMsg);
 
       // Messages list should be cleared and contain only the notice
       expect(messages.length, 1);
@@ -344,56 +313,28 @@ void main() {
     });
 
     test('marks specific message by ID', () {
-      final clearMsg = IRCMessage(
-        raw: '',
-        command: Command.clearMessage,
-        tags: {'target-msg-id': 'msg-2'},
-      );
+      final clearMsg = IRCMessage(raw: '', command: Command.clearMessage, tags: {'target-msg-id': 'msg-2'});
 
-      IRCMessage.clearMessage(
-        messages: messages,
-        bufferedMessages: bufferedMessages,
-        ircMessage: clearMsg,
-      );
+      IRCMessage.clearMessage(messages: messages, bufferedMessages: bufferedMessages, ircMessage: clearMsg);
 
       // Only msg-2 should be marked
-      expect(
-        messages.firstWhere((m) => m.tags['id'] == 'msg-2').command,
-        Command.clearMessage,
-      );
+      expect(messages.firstWhere((m) => m.tags['id'] == 'msg-2').command, Command.clearMessage);
       // Other messages unchanged
-      expect(
-        messages.firstWhere((m) => m.tags['id'] == 'msg-1').command,
-        Command.privateMessage,
-      );
-      expect(
-        messages.firstWhere((m) => m.tags['id'] == 'msg-3').command,
-        Command.privateMessage,
-      );
+      expect(messages.firstWhere((m) => m.tags['id'] == 'msg-1').command, Command.privateMessage);
+      expect(messages.firstWhere((m) => m.tags['id'] == 'msg-3').command, Command.privateMessage);
     });
 
     test('handles non-existent message ID gracefully', () {
-      final clearMsg = IRCMessage(
-        raw: '',
-        command: Command.clearMessage,
-        tags: {'target-msg-id': 'non-existent'},
-      );
+      final clearMsg = IRCMessage(raw: '', command: Command.clearMessage, tags: {'target-msg-id': 'non-existent'});
 
       // Should not throw
       expect(
-        () => IRCMessage.clearMessage(
-          messages: messages,
-          bufferedMessages: bufferedMessages,
-          ircMessage: clearMsg,
-        ),
+        () => IRCMessage.clearMessage(messages: messages, bufferedMessages: bufferedMessages, ircMessage: clearMsg),
         returnsNormally,
       );
 
       // All messages should be unchanged
-      expect(
-        messages.every((m) => m.command == Command.privateMessage),
-        isTrue,
-      );
+      expect(messages.every((m) => m.command == Command.privateMessage), isTrue);
     });
   });
 
@@ -438,11 +379,7 @@ void main() {
       final ircMsg = IRCMessage(
         raw: '',
         command: Command.roomState,
-        tags: {
-          'emote-only': '1',
-          'followers-only': '10',
-          'slow': '30',
-        },
+        tags: {'emote-only': '1', 'followers-only': '10', 'slow': '30'},
       );
 
       final updated = original.fromIRCMessage(ircMsg);
@@ -471,12 +408,7 @@ void main() {
       final ircMsg = IRCMessage(
         raw: '@color=#FF0000;display-name=TestUser;mod=1;subscriber=1',
         command: Command.userState,
-        tags: {
-          'color': '#FF0000',
-          'display-name': 'TestUser',
-          'mod': '1',
-          'subscriber': '1',
-        },
+        tags: {'color': '#FF0000', 'display-name': 'TestUser', 'mod': '1', 'subscriber': '1'},
       );
 
       final updated = original.fromIRCMessage(ircMsg);
@@ -489,11 +421,7 @@ void main() {
 
     test('mod=0 is false', () {
       const original = USERSTATE();
-      final ircMsg = IRCMessage(
-        raw: '',
-        command: Command.userState,
-        tags: {'mod': '0'},
-      );
+      final ircMsg = IRCMessage(raw: '', command: Command.userState, tags: {'mod': '0'});
 
       final updated = original.fromIRCMessage(ircMsg);
       expect(updated.mod, isFalse);

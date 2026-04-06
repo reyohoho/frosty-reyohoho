@@ -9,15 +9,10 @@ class AccentColorPickerDialog extends StatefulWidget {
   final Color initialColor;
   final ValueChanged<Color> onColorChanged;
 
-  const AccentColorPickerDialog({
-    super.key,
-    required this.initialColor,
-    required this.onColorChanged,
-  });
+  const AccentColorPickerDialog({super.key, required this.initialColor, required this.onColorChanged});
 
   @override
-  State<AccentColorPickerDialog> createState() =>
-      _AccentColorPickerDialogState();
+  State<AccentColorPickerDialog> createState() => _AccentColorPickerDialogState();
 }
 
 class _AccentColorPickerDialogState extends State<AccentColorPickerDialog> {
@@ -32,12 +27,7 @@ class _AccentColorPickerDialogState extends State<AccentColorPickerDialog> {
   void _generateRandomColor() {
     HapticFeedback.mediumImpact();
     final random = Random();
-    final newColor = Color.fromARGB(
-      255,
-      random.nextInt(256),
-      random.nextInt(256),
-      random.nextInt(256),
-    );
+    final newColor = Color.fromARGB(255, random.nextInt(256), random.nextInt(256), random.nextInt(256));
     setState(() => currentColor = newColor);
     widget.onColorChanged(newColor);
   }
@@ -57,9 +47,7 @@ class _AccentColorPickerDialogState extends State<AccentColorPickerDialog> {
                 widget.onColorChanged(newColor);
               },
               enableAlpha: false,
-              pickerAreaBorderRadius: const BorderRadius.all(
-                Radius.circular(8),
-              ),
+              pickerAreaBorderRadius: const BorderRadius.all(Radius.circular(8)),
               labelTypes: const [],
             ),
             SizedBox(
@@ -74,14 +62,8 @@ class _AccentColorPickerDialogState extends State<AccentColorPickerDialog> {
         ),
       ),
       actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Done'),
-        ),
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        FilledButton(onPressed: () => Navigator.pop(context), child: const Text('Done')),
       ],
     );
   }

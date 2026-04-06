@@ -26,10 +26,7 @@ class OfflineChannelCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final channelName = getReadableName(
-      channelInfo.broadcasterName,
-      channelInfo.broadcasterLogin,
-    );
+    final channelName = getReadableName(channelInfo.broadcasterName, channelInfo.broadcasterLogin);
 
     final fontColor = DefaultTextStyle.of(context).style.color;
     final followedDuration = DateTime.now().difference(channelInfo.followedAt);
@@ -40,14 +37,11 @@ class OfflineChannelCard extends StatelessWidget {
       followedText = 'Following for $years ${years == 1 ? 'year' : 'years'}';
     } else if (followedDuration.inDays >= 30) {
       final months = followedDuration.inDays ~/ 30;
-      followedText =
-          'Following for $months ${months == 1 ? 'month' : 'months'}';
+      followedText = 'Following for $months ${months == 1 ? 'month' : 'months'}';
     } else if (followedDuration.inDays > 0) {
-      followedText =
-          'Following for ${followedDuration.inDays} ${followedDuration.inDays == 1 ? 'day' : 'days'}';
+      followedText = 'Following for ${followedDuration.inDays} ${followedDuration.inDays == 1 ? 'day' : 'days'}';
     } else if (followedDuration.inHours > 0) {
-      followedText =
-          'Following for ${followedDuration.inHours} ${followedDuration.inHours == 1 ? 'hour' : 'hours'}';
+      followedText = 'Following for ${followedDuration.inHours} ${followedDuration.inHours == 1 ? 'hour' : 'hours'}';
     } else {
       followedText =
           'Following for ${followedDuration.inMinutes} ${followedDuration.inMinutes == 1 ? 'minute' : 'minutes'}';
@@ -80,10 +74,7 @@ class OfflineChannelCard extends StatelessWidget {
         );
       },
       child: Padding(
-        padding: EdgeInsets.symmetric(
-          horizontal: 16 + MediaQuery.of(context).padding.left,
-          vertical: 8,
-        ),
+        padding: EdgeInsets.symmetric(horizontal: 16 + MediaQuery.of(context).padding.left, vertical: 8),
         child: Row(
           spacing: 12,
           children: [
@@ -97,11 +88,7 @@ class OfflineChannelCard extends StatelessWidget {
                   // Channel name
                   Text(
                     channelName,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: fontColor,
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: fontColor),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),

@@ -27,11 +27,7 @@ class _UserAgentDebugScreenState extends State<UserAgentDebugScreen> {
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setUserAgent(AuthBase.webViewUserAgent)
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onPageFinished: (_) => _capturePageContent(),
-        ),
-      )
+      ..setNavigationDelegate(NavigationDelegate(onPageFinished: (_) => _capturePageContent()))
       ..loadRequest(Uri.parse(_uaCheckUrl));
   }
 
@@ -65,10 +61,7 @@ class _UserAgentDebugScreenState extends State<UserAgentDebugScreen> {
   void _showResultDialog(String? rawUa, {String? error}) {
     showDialog(
       context: context,
-      builder: (context) => _UserAgentResultDialog(
-        rawUa: rawUa,
-        error: error,
-      ),
+      builder: (context) => _UserAgentResultDialog(rawUa: rawUa, error: error),
     );
   }
 
@@ -106,10 +99,7 @@ class _UserAgentResultDialog extends StatelessWidget {
 
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('User-Agent copied to clipboard'),
-        behavior: SnackBarBehavior.floating,
-      ),
+      const SnackBar(content: Text('User-Agent copied to clipboard'), behavior: SnackBarBehavior.floating),
     );
   }
 
@@ -133,10 +123,7 @@ class _UserAgentResultDialog extends StatelessWidget {
                     color: theme.colorScheme.errorContainer.withOpacity(0.5),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Text(
-                    error!,
-                    style: TextStyle(color: theme.colorScheme.onErrorContainer),
-                  ),
+                  child: Text(error!, style: TextStyle(color: theme.colorScheme.onErrorContainer)),
                 ),
               )
             else if (rawUa != null && rawUa!.isNotEmpty) ...[
@@ -144,9 +131,7 @@ class _UserAgentResultDialog extends StatelessWidget {
               const SizedBox(height: 16),
               Text(
                 'Raw response (from WebView)',
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+                style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 8),
               Container(
@@ -156,10 +141,7 @@ class _UserAgentResultDialog extends StatelessWidget {
                   color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: SelectableText(
-                  rawUa!,
-                  style: theme.textTheme.bodySmall,
-                ),
+                child: SelectableText(rawUa!, style: theme.textTheme.bodySmall),
               ),
             ],
           ],
@@ -172,10 +154,7 @@ class _UserAgentResultDialog extends StatelessWidget {
             icon: const Icon(Icons.copy_rounded, size: 18),
             label: const Text('Copy UA'),
           ),
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Close'),
-        ),
+        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Close')),
       ],
     );
   }
@@ -191,8 +170,7 @@ class _ParsedUaSection extends StatelessWidget {
     final theme = Theme.of(context);
     final result = UaParser.parse(userAgent);
 
-    String format(String? value) =>
-        value != null && value.isNotEmpty ? value : '—';
+    String format(String? value) => value != null && value.isNotEmpty ? value : '—';
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -203,41 +181,18 @@ class _ParsedUaSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Parsed',
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+          Text('Parsed', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
           const SizedBox(height: 12),
-          _ParsedRow(
-            label: 'OS',
-            value: '${format(result.os.name)} ${format(result.os.version)}'.trim(),
-          ),
+          _ParsedRow(label: 'OS', value: '${format(result.os.name)} ${format(result.os.version)}'.trim()),
           _ParsedRow(
             label: 'Browser',
-            value:
-                '${format(result.browser.name)} ${format(result.browser.version)}'
-                    .trim(),
+            value: '${format(result.browser.name)} ${format(result.browser.version)}'.trim(),
           ),
-          _ParsedRow(
-            label: 'Engine',
-            value:
-                '${format(result.engine.name)} ${format(result.engine.version)}'
-                    .trim(),
-          ),
-          _ParsedRow(
-            label: 'Device',
-            value:
-                '${format(result.device.vendor)} ${format(result.device.model)}'
-                    .trim(),
-          ),
+          _ParsedRow(label: 'Engine', value: '${format(result.engine.name)} ${format(result.engine.version)}'.trim()),
+          _ParsedRow(label: 'Device', value: '${format(result.device.vendor)} ${format(result.device.model)}'.trim()),
           if (result.device.type != null && result.device.type!.isNotEmpty)
             _ParsedRow(label: 'Device type', value: result.device.type!),
-          _ParsedRow(
-            label: 'CPU',
-            value: format(result.cpu.architecture),
-          ),
+          _ParsedRow(label: 'CPU', value: format(result.cpu.architecture)),
         ],
       ),
     );
@@ -263,17 +218,10 @@ class _ParsedRow extends StatelessWidget {
             width: 90,
             child: Text(
               '$label:',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
+              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             ),
           ),
-          Expanded(
-            child: Text(
-              value.isEmpty ? '—' : value,
-              style: theme.textTheme.bodySmall,
-            ),
-          ),
+          Expanded(child: Text(value.isEmpty ? '—' : value, style: theme.textTheme.bodySmall)),
         ],
       ),
     );

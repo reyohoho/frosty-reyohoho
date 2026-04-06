@@ -3,11 +3,7 @@ import 'package:json_annotation/json_annotation.dart';
 part 'vod.g.dart';
 
 /// Video types from Twitch API
-enum VideoType {
-  archive,
-  highlight,
-  upload,
-}
+enum VideoType { archive, highlight, upload }
 
 /// Represents a Twitch VOD (Video on Demand)
 @JsonSerializable(createToJson: false, fieldRename: FieldRename.snake)
@@ -50,8 +46,7 @@ class VideoTwitch {
     this.mutedSegments,
   });
 
-  factory VideoTwitch.fromJson(Map<String, dynamic> json) =>
-      _$VideoTwitchFromJson(json);
+  factory VideoTwitch.fromJson(Map<String, dynamic> json) => _$VideoTwitchFromJson(json);
 
   /// Returns the video type as enum
   VideoType get videoType {
@@ -99,9 +94,7 @@ class VideoTwitch {
 
   /// Returns the thumbnail URL with specified dimensions
   String getThumbnailUrl({int width = 320, int height = 180}) {
-    return thumbnailUrl
-        .replaceFirst('%{width}', width.toString())
-        .replaceFirst('%{height}', height.toString());
+    return thumbnailUrl.replaceFirst('%{width}', width.toString()).replaceFirst('%{height}', height.toString());
   }
 }
 
@@ -111,13 +104,9 @@ class MutedSegment {
   final int offset;
   final int duration;
 
-  const MutedSegment({
-    required this.offset,
-    required this.duration,
-  });
+  const MutedSegment({required this.offset, required this.duration});
 
-  factory MutedSegment.fromJson(Map<String, dynamic> json) =>
-      _$MutedSegmentFromJson(json);
+  factory MutedSegment.fromJson(Map<String, dynamic> json) => _$MutedSegmentFromJson(json);
 }
 
 /// Response wrapper for videos list with pagination
@@ -128,7 +117,5 @@ class VideosTwitch {
 
   const VideosTwitch(this.data, this.pagination);
 
-  factory VideosTwitch.fromJson(Map<String, dynamic> json) =>
-      _$VideosTwitchFromJson(json);
+  factory VideosTwitch.fromJson(Map<String, dynamic> json) => _$VideosTwitchFromJson(json);
 }
-

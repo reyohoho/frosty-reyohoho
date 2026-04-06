@@ -9,8 +9,7 @@ class ChatUsers {
 
   ChatUsers(this.chatterCount, this.chatters);
 
-  factory ChatUsers.fromJson(Map<String, dynamic> json) =>
-      _$ChatUsersFromJson(json);
+  factory ChatUsers.fromJson(Map<String, dynamic> json) => _$ChatUsersFromJson(json);
 }
 
 @JsonSerializable(createToJson: false, fieldRename: FieldRename.snake)
@@ -23,16 +22,7 @@ class Chatters {
   final List<String> globalMods;
   final List<String> viewers;
 
-  const Chatters(
-    this.broadcaster,
-    this.vips,
-    this.moderators,
-    this.staff,
-    this.admins,
-    this.globalMods,
-    this.viewers,
-  );
+  const Chatters(this.broadcaster, this.vips, this.moderators, this.staff, this.admins, this.globalMods, this.viewers);
 
-  factory Chatters.fromJson(Map<String, dynamic> json) =>
-      _$ChattersFromJson(json);
+  factory Chatters.fromJson(Map<String, dynamic> json) => _$ChattersFromJson(json);
 }

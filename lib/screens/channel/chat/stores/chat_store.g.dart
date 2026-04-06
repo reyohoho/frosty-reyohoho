@@ -513,6 +513,18 @@ mixin _$ChatStore on ChatStoreBase, Store {
   }
 
   @override
+  void addModerationNotice(String message) {
+    final _$actionInfo = _$ChatStoreBaseActionController.startAction(
+      name: 'ChatStoreBase.addModerationNotice',
+    );
+    try {
+      return super.addModerationNotice(message);
+    } finally {
+      _$ChatStoreBaseActionController.endAction(_$actionInfo);
+    }
+  }
+
+  @override
   void updateSleepTimer({
     required Duration duration,
     required VoidCallback onTimerFinished,

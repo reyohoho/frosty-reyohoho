@@ -14,6 +14,13 @@ const _staregeDomains = [
   'https://starege4.rte.net.ru',
 ];
 
+const _qualityDomains = [
+  'https://proxy4.rte.net.ru',
+  'https://proxy5.rte.net.ru',
+  'https://proxy6.rte.net.ru',
+  'https://proxy7.rte.net.ru',
+];
+
 /// The Reyohoho service for making API calls (badges and paints).
 class ReyohohoApi extends BaseApiClient {
   String? _workingDomain;
@@ -23,7 +30,7 @@ class ReyohohoApi extends BaseApiClient {
   ReyohohoApi(Dio dio) : super(dio, '');
 
   /// Initializes and finds a working starege domain.
-  Future<String?> _initializeDomain({bool force = false}) async {
+  Future<String?> initializeDomain({bool force = false}) async {
     if (_isInitialized && !force && _workingDomain != null) {
       return _workingDomain;
     }
@@ -72,9 +79,71 @@ class ReyohohoApi extends BaseApiClient {
     return null;
   }
 
+  Future<String?> findStaregeDomain() async {
+    for (final domain in _staregeDomains) {
+      try {
+        final testUrl = '$domain/https://google.com';
+        final response = await Dio().head(
+          testUrl,
+          options: Options(
+            receiveTimeout: const Duration(seconds: 3),
+            sendTimeout: const Duration(seconds: 3),
+          ),
+        );
+
+        if (response.statusCode != null &&
+            response.statusCode! >= 200 &&
+            response.statusCode! < 400) {
+          debugPrint(
+            'ReyohohoApi: findStaregeDomain :Using Starege domain: $domain',
+          );
+          return domain;
+        }
+      } catch (e) {
+        // Try next domain
+      }
+    }
+
+    debugPrint(
+      'ReyohohoApi: findStaregeDomain :All Starege domains are unavailable',
+    );
+    return null;
+  }
+
+  Future<String?> findQualityDomain() async {
+    for (final domain in _qualityDomains) {
+      try {
+        final testUrl = '$domain/https://google.com';
+        final response = await Dio().head(
+          testUrl,
+          options: Options(
+            receiveTimeout: const Duration(seconds: 3),
+            sendTimeout: const Duration(seconds: 3),
+          ),
+        );
+
+        if (response.statusCode != null &&
+            response.statusCode! >= 200 &&
+            response.statusCode! < 400) {
+          debugPrint(
+            'ReyohohoApi: findQualityDomain :Using Quality domain: $domain',
+          );
+          return domain;
+        }
+      } catch (e) {
+        // Try next domain
+      }
+    }
+
+    debugPrint(
+      'ReyohohoApi: findQualityDomain :All Quality domains are unavailable',
+    );
+    return null;
+  }
+
   /// Gets the API URL for a given path.
   Future<String?> _getApiUrl(String path) async {
-    final domain = await _initializeDomain();
+    final domain = await initializeDomain();
     if (domain == null) return null;
 
     final cleanPath = path.startsWith('/') ? path : '/$path';
@@ -88,10 +157,7 @@ class ReyohohoApi extends BaseApiClient {
     if (apiUrl == null) return;
 
     try {
-      await post<void>(
-        apiUrl,
-        data: {'userId': userId},
-      );
+      await post<void>(apiUrl, data: {'userId': userId});
       debugPrint('ReyohohoApi: Registered user $userId');
     } catch (e) {
       debugPrint('ReyohohoApi: Failed to register user $userId: $e');
@@ -111,12 +177,12 @@ class ReyohohoApi extends BaseApiClient {
       final JsonMap? response = switch (raw) {
         JsonMap map => map,
         String s => () {
-            try {
-              return jsonDecode(s) as JsonMap?;
-            } catch (_) {
-              return null;
-            }
-          }(),
+          try {
+            return jsonDecode(s) as JsonMap?;
+          } catch (_) {
+            return null;
+          }
+        }(),
         _ => null,
       };
       if (response == null) return null;
@@ -220,7 +286,7 @@ class ReyohohoApi extends BaseApiClient {
 
     try {
       // Use the working domain as proxy
-      final domain = await _initializeDomain();
+      final domain = await initializeDomain();
       final proxyUrl = domain != null ? '$domain/' : '';
 
       final response = await post<JsonMap>(
@@ -249,10 +315,7 @@ class ReyohohoApi extends BaseApiClient {
 }
 
 /// Source of the paint (7TV or Reyohoho).
-enum PaintSource {
-  sevenTV,
-  reyohoho,
-}
+enum PaintSource { sevenTV, reyohoho }
 
 /// User paint assignment data.
 class UserPaint {
@@ -358,5 +421,3 @@ class PaintShadow {
     );
   }
 }
-
-

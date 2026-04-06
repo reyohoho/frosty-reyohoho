@@ -13,9 +13,7 @@ class SevenTVApi extends BaseApiClient {
     final decoded = data['emotes'] as JsonList;
     final emotes = decoded.map((emote) => Emote7TV.fromJson(emote));
 
-    return emotes
-        .map((emote) => Emote.from7TV(emote, EmoteType.sevenTVGlobal))
-        .toList();
+    return emotes.map((emote) => Emote.from7TV(emote, EmoteType.sevenTVGlobal)).toList();
   }
 
   /// Returns a tuple containing the emote set ID and a map of a channel's 7TV
@@ -24,9 +22,7 @@ class SevenTVApi extends BaseApiClient {
     final data = await get<JsonMap>('/users/twitch/$id');
 
     final emoteSetId = data['emote_set']['id'] as String;
-    final emotes = (data['emote_set']['emotes'] as JsonList).map(
-      (emote) => Emote7TV.fromJson(emote),
-    );
+    final emotes = (data['emote_set']['emotes'] as JsonList).map((emote) => Emote7TV.fromJson(emote));
 
     return (
       emoteSetId,

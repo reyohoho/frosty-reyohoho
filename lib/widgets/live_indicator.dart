@@ -9,18 +9,13 @@ class LiveIndicator extends StatefulWidget {
   /// The color of the indicator. Defaults to red.
   final Color color;
 
-  const LiveIndicator({
-    super.key,
-    this.size = _LiveIndicatorState._defaultSize,
-    this.color = Colors.red,
-  });
+  const LiveIndicator({super.key, this.size = _LiveIndicatorState._defaultSize, this.color = Colors.red});
 
   @override
   State<LiveIndicator> createState() => _LiveIndicatorState();
 }
 
-class _LiveIndicatorState extends State<LiveIndicator>
-    with TickerProviderStateMixin, WidgetsBindingObserver {
+class _LiveIndicatorState extends State<LiveIndicator> with TickerProviderStateMixin, WidgetsBindingObserver {
   // ===========================================================================
   // CONFIGURABLE ANIMATION PARAMETERS
   // ===========================================================================
@@ -67,10 +62,7 @@ class _LiveIndicatorState extends State<LiveIndicator>
   }
 
   void _initAnimations() {
-    _pingController = AnimationController(
-      duration: _animationDuration,
-      vsync: this,
-    )..repeat();
+    _pingController = AnimationController(duration: _animationDuration, vsync: this)..repeat();
 
     _pingScale = Tween<double>(
       begin: _pingScaleStart,
@@ -164,9 +156,7 @@ class _LiveIndicatorState extends State<LiveIndicator>
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: widget.color.withValues(
-                                alpha: _borderOpacity,
-                              ),
+                              color: widget.color.withValues(alpha: _borderOpacity),
                               width: _borderWidth,
                             ),
                           ),
@@ -180,10 +170,7 @@ class _LiveIndicatorState extends State<LiveIndicator>
               Container(
                 width: widget.size,
                 height: widget.size,
-                decoration: BoxDecoration(
-                  color: widget.color,
-                  shape: BoxShape.circle,
-                ),
+                decoration: BoxDecoration(color: widget.color, shape: BoxShape.circle),
               ),
             ],
           ),

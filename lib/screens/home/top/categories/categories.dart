@@ -20,8 +20,7 @@ class Categories extends StatefulWidget {
   State<Categories> createState() => _CategoriesState();
 }
 
-class _CategoriesState extends State<Categories>
-    with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
+class _CategoriesState extends State<Categories> with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
   late final _categoriesStore = CategoriesStore(
     authStore: context.read<AuthStore>(),
     twitchApi: context.read<TwitchApi>(),
@@ -60,12 +59,7 @@ class _CategoriesState extends State<Categories>
         await _categoriesStore.refreshCategories();
 
         if (_categoriesStore.error != null) {
-          final snackBar = SnackBar(
-            content: AlertMessage(
-              message: _categoriesStore.error!,
-              centered: false,
-            ),
-          );
+          final snackBar = SnackBar(content: AlertMessage(message: _categoriesStore.error!, centered: false));
 
           if (!context.mounted) return;
 
@@ -77,10 +71,7 @@ class _CategoriesState extends State<Categories>
           Widget? statusWidget;
 
           if (_categoriesStore.error != null) {
-            statusWidget = AlertMessage(
-              message: _categoriesStore.error!,
-              vertical: true,
-            );
+            statusWidget = AlertMessage(message: _categoriesStore.error!, vertical: true);
           }
 
           if (_categoriesStore.categories.isEmpty) {
@@ -90,27 +81,18 @@ class _CategoriesState extends State<Categories>
                 controller: widget.scrollController,
                 slivers: [
                   const SliverTopPadding(extraTopPadding: kToolbarHeight),
-                  SliverList.builder(
-                    itemCount: 10,
-                    itemBuilder: (context, index) =>
-                        const CategorySkeletonLoader(),
-                  ),
+                  SliverList.builder(itemCount: 10, itemBuilder: (context, index) => const CategorySkeletonLoader()),
                   const SliverBottomPadding(),
                 ],
               );
             } else {
-              statusWidget = const AlertMessage(
-                message: 'No top categories',
-                vertical: true,
-              );
+              statusWidget = const AlertMessage(message: 'No top categories', vertical: true);
             }
           }
 
           if (statusWidget != null) {
             return CustomScrollView(
-              slivers: [
-                SliverFillRemaining(child: Center(child: statusWidget)),
-              ],
+              slivers: [SliverFillRemaining(child: Center(child: statusWidget))],
             );
           }
 
@@ -128,8 +110,7 @@ class _CategoriesState extends State<Categories>
                 SliverList.builder(
                   itemCount: _categoriesStore.categories.length,
                   itemBuilder: (context, index) {
-                    if (index > _categoriesStore.categories.length - 10 &&
-                        _categoriesStore.hasMore) {
+                    if (index > _categoriesStore.categories.length - 10 && _categoriesStore.hasMore) {
                       _categoriesStore.getCategories();
                     }
                     return CategoryCard(

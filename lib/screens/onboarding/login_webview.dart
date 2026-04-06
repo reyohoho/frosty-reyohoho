@@ -29,23 +29,14 @@ class LoginWebView extends StatelessWidget {
                   title: 'Workaround for the Twitch cookie banner',
                   message:
                       'If the Twitch cookie banner is still blocking the login, try clicking one of the links in the cookie policy description and navigating until you reach the Twitch home page. From there, you can try logging in on the top right profile icon. Once logged in, go back to the first step of the onboarding and then try again.',
-                  actions: [
-                    TextButton(
-                      onPressed: Navigator.of(context).pop,
-                      child: const Text('Close'),
-                    ),
-                  ],
+                  actions: [TextButton(onPressed: Navigator.of(context).pop, child: const Text('Close'))],
                 );
               },
             ),
           ),
         ],
       ),
-      body: WebViewWidget(
-        controller: authStore.createAuthWebViewController(
-          routeAfter: routeAfter,
-        ),
-      ),
+      body: WebViewWidget(controller: authStore.createAuthWebViewController(routeAfter: routeAfter)),
     );
   }
 }

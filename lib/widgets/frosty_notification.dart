@@ -6,19 +6,12 @@ class FrostyNotification extends StatelessWidget {
   final VoidCallback? onDismissed;
   final bool showGradient;
 
-  const FrostyNotification({
-    super.key,
-    required this.message,
-    this.onDismissed,
-    this.showGradient = true,
-  });
+  const FrostyNotification({super.key, required this.message, this.onDismissed, this.showGradient = true});
 
   @override
   Widget build(BuildContext context) {
     final Widget notificationContent = BlurredContainer(
-      gradientDirection: showGradient
-          ? GradientDirection.up
-          : GradientDirection.none,
+      gradientDirection: showGradient ? GradientDirection.up : GradientDirection.none,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: Row(
         children: [
@@ -44,9 +37,7 @@ class FrostyNotification extends StatelessWidget {
               icon: const Icon(Icons.close_rounded, size: 20),
               visualDensity: VisualDensity.compact,
               tooltip: 'Dismiss',
-              color: Theme.of(
-                context,
-              ).colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+              color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
             ),
         ],
       ),

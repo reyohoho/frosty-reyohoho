@@ -32,13 +32,8 @@ class _UptimeState extends State<Uptime> {
   @override
   Widget build(BuildContext context) {
     return Text(
-      _timerService.currentTime
-          .difference(DateTime.parse(widget.startTime))
-          .toString()
-          .split('.')[0],
-      style: widget.style?.copyWith(
-        fontFeatures: [const FontFeature.tabularFigures()],
-      ),
+      _timerService.currentTime.difference(DateTime.parse(widget.startTime)).toString().split('.')[0],
+      style: widget.style?.copyWith(fontFeatures: [const FontFeature.tabularFigures()]),
     );
   }
 

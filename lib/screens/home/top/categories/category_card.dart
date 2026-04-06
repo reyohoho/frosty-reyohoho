@@ -9,11 +9,7 @@ class CategoryCard extends StatelessWidget {
   final CategoryTwitch category;
   final bool isTappable;
 
-  const CategoryCard({
-    super.key,
-    required this.category,
-    this.isTappable = true,
-  });
+  const CategoryCard({super.key, required this.category, this.isTappable = true});
 
   @override
   Widget build(BuildContext context) {
@@ -27,9 +23,7 @@ class CategoryCard extends StatelessWidget {
       onTap: isTappable
           ? () => Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (context) => CategoryStreams(categoryId: category.id),
-              ),
+              MaterialPageRoute(builder: (context) => CategoryStreams(categoryId: category.id)),
             )
           : null,
       child: Padding(
@@ -54,9 +48,8 @@ class CategoryCard extends StatelessWidget {
                       null,
                       '${artWidth}x$artHeight.jpg',
                     ),
-                    placeholder: (context, url) => const SkeletonLoader(
-                      borderRadius: BorderRadius.all(Radius.circular(8)),
-                    ),
+                    placeholder: (context, url) =>
+                        const SkeletonLoader(borderRadius: BorderRadius.all(Radius.circular(8))),
                   ),
                 ),
               ),
@@ -64,9 +57,7 @@ class CategoryCard extends StatelessWidget {
             Flexible(
               child: Text(
                 category.name,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
               ),
             ),
           ],

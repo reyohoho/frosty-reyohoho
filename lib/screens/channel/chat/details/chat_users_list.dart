@@ -18,12 +18,7 @@ class ChattersList extends StatefulWidget {
   final ChatStore chatStore;
   final String userLogin;
 
-  const ChattersList({
-    super.key,
-    required this.chatDetailsStore,
-    required this.chatStore,
-    required this.userLogin,
-  });
+  const ChattersList({super.key, required this.chatDetailsStore, required this.chatStore, required this.userLogin});
 
   @override
   State<ChattersList> createState() => _ChattersListState();
@@ -51,13 +46,10 @@ class _ChattersListState extends State<ChattersList> {
                         widget.chatDetailsStore.textFieldFocusNode.hasFocus ||
                             widget.chatDetailsStore.filterText.isNotEmpty
                         ? IconButton(
-                            tooltip: widget.chatDetailsStore.filterText.isEmpty
-                                ? 'Cancel'
-                                : 'Clear',
+                            tooltip: widget.chatDetailsStore.filterText.isEmpty ? 'Cancel' : 'Clear',
                             onPressed: () {
                               if (widget.chatDetailsStore.filterText.isEmpty) {
-                                widget.chatDetailsStore.textFieldFocusNode
-                                    .unfocus();
+                                widget.chatDetailsStore.textFieldFocusNode.unfocus();
                               }
                               widget.chatDetailsStore.textController.clear();
                             },
@@ -69,9 +61,7 @@ class _ChattersListState extends State<ChattersList> {
               },
             ),
           ),
-          AnimatedScrollBorder(
-            scrollController: widget.chatDetailsStore.scrollController,
-          ),
+          AnimatedScrollBorder(scrollController: widget.chatDetailsStore.scrollController),
           Expanded(
             child: RefreshIndicator.adaptive(
               onRefresh: () async {
@@ -92,59 +82,35 @@ class _ChattersListState extends State<ChattersList> {
                           slivers: [
                             if (widget.chatDetailsStore.filterText.isEmpty)
                               SliverPadding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 8,
-                                ),
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                 sliver: SliverToBoxAdapter(
                                   child: Text(
                                     '${NumberFormat().format(widget.chatDetailsStore.chatUsers.length)} chatters found',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 18.0,
-                                    ),
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18.0),
                                   ),
                                 ),
                               ),
                             if (widget.chatDetailsStore.chatUsers.isEmpty)
                               const SliverFillRemaining(
                                 hasScrollBody: false,
-                                child: AlertMessage(
-                                  message: 'No chatters found',
-                                ),
+                                child: AlertMessage(message: 'No chatters found'),
                               )
-                            else if (widget
-                                .chatDetailsStore
-                                .filteredUsers
-                                .isEmpty)
+                            else if (widget.chatDetailsStore.filteredUsers.isEmpty)
                               const SliverFillRemaining(
                                 hasScrollBody: false,
-                                child: AlertMessage(
-                                  message: 'No matching chatters',
-                                ),
+                                child: AlertMessage(message: 'No matching chatters'),
                               )
                             else
                               SliverList.builder(
                                 itemBuilder: (context, index) => InkWell(
                                   child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 4,
-                                    ),
-                                    child: Text(
-                                      widget.chatDetailsStore.filteredUsers
-                                          .elementAt(index),
-                                    ),
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                    child: Text(widget.chatDetailsStore.filteredUsers.elementAt(index)),
                                   ),
                                   onTap: () async {
-                                    final userInfo = await context
-                                        .read<TwitchApi>()
-                                        .getUser(
-                                          userLogin: widget
-                                              .chatDetailsStore
-                                              .filteredUsers
-                                              .elementAt(index),
-                                        );
+                                    final userInfo = await context.read<TwitchApi>().getUser(
+                                      userLogin: widget.chatDetailsStore.filteredUsers.elementAt(index),
+                                    );
 
                                     if (!context.mounted) return;
 
@@ -160,10 +126,7 @@ class _ChattersListState extends State<ChattersList> {
                                     );
                                   },
                                 ),
-                                itemCount: widget
-                                    .chatDetailsStore
-                                    .filteredUsers
-                                    .length,
+                                itemCount: widget.chatDetailsStore.filteredUsers.length,
                               ),
                           ],
                         );
@@ -176,10 +139,7 @@ class _ChattersListState extends State<ChattersList> {
                       switchInCurve: Curves.easeOut,
                       switchOutCurve: Curves.easeIn,
                       child: widget.chatDetailsStore.showJumpButton
-                          ? ScrollToTopButton(
-                              scrollController:
-                                  widget.chatDetailsStore.scrollController,
-                            )
+                          ? ScrollToTopButton(scrollController: widget.chatDetailsStore.scrollController)
                           : null,
                     ),
                   ),

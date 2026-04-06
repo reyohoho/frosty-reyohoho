@@ -25,8 +25,7 @@ const _recentMessagesProxyDomains = [
 class TwitchApi extends BaseApiClient {
   static const String _helixBaseUrl = 'https://api.twitch.tv/helix';
   static const String _oauthBaseUrl = 'https://id.twitch.tv/oauth2';
-  static const String _recentMessagesUrl =
-      'https://recent-messages.robotty.de/api/v2';
+  static const String _recentMessagesUrl = 'https://recent-messages.robotty.de/api/v2';
 
   /// Cached working proxy domain for recent messages.
   String? _workingProxyDomain;
@@ -59,15 +58,10 @@ class TwitchApi extends BaseApiClient {
         final testUrl = '$domain/https://google.com';
         final response = await Dio().head(
           testUrl,
-          options: Options(
-            receiveTimeout: const Duration(seconds: 3),
-            sendTimeout: const Duration(seconds: 3),
-          ),
+          options: Options(receiveTimeout: const Duration(seconds: 3), sendTimeout: const Duration(seconds: 3)),
         );
 
-        if (response.statusCode != null &&
-            response.statusCode! >= 200 &&
-            response.statusCode! < 400) {
+        if (response.statusCode != null && response.statusCode! >= 200 && response.statusCode! < 400) {
           debugPrint('TwitchApi: Using proxy domain for recent messages: $domain');
           return domain;
         }
@@ -87,17 +81,12 @@ class TwitchApi extends BaseApiClient {
     final decoded = data['data'] as JsonList;
     final emotes = decoded.map((emote) => EmoteTwitch.fromJson(emote)).toList();
 
-    return emotes
-        .map((emote) => Emote.fromTwitch(emote, EmoteType.twitchGlobal))
-        .toList();
+    return emotes.map((emote) => Emote.fromTwitch(emote, EmoteType.twitchGlobal)).toList();
   }
 
   /// Returns a list of a channel's Twitch emotes given their [id].
   Future<List<Emote>> getEmotesChannel({required String id}) async {
-    final data = await get<JsonMap>(
-      '/chat/emotes',
-      queryParameters: {'broadcaster_id': id},
-    );
+    final data = await get<JsonMap>('/chat/emotes', queryParameters: {'broadcaster_id': id});
 
     final decoded = data['data'] as JsonList;
     final emotes = decoded.map((emote) => EmoteTwitch.fromJson(emote)).toList();
@@ -118,10 +107,7 @@ class TwitchApi extends BaseApiClient {
 
   /// Returns a list of Twitch emotes under the provided [setId].
   Future<List<Emote>> getEmotesSets({required String setId}) async {
-    final data = await get<JsonMap>(
-      '/chat/emotes/set',
-      queryParameters: {'emote_set_id': setId},
-    );
+    final data = await get<JsonMap>('/chat/emotes/set', queryParameters: {'emote_set_id': setId});
 
     final decoded = data['data'] as JsonList;
     final emotes = decoded.map((emote) => EmoteTwitch.fromJson(emote)).toList();
@@ -161,10 +147,7 @@ class TwitchApi extends BaseApiClient {
 
   /// Returns a map of a channel's Twitch badges to their [Emote] object.
   Future<Map<String, ChatBadge>> getBadgesChannel({required String id}) async {
-    final data = await get<JsonMap>(
-      '/chat/badges',
-      queryParameters: {'broadcaster_id': id},
-    );
+    final data = await get<JsonMap>('/chat/badges', queryParameters: {'broadcaster_id': id});
 
     final result = <String, ChatBadge>{};
     final decoded = data['data'] as JsonList;
@@ -195,11 +178,7 @@ class TwitchApi extends BaseApiClient {
     // Use custom base URL for OAuth
     final data = await post<JsonMap>(
       '$_oauthBaseUrl/token',
-      queryParameters: {
-        'client_id': clientId,
-        'client_secret': secret,
-        'grant_type': 'client_credentials',
-      },
+      queryParameters: {'client_id': clientId, 'client_secret': secret, 'grant_type': 'client_credentials'},
     );
 
     return data['access_token'] as String;
@@ -208,10 +187,7 @@ class TwitchApi extends BaseApiClient {
   /// Returns a bool indicating the validity of the given token.
   Future<bool> validateToken({required String token}) async {
     try {
-      await get<JsonMap>(
-        '$_oauthBaseUrl/validate',
-        headers: {'Authorization': 'Bearer $token'},
-      );
+      await get<JsonMap>('$_oauthBaseUrl/validate', headers: {'Authorization': 'Bearer $token'});
       return true;
     } on UnauthorizedException {
       // 401 -> token is invalid/expired (propagated from interceptor for validate requests)
@@ -225,51 +201,33 @@ class TwitchApi extends BaseApiClient {
 
   /// Returns a [StreamsTwitch] object that contains the top 20 streams and a cursor for further requests.
   Future<StreamsTwitch> getTopStreams({String? cursor}) async {
-    final data = await get<JsonMap>(
-      '/streams',
-      queryParameters: cursor != null ? {'after': cursor} : null,
-    );
+    final data = await get<JsonMap>('/streams', queryParameters: cursor != null ? {'after': cursor} : null);
 
     return StreamsTwitch.fromJson(data);
   }
 
   /// Returns a [StreamsTwitch] object that contains the given user ID's top 20 followed streams and a cursor for further requests.
-  Future<StreamsTwitch> getFollowedStreams({
-    required String id,
-    String? cursor,
-  }) async {
+  Future<StreamsTwitch> getFollowedStreams({required String id, String? cursor}) async {
     final queryParams = {'user_id': id};
     if (cursor != null) queryParams['after'] = cursor;
 
-    final data = await get<JsonMap>(
-      '/streams/followed',
-      queryParameters: queryParams,
-    );
+    final data = await get<JsonMap>('/streams/followed', queryParameters: queryParams);
 
     return StreamsTwitch.fromJson(data);
   }
 
   /// Returns a [FollowedChannels] object containing all followed channels (including offline ones) for the given user ID.
-  Future<FollowedChannels> getFollowedChannels({
-    required String userId,
-    String? cursor,
-  }) async {
+  Future<FollowedChannels> getFollowedChannels({required String userId, String? cursor}) async {
     final queryParams = {'user_id': userId, 'first': '20'};
     if (cursor != null) queryParams['after'] = cursor;
 
-    final data = await get<JsonMap>(
-      '/channels/followed',
-      queryParameters: queryParams,
-    );
+    final data = await get<JsonMap>('/channels/followed', queryParameters: queryParams);
 
     return FollowedChannels.fromJson(data);
   }
 
   /// Returns a [StreamsTwitch] object that contains the list of streams under the given game/category ID.
-  Future<StreamsTwitch> getStreamsUnderCategory({
-    required String gameId,
-    String? cursor,
-  }) async {
+  Future<StreamsTwitch> getStreamsUnderCategory({required String gameId, String? cursor}) async {
     final queryParams = {'game_id': gameId};
     if (cursor != null) queryParams['after'] = cursor;
 
@@ -280,10 +238,7 @@ class TwitchApi extends BaseApiClient {
 
   /// Returns a [StreamTwitch] object containing the stream info associated with the given [userLogin].
   Future<StreamTwitch> getStream({required String userLogin}) async {
-    final data = await get<JsonMap>(
-      '/streams',
-      queryParameters: {'user_login': userLogin},
-    );
+    final data = await get<JsonMap>('/streams', queryParameters: {'user_login': userLogin});
 
     final streamData = data['data'] as JsonList;
     if (streamData.isNotEmpty) {
@@ -324,10 +279,7 @@ class TwitchApi extends BaseApiClient {
 
   /// Returns a [Channel] object containing a channels's info associated with the given [userId].
   Future<Channel> getChannel({required String userId}) async {
-    final data = await get<JsonMap>(
-      '/channels',
-      queryParameters: {'broadcaster_id': userId},
-    );
+    final data = await get<JsonMap>('/channels', queryParameters: {'broadcaster_id': userId});
 
     final channelData = data['data'] as JsonList;
     if (channelData.isNotEmpty) {
@@ -339,10 +291,7 @@ class TwitchApi extends BaseApiClient {
 
   /// Returns a list of [ChannelQuery] objects closest matching the given [query].
   Future<List<ChannelQuery>> searchChannels({required String query}) async {
-    final data = await get<JsonMap>(
-      '/search/channels',
-      queryParameters: {'first': '8', 'query': query},
-    );
+    final data = await get<JsonMap>('/search/channels', queryParameters: {'first': '8', 'query': query});
 
     final channelData = data['data'] as JsonList;
     return channelData.map((e) => ChannelQuery.fromJson(e)).toList();
@@ -350,10 +299,7 @@ class TwitchApi extends BaseApiClient {
 
   /// Returns a [CategoriesTwitch] object containing the next top 20 categories/games and a cursor for further requests.
   Future<CategoriesTwitch> getTopCategories({String? cursor}) async {
-    final data = await get<JsonMap>(
-      '/games/top',
-      queryParameters: cursor != null ? {'after': cursor} : null,
-    );
+    final data = await get<JsonMap>('/games/top', queryParameters: cursor != null ? {'after': cursor} : null);
 
     return CategoriesTwitch.fromJson(data);
   }
@@ -366,51 +312,34 @@ class TwitchApi extends BaseApiClient {
   }
 
   /// Returns a [CategoriesTwitch] containing up to 20 categories/games closest matching the [query] and a cursor for further requests.
-  Future<CategoriesTwitch> searchCategories({
-    required String query,
-    String? cursor,
-  }) async {
+  Future<CategoriesTwitch> searchCategories({required String query, String? cursor}) async {
     final queryParams = {'first': '8', 'query': query};
     if (cursor != null) queryParams['after'] = cursor;
 
-    final data = await get<JsonMap>(
-      '/search/categories',
-      queryParameters: queryParams,
-    );
+    final data = await get<JsonMap>('/search/categories', queryParameters: queryParams);
 
     return CategoriesTwitch.fromJson(data);
   }
 
   /// Returns the sub count associated with the given [userId].
   Future<int> getSubscriberCount({required String userId}) async {
-    final data = await get<JsonMap>(
-      '/subscriptions',
-      queryParameters: {'broadcaster_id': userId},
-    );
+    final data = await get<JsonMap>('/subscriptions', queryParameters: {'broadcaster_id': userId});
 
     return data['total'] as int;
   }
 
   /// Returns a user's list of blocked users given their id.
-  Future<List<UserBlockedTwitch>> getUserBlockedList({
-    required String id,
-    String? cursor,
-  }) async {
+  Future<List<UserBlockedTwitch>> getUserBlockedList({required String id, String? cursor}) async {
     final queryParams = {'first': '100', 'broadcaster_id': id};
     if (cursor != null) queryParams['after'] = cursor;
 
-    final data = await get<JsonMap>(
-      '/users/blocks',
-      queryParameters: queryParams,
-    );
+    final data = await get<JsonMap>('/users/blocks', queryParameters: queryParams);
 
     final paginationCursor = data['pagination']['cursor'];
     final blockedList = data['data'] as JsonList;
 
     if (blockedList.isNotEmpty) {
-      final result = blockedList
-          .map((e) => UserBlockedTwitch.fromJson(e))
-          .toList();
+      final result = blockedList.map((e) => UserBlockedTwitch.fromJson(e)).toList();
 
       if (paginationCursor != null) {
         // Wait a bit (150 milliseconds) before recursively calling.
@@ -419,9 +348,7 @@ class TwitchApi extends BaseApiClient {
         // With the Twitch API, we can make up to 800 requests per minute.
         // Waiting 150 milliseconds between requests will cap the rate here at 400 requests per minute.
         await Future.delayed(const Duration(milliseconds: 150));
-        result.addAll(
-          await getUserBlockedList(id: id, cursor: paginationCursor),
-        );
+        result.addAll(await getUserBlockedList(id: id, cursor: paginationCursor));
       }
 
       return result;
@@ -434,10 +361,7 @@ class TwitchApi extends BaseApiClient {
   // Blocks the user with the given ID and returns true on success or false on failure.
   Future<bool> blockUser({required String userId}) async {
     try {
-      await put<dynamic>(
-        '/users/blocks',
-        queryParameters: {'target_user_id': userId},
-      );
+      await put<dynamic>('/users/blocks', queryParameters: {'target_user_id': userId});
       return true; // If no exception, operation succeeded
     } on ApiException {
       return false;
@@ -447,10 +371,7 @@ class TwitchApi extends BaseApiClient {
   // Unblocks the user with the given ID and returns true on success or false on failure.
   Future<bool> unblockUser({required String userId}) async {
     try {
-      await delete<dynamic>(
-        '/users/blocks',
-        queryParameters: {'target_user_id': userId},
-      );
+      await delete<dynamic>('/users/blocks', queryParameters: {'target_user_id': userId});
       return true; // If no exception, operation succeeded
     } on ApiException {
       return false;
@@ -472,15 +393,9 @@ class TwitchApi extends BaseApiClient {
     try {
       await post<dynamic>(
         '/moderation/bans',
-        queryParameters: {
-          'broadcaster_id': broadcasterId,
-          'moderator_id': moderatorId,
-        },
+        queryParameters: {'broadcaster_id': broadcasterId, 'moderator_id': moderatorId},
         data: {
-          'data': {
-            'user_id': userId,
-            if (reason != null && reason.isNotEmpty) 'reason': reason,
-          },
+          'data': {'user_id': userId, if (reason != null && reason.isNotEmpty) 'reason': reason},
         },
       );
       return true;
@@ -506,16 +421,9 @@ class TwitchApi extends BaseApiClient {
     try {
       await post<dynamic>(
         '/moderation/bans',
-        queryParameters: {
-          'broadcaster_id': broadcasterId,
-          'moderator_id': moderatorId,
-        },
+        queryParameters: {'broadcaster_id': broadcasterId, 'moderator_id': moderatorId},
         data: {
-          'data': {
-            'user_id': userId,
-            'duration': duration,
-            if (reason != null && reason.isNotEmpty) 'reason': reason,
-          },
+          'data': {'user_id': userId, 'duration': duration, if (reason != null && reason.isNotEmpty) 'reason': reason},
         },
       );
       return true;
@@ -529,19 +437,11 @@ class TwitchApi extends BaseApiClient {
   /// [moderatorId] - The ID of the moderator performing the action
   /// [userId] - The ID of the user to unban
   /// Returns true on success or false on failure.
-  Future<bool> unbanUser({
-    required String broadcasterId,
-    required String moderatorId,
-    required String userId,
-  }) async {
+  Future<bool> unbanUser({required String broadcasterId, required String moderatorId, required String userId}) async {
     try {
       await delete<dynamic>(
         '/moderation/bans',
-        queryParameters: {
-          'broadcaster_id': broadcasterId,
-          'moderator_id': moderatorId,
-          'user_id': userId,
-        },
+        queryParameters: {'broadcaster_id': broadcasterId, 'moderator_id': moderatorId, 'user_id': userId},
       );
       return true;
     } on ApiException {
@@ -562,11 +462,7 @@ class TwitchApi extends BaseApiClient {
     try {
       await delete<dynamic>(
         '/moderation/chat',
-        queryParameters: {
-          'broadcaster_id': broadcasterId,
-          'moderator_id': moderatorId,
-          'message_id': messageId,
-        },
+        queryParameters: {'broadcaster_id': broadcasterId, 'moderator_id': moderatorId, 'message_id': messageId},
       );
       return true;
     } on ApiException {
@@ -574,13 +470,8 @@ class TwitchApi extends BaseApiClient {
     }
   }
 
-  Future<SharedChatSession?> getSharedChatSession({
-    required String broadcasterId,
-  }) async {
-    final data = await get<JsonMap>(
-      '/shared_chat/session',
-      queryParameters: {'broadcaster_id': broadcasterId},
-    );
+  Future<SharedChatSession?> getSharedChatSession({required String broadcasterId}) async {
+    final data = await get<JsonMap>('/shared_chat/session', queryParameters: {'broadcaster_id': broadcasterId});
 
     final sessionData = data['data'] as JsonList;
     if (sessionData.isEmpty) {
@@ -595,10 +486,7 @@ class TwitchApi extends BaseApiClient {
   /// Returns the color as a hex string or empty string if no color is set.
   Future<String> getUserChatColor({required String userId}) async {
     try {
-      final data = await get<JsonMap>(
-        '/chat/color',
-        queryParameters: {'user_id': userId},
-      );
+      final data = await get<JsonMap>('/chat/color', queryParameters: {'user_id': userId});
 
       final users = data['data'] as JsonList;
       if (users.isNotEmpty) {
@@ -616,15 +504,9 @@ class TwitchApi extends BaseApiClient {
   /// [userId] - The ID of the user whose chat color to update
   /// [color] - The color to use. Can be a named color (blue, blue_violet, etc.) or hex code for Turbo/Prime users
   /// Returns true on success or false on failure.
-  Future<bool> updateUserChatColor({
-    required String userId,
-    required String color,
-  }) async {
+  Future<bool> updateUserChatColor({required String userId, required String color}) async {
     try {
-      await put<dynamic>(
-        '/chat/color',
-        queryParameters: {'user_id': userId, 'color': color},
-      );
+      await put<dynamic>('/chat/color', queryParameters: {'user_id': userId, 'color': color});
       return true; // If no exception, operation succeeded
     } on ApiException catch (e) {
       // Log the specific error for debugging
@@ -646,12 +528,9 @@ class TwitchApi extends BaseApiClient {
     int? contentOffsetSeconds,
     String? cursor,
   }) async {
-    const persistedQueryHash =
-        'b70a3591ff0f4e0313d126c6a1502d79a1c02baebb288227c582044aa76adf6a';
+    const persistedQueryHash = 'b70a3591ff0f4e0313d126c6a1502d79a1c02baebb288227c582044aa76adf6a';
 
-    final variables = <String, dynamic>{
-      'videoID': videoId,
-    };
+    final variables = <String, dynamic>{'videoID': videoId};
     if (cursor != null) {
       variables['cursor'] = cursor;
     } else if (contentOffsetSeconds != null) {
@@ -663,10 +542,7 @@ class TwitchApi extends BaseApiClient {
         'operationName': 'VideoCommentsByOffsetOrCursor',
         'variables': variables,
         'extensions': {
-          'persistedQuery': {
-            'version': 1,
-            'sha256Hash': persistedQueryHash,
-          },
+          'persistedQuery': {'version': 1, 'sha256Hash': persistedQueryHash},
         },
       },
     ];
@@ -675,32 +551,17 @@ class TwitchApi extends BaseApiClient {
       final response = await dio.post<List<dynamic>>(
         _gqlBaseUrl,
         data: body,
-        options: Options(
-          headers: {
-            'Client-ID': 'kimne78kx3ncx6brgo4mv6wki5h1ko',
-            'Content-Type': 'application/json',
-          },
-        ),
+        options: Options(headers: {'Client-ID': 'kimne78kx3ncx6brgo4mv6wki5h1ko', 'Content-Type': 'application/json'}),
       );
 
       if (response.data != null && response.data!.isNotEmpty) {
-        return VodCommentsResponse.fromJson(
-          response.data!.first as Map<String, dynamic>,
-        );
+        return VodCommentsResponse.fromJson(response.data!.first as Map<String, dynamic>);
       }
 
-      return const VodCommentsResponse(
-        comments: [],
-        hasNextPage: false,
-        hasPreviousPage: false,
-      );
+      return const VodCommentsResponse(comments: [], hasNextPage: false, hasPreviousPage: false);
     } catch (e) {
       debugPrint('Error fetching VOD comments: $e');
-      return const VodCommentsResponse(
-        comments: [],
-        hasNextPage: false,
-        hasPreviousPage: false,
-      );
+      return const VodCommentsResponse(comments: [], hasNextPage: false, hasPreviousPage: false);
     }
   }
 
@@ -718,12 +579,7 @@ class TwitchApi extends BaseApiClient {
     String? cursor,
     int first = 20,
   }) async {
-    final queryParams = <String, String>{
-      'user_id': userId,
-      'type': type,
-      'sort': sort,
-      'first': first.toString(),
-    };
+    final queryParams = <String, String>{'user_id': userId, 'type': type, 'sort': sort, 'first': first.toString()};
     if (cursor != null) queryParams['after'] = cursor;
 
     final data = await get<JsonMap>('/videos', queryParameters: queryParams);
@@ -733,10 +589,7 @@ class TwitchApi extends BaseApiClient {
 
   /// Returns a single video by its ID.
   Future<VideoTwitch> getVideo({required String videoId}) async {
-    final data = await get<JsonMap>(
-      '/videos',
-      queryParameters: {'id': videoId},
-    );
+    final data = await get<JsonMap>('/videos', queryParameters: {'id': videoId});
 
     final videoData = data['data'] as JsonList;
     if (videoData.isNotEmpty) {

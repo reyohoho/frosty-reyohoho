@@ -34,8 +34,7 @@ class LargeStreamCard extends StatelessWidget {
     // Generate a unique cache key for the thumbnail URL that updates every 5 minutes.
     // This ensures the image is refreshed periodically to reflect the latest content.
     final time = DateTime.now();
-    final cacheKey =
-        '${streamInfo.thumbnailUrl}-${time.day}-${time.hour}-${time.minute ~/ 5}';
+    final cacheKey = '${streamInfo.thumbnailUrl}-${time.day}-${time.hour}-${time.minute ~/ 5}';
 
     // Calculate the width and height of the thumbnail based on the device width and the stream card size setting.
     // Constraint the resolution to 1920x1080 since that's the max resolution of the Twitch API.
@@ -51,34 +50,23 @@ class LargeStreamCard extends StatelessWidget {
         child: AspectRatio(
           aspectRatio: 16 / 9,
           child: FrostyCachedNetworkImage(
-            imageUrl: streamInfo.thumbnailUrl.replaceFirst(
-              '-{width}x{height}',
-              '-${thumbnailWidth}x$thumbnailHeight',
-            ),
+            imageUrl: streamInfo.thumbnailUrl.replaceFirst('-{width}x{height}', '-${thumbnailWidth}x$thumbnailHeight'),
             cacheKey: cacheKey,
-            placeholder: (context, url) => const SkeletonLoader(
-              borderRadius: BorderRadius.all(Radius.circular(8)),
-            ),
+            placeholder: (context, url) => const SkeletonLoader(borderRadius: BorderRadius.all(Radius.circular(8))),
             useOldImageOnUrlChange: true,
           ),
         ),
       ),
     );
 
-    final streamerName = getReadableName(
-      streamInfo.userName,
-      streamInfo.userLogin,
-    );
+    final streamerName = getReadableName(streamInfo.userName, streamInfo.userLogin);
 
     return InkWell(
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => VideoChat(
-            userId: streamInfo.userId,
-            userName: streamInfo.userName,
-            userLogin: streamInfo.userLogin,
-          ),
+          builder: (context) =>
+              VideoChat(userId: streamInfo.userId, userName: streamInfo.userName, userLogin: streamInfo.userLogin),
         ),
       ),
       onLongPress: () {

@@ -54,26 +54,19 @@ abstract class AuthBase with Store {
 
   /// Authentication headers for Twitch API requests.
   @computed
-  Map<String, String> get headersTwitch => {
-    'Authorization': 'Bearer $_token',
-    'Client-Id': clientId,
-  };
+  Map<String, String> get headersTwitch => {'Authorization': 'Bearer $_token', 'Client-Id': clientId};
 
   /// Error flag that will be non-null and contain an error message if login failed.
   @readonly
   String? _error;
 
   /// User-Agent used by the auth WebView (platform-specific, works around Google OAuth WebView blocking).
-  static String get webViewUserAgent =>
-      Platform.isIOS
-          ? 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1'
-          : 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Mobile Safari/537.36';
+  static String get webViewUserAgent => Platform.isIOS
+      ? 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1'
+      : 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Mobile Safari/537.36';
 
   /// Navigation handler for the login webview. Fires on every navigation request (whenever the URL changes).
-  FutureOr<NavigationDecision> handleNavigation({
-    required NavigationRequest request,
-    Widget? routeAfter,
-  }) {
+  FutureOr<NavigationDecision> handleNavigation({required NavigationRequest request, Widget? routeAfter}) {
     // Check if the URL is the redirect URI.
     if (request.url.startsWith('https://twitch.tv/login')) {
       // Extract the token from the query parameters.
@@ -90,9 +83,7 @@ abstract class AuthBase with Store {
     if (request.url == 'https://www.twitch.tv/?no-reload=true') {
       if (routeAfter != null) {
         navigatorKey.currentState?.pop();
-        navigatorKey.currentState?.push(
-          MaterialPageRoute(builder: (context) => routeAfter),
-        );
+        navigatorKey.currentState?.push(MaterialPageRoute(builder: (context) => routeAfter));
       } else {
         // Pop the WebView to return to the previous screen
         navigatorKey.currentState?.pop();
@@ -114,8 +105,7 @@ abstract class AuthBase with Store {
     return webViewController
       ..setNavigationDelegate(
         NavigationDelegate(
-          onNavigationRequest: (request) =>
-              handleNavigation(request: request, routeAfter: routeAfter),
+          onNavigationRequest: (request) => handleNavigation(request: request, routeAfter: routeAfter),
           onWebResourceError: (error) {
             debugPrint('Auth WebView error: ${error.description}');
           },
@@ -171,14 +161,8 @@ abstract class AuthBase with Store {
   }
 
   /// Shows a dialog verifying that the user is sure they want to block/unblock the target user.
-  Future<void> showBlockDialog(
-    BuildContext context, {
-    required String targetUser,
-    required String targetUserId,
-  }) {
-    final isBlocked = user.blockedUsers
-        .where((blockedUser) => blockedUser.userId == targetUserId)
-        .isNotEmpty;
+  Future<void> showBlockDialog(BuildContext context, {required String targetUser, required String targetUserId}) {
+    final isBlocked = user.blockedUsers.where((blockedUser) => blockedUser.userId == targetUserId).isNotEmpty;
 
     final title = isBlocked ? 'Unblock' : 'Block';
 
@@ -200,10 +184,7 @@ abstract class AuthBase with Store {
         title: title,
         message: message,
         actions: [
-          TextButton(
-            onPressed: Navigator.of(context).pop,
-            child: const Text('Cancel'),
-          ),
+          TextButton(onPressed: Navigator.of(context).pop, child: const Text('Cancel')),
           FilledButton(onPressed: onPressed, child: const Text('Yes')),
         ],
       ),

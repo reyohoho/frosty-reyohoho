@@ -8,14 +8,7 @@ class SectionHeader extends StatelessWidget {
   final bool isFirst;
   final double? topPadding;
 
-  const SectionHeader(
-    this.text, {
-    super.key,
-    this.padding,
-    this.fontSize,
-    this.isFirst = false,
-    this.topPadding,
-  });
+  const SectionHeader(this.text, {super.key, this.padding, this.fontSize, this.isFirst = false, this.topPadding});
 
   @override
   Widget build(BuildContext context) {

@@ -175,65 +175,46 @@ abstract class GlobalAssetsStoreBase with Store {
     await Future.wait([
       // Twitch global emotes
       if (showTwitchEmotes)
-        twitchApi
-            .getEmotesGlobal()
-            .then((emotes) => _twitchGlobalEmotes = emotes)
-            .catchError((e) {
-              _twitchGlobalEmotes = onEmoteError(e);
-              return _twitchGlobalEmotes;
-            }),
+        twitchApi.getEmotesGlobal().then((emotes) => _twitchGlobalEmotes = emotes).catchError((e) {
+          _twitchGlobalEmotes = onEmoteError(e);
+          return _twitchGlobalEmotes;
+        }),
       // 7TV global emotes
       if (show7TVEmotes)
-        sevenTVApi
-            .getEmotesGlobal()
-            .then((emotes) => _sevenTVGlobalEmotes = emotes)
-            .catchError((e) {
-              _sevenTVGlobalEmotes = onEmoteError(e);
-              return _sevenTVGlobalEmotes;
-            }),
+        sevenTVApi.getEmotesGlobal().then((emotes) => _sevenTVGlobalEmotes = emotes).catchError((e) {
+          _sevenTVGlobalEmotes = onEmoteError(e);
+          return _sevenTVGlobalEmotes;
+        }),
       // BTTV global emotes
       if (showBTTVEmotes)
-        bttvApi
-            .getEmotesGlobal()
-            .then((emotes) => _bttvGlobalEmotes = emotes)
-            .catchError((e) {
-              _bttvGlobalEmotes = onEmoteError(e);
-              return _bttvGlobalEmotes;
-            }),
+        bttvApi.getEmotesGlobal().then((emotes) => _bttvGlobalEmotes = emotes).catchError((e) {
+          _bttvGlobalEmotes = onEmoteError(e);
+          return _bttvGlobalEmotes;
+        }),
       // FFZ global emotes
       if (showFFZEmotes)
-        ffzApi
-            .getEmotesGlobal()
-            .then((emotes) => _ffzGlobalEmotes = emotes)
-            .catchError((e) {
-              _ffzGlobalEmotes = onEmoteError(e);
-              return _ffzGlobalEmotes;
-            }),
+        ffzApi.getEmotesGlobal().then((emotes) => _ffzGlobalEmotes = emotes).catchError((e) {
+          _ffzGlobalEmotes = onEmoteError(e);
+          return _ffzGlobalEmotes;
+        }),
 
       // Twitch global badges
       if (showTwitchBadges)
-        twitchApi
-            .getBadgesGlobal()
-            .then((badges) => _twitchGlobalBadges = badges)
-            .catchError((e) {
-              debugPrint('GlobalAssetsStore badge error: $e');
-              _twitchGlobalBadges = <String, ChatBadge>{};
-              return _twitchGlobalBadges;
-            }),
+        twitchApi.getBadgesGlobal().then((badges) => _twitchGlobalBadges = badges).catchError((e) {
+          debugPrint('GlobalAssetsStore badge error: $e');
+          _twitchGlobalBadges = <String, ChatBadge>{};
+          return _twitchGlobalBadges;
+        }),
       // BTTV badges (global - provider ID to badge mapping)
       if (showBTTVBadges)
-        bttvApi.getBadges().then((badges) => _bttvBadges = badges).catchError((
-          e,
-        ) {
+        bttvApi.getBadges().then((badges) => _bttvBadges = badges).catchError((e) {
           debugPrint('GlobalAssetsStore badge error: $e');
           _bttvBadges = <String, ChatBadge>{};
           return _bttvBadges;
         }),
       // FFZ badges (global - user ID to badges mapping)
       if (showFFZBadges)
-        ffzApi.getBadges().then((badges) => _ffzBadges = badges).catchError((
-          e,
-        ) {
+        ffzApi.getBadges().then((badges) => _ffzBadges = badges).catchError((e) {
           debugPrint('GlobalAssetsStore badge error: $e');
           _ffzBadges = <String, List<ChatBadge>>{};
           return _ffzBadges;

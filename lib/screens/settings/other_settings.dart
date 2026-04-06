@@ -32,10 +32,7 @@ class _OtherSettingsState extends State<OtherSettings> {
         title: 'Reset all settings',
         message: 'Are you sure you want to reset all settings?',
         actions: [
-          TextButton(
-            onPressed: Navigator.of(context).pop,
-            child: const Text('Cancel'),
-          ),
+          TextButton(onPressed: Navigator.of(context).pop, child: const Text('Cancel')),
           FilledButton(
             onPressed: () {
               HapticFeedback.heavyImpact();
@@ -44,14 +41,9 @@ class _OtherSettingsState extends State<OtherSettings> {
 
               Navigator.pop(context);
 
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: AlertMessage(
-                    message: 'All settings reset',
-                    centered: false,
-                  ),
-                ),
-              );
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: AlertMessage(message: 'All settings reset', centered: false)));
             },
             child: const Text('Reset'),
           ),
@@ -74,13 +66,9 @@ class _OtherSettingsState extends State<OtherSettings> {
 
             showAboutDialog(
               context: context,
-              applicationIcon: SvgPicture.asset(
-                'assets/icons/logo.svg',
-                height: 80,
-              ),
+              applicationIcon: SvgPicture.asset('assets/icons/logo.svg', height: 80),
               applicationName: packageInfo.appName,
-              applicationVersion:
-                  'Version ${packageInfo.version} (${packageInfo.buildNumber})',
+              applicationVersion: 'Version ${packageInfo.version} (${packageInfo.buildNumber})',
               applicationLegalese: '\u{a9} 2026 Tommy Chow',
             );
           },
@@ -88,18 +76,14 @@ class _OtherSettingsState extends State<OtherSettings> {
         ListTile(
           leading: const Icon(Icons.notes_rounded),
           title: const Text('Release notes'),
-          onTap: () => Navigator.of(
-            context,
-          ).push(MaterialPageRoute(builder: (context) => const ReleaseNotes())),
+          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => const ReleaseNotes())),
         ),
         ListTile(
           leading: const Icon(Icons.launch_rounded),
           title: const Text('FAQ'),
           onTap: () => launchUrl(
             Uri.parse('https://www.frostyapp.io/#faq'),
-            mode: widget.settingsStore.launchUrlExternal
-                ? LaunchMode.externalApplication
-                : LaunchMode.inAppBrowserView,
+            mode: widget.settingsStore.launchUrlExternal ? LaunchMode.externalApplication : LaunchMode.inAppBrowserView,
           ),
         ),
         ListTile(
@@ -113,14 +97,9 @@ class _OtherSettingsState extends State<OtherSettings> {
 
             if (!context.mounted) return;
 
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: AlertMessage(
-                  message: 'Image cache cleared',
-                  centered: false,
-                ),
-              ),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: AlertMessage(message: 'Image cache cleared', centered: false)));
           },
         ),
         ListTile(
@@ -131,9 +110,7 @@ class _OtherSettingsState extends State<OtherSettings> {
         Observer(
           builder: (_) => SettingsListSwitch(
             title: 'Share crash logs and analytics',
-            subtitle: const Text(
-              'Help improve Frosty by sending anonymous crash logs and analytics through Firebase.',
-            ),
+            subtitle: const Text('Help improve Frosty by sending anonymous crash logs and analytics through Firebase.'),
             value: widget.settingsStore.shareCrashLogsAndAnalytics,
             onChanged: (newValue) {
               widget.settingsStore.shareCrashLogsAndAnalytics = newValue;

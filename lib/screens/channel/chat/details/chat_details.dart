@@ -92,11 +92,7 @@ class _ChatDetailsState extends State<ChatDetails> {
       builder: (context) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SectionHeader(
-            'Sleep timer',
-            padding: EdgeInsets.fromLTRB(16, 0, 16, 4),
-            isFirst: true,
-          ),
+          const SectionHeader('Sleep timer', padding: EdgeInsets.fromLTRB(16, 0, 16, 4), isFirst: true),
           AnimatedScrollBorder(scrollController: _scrollController),
           Expanded(
             child: ListView(
@@ -112,15 +108,9 @@ class _ChatDetailsState extends State<ChatDetails> {
                             text: 'Cancel   ',
                             children: [
                               TextSpan(
-                                text: formatTimeLeft(
-                                  widget.chatStore.timeRemaining,
-                                ),
+                                text: formatTimeLeft(widget.chatStore.timeRemaining),
                                 style: TextStyle(
-                                  color: Theme.of(context)
-                                      .textTheme
-                                      .bodyMedium
-                                      ?.color
-                                      ?.withValues(alpha: 0.6),
+                                  color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
                                   fontFeatures: [FontFeature.tabularFigures()],
                                 ),
                               ),
@@ -142,8 +132,7 @@ class _ChatDetailsState extends State<ChatDetails> {
                     onTap: () {
                       widget.chatStore.updateSleepTimer(
                         duration: duration,
-                        onTimerFinished: () => navigatorKey.currentState
-                            ?.popUntil((route) => route.isFirst),
+                        onTimerFinished: () => navigatorKey.currentState?.popUntil((route) => route.isFirst),
                       );
 
                       Navigator.of(context).pop();
@@ -162,9 +151,7 @@ class _ChatDetailsState extends State<ChatDetails> {
   /// Returns null if no match is found.
   String? _hexToColorName(String hexColor) {
     // Remove # if present
-    final cleanHex = hexColor.startsWith('#')
-        ? hexColor.substring(1)
-        : hexColor;
+    final cleanHex = hexColor.startsWith('#') ? hexColor.substring(1) : hexColor;
 
     // Convert to uppercase for comparison
     final upperHex = cleanHex.toUpperCase();
@@ -226,16 +213,12 @@ class _ChatDetailsState extends State<ChatDetails> {
     if (!context.mounted) return;
     Navigator.of(context).pop();
 
-    final message = success
-        ? 'Chat color updated successfully!'
-        : 'Failed to update chat color. Please try again.';
+    final message = success ? 'Chat color updated successfully!' : 'Failed to update chat color. Please try again.';
     _showMessage(context, message);
   }
 
   void _showMessage(BuildContext context, String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
   bool _hasActiveModes() {
@@ -251,17 +234,9 @@ class _ChatDetailsState extends State<ChatDetails> {
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 200),
       child: _isRefreshingAssets
-          ? const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator.adaptive(strokeWidth: 2),
-            )
+          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator.adaptive(strokeWidth: 2))
           : _showRefreshSuccess
-          ? Icon(
-              Icons.check_rounded,
-              color: Theme.of(context).colorScheme.primary,
-              key: const ValueKey('success'),
-            )
+          ? Icon(Icons.check_rounded, color: Theme.of(context).colorScheme.primary, key: const ValueKey('success'))
           : const SizedBox.shrink(),
     );
   }
@@ -305,13 +280,7 @@ class _ChatDetailsState extends State<ChatDetails> {
                 height: 48,
                 child: ListView(
                   scrollDirection: Axis.horizontal,
-                  children: [
-                    Observer(
-                      builder: (context) => ChatModes(
-                        roomState: widget.chatDetailsStore.roomState,
-                      ),
-                    ),
-                  ],
+                  children: [Observer(builder: (context) => ChatModes(roomState: widget.chatDetailsStore.roomState))],
                 ),
               ),
             ),
@@ -320,9 +289,7 @@ class _ChatDetailsState extends State<ChatDetails> {
               final showVideo = widget.chatStore.settings.showVideo;
               final label = showVideo ? 'Chat only' : 'Show video';
               return ListTile(
-                leading: Icon(
-                  showVideo ? Icons.chat_rounded : Icons.tv_rounded,
-                ),
+                leading: Icon(showVideo ? Icons.chat_rounded : Icons.tv_rounded),
                 title: Text(label),
                 onTap: () {
                   widget.chatStore.settings.showVideo = !showVideo;
@@ -380,15 +347,11 @@ class _ChatDetailsState extends State<ChatDetails> {
           Observer(
             builder: (context) {
               final hasTimer = widget.chatStore.timeRemaining.inSeconds > 0;
-              final label = hasTimer
-                  ? formatTimeLeft(widget.chatStore.timeRemaining)
-                  : 'Sleep timer';
+              final label = hasTimer ? formatTimeLeft(widget.chatStore.timeRemaining) : 'Sleep timer';
               return ListTile(
                 leading: Icon(
                   hasTimer ? Icons.timer_rounded : Icons.timer_rounded,
-                  color: hasTimer
-                      ? Theme.of(context).colorScheme.primary
-                      : null,
+                  color: hasTimer ? Theme.of(context).colorScheme.primary : null,
                 ),
                 title: Text(
                   label,
@@ -400,10 +363,7 @@ class _ChatDetailsState extends State<ChatDetails> {
                       : null,
                 ),
                 trailing: hasTimer
-                    ? Icon(
-                        Icons.chevron_right,
-                        color: Theme.of(context).colorScheme.primary,
-                      )
+                    ? Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.primary)
                     : const Icon(Icons.chevron_right),
                 onTap: () => _showSleepTimer(context),
               );
@@ -415,10 +375,7 @@ class _ChatDetailsState extends State<ChatDetails> {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (context) =>
-                    Settings(settingsStore: widget.chatStore.settings),
-              ),
+              MaterialPageRoute(builder: (context) => Settings(settingsStore: widget.chatStore.settings)),
             ),
           ),
         ];
@@ -445,8 +402,7 @@ class _ChatColorPickerModal extends StatefulWidget {
 
   final String? initialColor;
   final ScrollController scrollController;
-  final Future<void> Function(BuildContext context, String color)
-  onColorSelected;
+  final Future<void> Function(BuildContext context, String color) onColorSelected;
   final ChatStore chatStore;
 
   @override
@@ -497,8 +453,7 @@ class _ChatColorPickerModalState extends State<_ChatColorPickerModal> {
     // Create a mock IRC message with the user's current state
     final mockTags = <String, String>{
       'display-name': userDetails.displayName,
-      'color':
-          '#${chatColorValues[selectedColor!]!.toARGB32().toRadixString(16).substring(2)}',
+      'color': '#${chatColorValues[selectedColor!]!.toARGB32().toRadixString(16).substring(2)}',
       'user-id': userDetails.id,
       'mod': userState.mod ? '1' : '0',
       'subscriber': userState.subscriber ? '1' : '0',
@@ -551,9 +506,7 @@ class _ChatColorPickerModalState extends State<_ChatColorPickerModal> {
         child: ListView(
           padding: EdgeInsets.zero,
           controller: widget.scrollController,
-          children: chatColorNames
-              .map((colorName) => _buildColorTile(colorName))
-              .toList(),
+          children: chatColorNames.map((colorName) => _buildColorTile(colorName)).toList(),
         ),
       ),
     );
@@ -578,9 +531,7 @@ class _ChatColorPickerModalState extends State<_ChatColorPickerModal> {
         decoration: BoxDecoration(color: adjustedColor, shape: BoxShape.circle),
       ),
       title: Text(displayName),
-      trailing: isSelected
-          ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary)
-          : null,
+      trailing: isSelected ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary) : null,
       onTap: () => setState(() => selectedColor = colorName),
     );
   }
@@ -588,27 +539,19 @@ class _ChatColorPickerModalState extends State<_ChatColorPickerModal> {
   Widget _buildBottomBar() {
     return Column(
       children: [
-        AnimatedScrollBorder(
-          scrollController: widget.scrollController,
-          position: ScrollBorderPosition.bottom,
-        ),
+        AnimatedScrollBorder(scrollController: widget.scrollController, position: ScrollBorderPosition.bottom),
         SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
               children: [
                 Expanded(
-                  child: TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Cancel'),
-                  ),
+                  child: TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: FilledButton(
-                    onPressed: selectedColor == null
-                        ? null
-                        : () => widget.onColorSelected(context, selectedColor!),
+                    onPressed: selectedColor == null ? null : () => widget.onColorSelected(context, selectedColor!),
                     child: const Text('Save'),
                   ),
                 ),

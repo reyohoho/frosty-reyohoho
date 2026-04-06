@@ -36,6 +36,10 @@ abstract class VideoStoreBase with Store {
 
   final SettingsStore settingsStore;
 
+  /// Resolved each time the channel screen opens (see `findQualityDomain` on Reyohoho API).
+  /// When the host matches `proxy*.rte.net.ru`, usher playlists use this base URL.
+  final String? usherProxyBaseUrl;
+
   /// The [SimplePip] instance used for initiating PiP on Android.
   late final SimplePip pip;
 
@@ -145,20 +149,19 @@ abstract class VideoStoreBase with Store {
   String get videoUrl =>
       'https://player.twitch.tv/?channel=$userLogin&muted=false&parent=frosty';
 
-
   /// InAppWebView settings for video playback
   InAppWebViewSettings get webViewSettings => InAppWebViewSettings(
-        mediaPlaybackRequiresUserGesture: false,
-        allowsInlineMediaPlayback: true,
-        javaScriptEnabled: true,
-        transparentBackground: true,
-        supportZoom: false,
-        disableContextMenu: true,
-        useHybridComposition: !settingsStore.useTextureRendering,
-        allowsBackForwardNavigationGestures: false,
-        iframeAllowFullscreen: true,
-        allowBackgroundAudioPlaying: settingsStore.backgroundAudioEnabled,
-      );
+    mediaPlaybackRequiresUserGesture: false,
+    allowsInlineMediaPlayback: true,
+    javaScriptEnabled: true,
+    transparentBackground: true,
+    supportZoom: false,
+    disableContextMenu: true,
+    useHybridComposition: !settingsStore.useTextureRendering,
+    allowsBackForwardNavigationGestures: false,
+    iframeAllowFullscreen: true,
+    allowBackgroundAudioPlaying: settingsStore.backgroundAudioEnabled,
+  );
 
   VideoStoreBase({
     required this.userLogin,
@@ -166,9 +169,12 @@ abstract class VideoStoreBase with Store {
     required this.twitchApi,
     required this.authStore,
     required this.settingsStore,
+    this.usherProxyBaseUrl,
   }) {
     // Initialize SimplePip with callbacks for PIP exit detection
-    debugPrint('[PIP] VideoStore: registering SimplePip callbacks (onPipExited, onPipEntered)');
+    debugPrint(
+      '[PIP] VideoStore: registering SimplePip callbacks (onPipExited, onPipEntered)',
+    );
     pip = SimplePip(
       onPipExited: () {
         debugPrint('[PIP] VideoStore: onPipExited invoked (native -> Dart)');
@@ -303,10 +309,7 @@ abstract class VideoStoreBase with Store {
         if (!settingsStore.autoSyncChatDelay) return;
 
         // Parse latency from abbreviated format: "5s" -> 5.0
-        final numericPart = receivedLatency.replaceAll(
-          RegExp(r'[^0-9.]'),
-          '',
-        );
+        final numericPart = receivedLatency.replaceAll(RegExp(r'[^0-9.]'), '');
         final latencyAsDouble = double.tryParse(numericPart);
 
         if (latencyAsDouble != null) {
@@ -320,8 +323,7 @@ abstract class VideoStoreBase with Store {
       callback: (args) async {
         if (args.isEmpty) return;
         final data = jsonDecode(args[0].toString()) as List;
-        _availableStreamQualities =
-            data.map((item) => item as String).toList();
+        _availableStreamQualities = data.map((item) => item as String).toList();
         if (_firstTimeSettingQuality) {
           _firstTimeSettingQuality = false;
           if (settingsStore.defaultToHighestQuality) {
@@ -387,16 +389,36 @@ abstract class VideoStoreBase with Store {
         settingsStore.audioCompressorEnabled = isActive;
       },
     );
+  }
 
+  static final RegExp _rteQualityProxyHost = RegExp(r'^proxy\d+\.rte\.net\.ru$');
+
+  static String _stripTrailingSlashes(String s) =>
+      s.replaceAll(RegExp(r'/+$'), '');
+
+  /// Base URL for usher proxying: RTE quality proxy from [usherProxyBaseUrl] if valid,
+  /// otherwise manual playlist proxy from settings (same gate as before).
+  String? get _effectiveUsherProxyBase {
+    final auto = usherProxyBaseUrl?.trim() ?? '';
+    if (auto.isNotEmpty) {
+      final host = Uri.tryParse(auto)?.host ?? '';
+      if (_rteQualityProxyHost.hasMatch(host)) {
+        return _stripTrailingSlashes(auto);
+      }
+    }
+    if (settingsStore.usePlaylistProxy &&
+        settingsStore.selectedProxyUrl.isNotEmpty) {
+      return _stripTrailingSlashes(settingsStore.selectedProxyUrl);
+    }
+    return null;
   }
 
   /// Intercepts network requests to proxy usher URLs
   Future<WebResourceResponse?> shouldInterceptRequest(
     WebResourceRequest request,
   ) async {
-    // Only intercept if proxy is enabled and a proxy is selected
-    if (!settingsStore.usePlaylistProxy ||
-        settingsStore.selectedProxyUrl.isEmpty) {
+    final proxyBase = _effectiveUsherProxyBase;
+    if (proxyBase == null || proxyBase.isEmpty) {
       return null;
     }
 
@@ -405,7 +427,7 @@ abstract class VideoStoreBase with Store {
     // Intercept usher.ttvnw.net requests and proxy them
     if (url.contains('usher.ttvnw.net')) {
       try {
-        final proxyUrl = '${settingsStore.selectedProxyUrl}/$url';
+        final proxyUrl = '$proxyBase/$url';
 
         final response = await _dio.get<List<int>>(
           proxyUrl,
@@ -461,15 +483,19 @@ abstract class VideoStoreBase with Store {
   }
 
   /// Called when page finishes loading
-  Future<void> onLoadStop(InAppWebViewController controller, WebUri? url) async {
+  Future<void> onLoadStop(
+    InAppWebViewController controller,
+    WebUri? url,
+  ) async {
     if (url?.toString() != videoUrl) return;
 
     // Safe evaluation of JavaScript boolean result
     final result = await controller.evaluateJavascript(
       source: 'window._injected ? true : false',
     );
-    final injected =
-        result is bool ? result : (result.toString().toLowerCase() == 'true');
+    final injected = result is bool
+        ? result
+        : (result.toString().toLowerCase() == 'true');
     if (injected) return;
 
     await controller.evaluateJavascript(source: 'window._injected = true;');
@@ -480,7 +506,8 @@ abstract class VideoStoreBase with Store {
   @action
   Future<void> updateStreamQualities() async {
     try {
-      await _webViewController?.evaluateJavascript(source: r'''
+      await _webViewController?.evaluateJavascript(
+        source: r'''
       _queuePromise(async () => {
         // Open the settings → quality submenu
         (await _asyncQuerySelector('[data-a-target="player-settings-button"]')).click();
@@ -503,7 +530,8 @@ abstract class VideoStoreBase with Store {
         // Close the settings panel again
         (await _asyncQuerySelector('[data-a-target="player-settings-button"]')).click();
       });
-    ''');
+    ''',
+      );
     } catch (e) {
       debugPrint(e.toString());
     }
@@ -521,7 +549,9 @@ abstract class VideoStoreBase with Store {
   @action
   Future<void> _setStreamQualityIndex(int newStreamQualityIndex) async {
     try {
-      await _webViewController?.evaluateJavascript(source: '''
+      await _webViewController?.evaluateJavascript(
+        source:
+            '''
         _queuePromise(async () => {
           (await _asyncQuerySelector('[data-a-target="player-settings-button"]')).click();
           (await _asyncQuerySelector('[data-a-target="player-settings-menu-item-quality"]')).click();
@@ -529,7 +559,8 @@ abstract class VideoStoreBase with Store {
           [...document.querySelectorAll('[data-a-target="player-settings-submenu-quality-option"] input')][$newStreamQualityIndex].click();
           (await _asyncQuerySelector('[data-a-target="player-settings-button"]')).click();
         });
-      ''');
+      ''',
+      );
       _streamQualityIndex = newStreamQualityIndex;
     } catch (e) {
       debugPrint(e.toString());
@@ -539,7 +570,8 @@ abstract class VideoStoreBase with Store {
   /// Hides the default Twitch overlay elements using CSS injection.
   Future<void> _hideDefaultOverlay() async {
     try {
-      await _webViewController?.evaluateJavascript(source: '''
+      await _webViewController?.evaluateJavascript(
+        source: '''
         {
           if (!document.getElementById('frosty-overlay-styles')) {
             const style = document.createElement('style');
@@ -575,7 +607,8 @@ abstract class VideoStoreBase with Store {
           // Safety timeout: disconnect observer if player never loads
           setTimeout(() => observer.disconnect(), 30000);
         }
-      ''');
+      ''',
+      );
     } catch (e) {
       debugPrint(e.toString());
     }
@@ -583,7 +616,8 @@ abstract class VideoStoreBase with Store {
 
   Future<void> _acceptContentWarning() async {
     try {
-      await _webViewController?.evaluateJavascript(source: '''
+      await _webViewController?.evaluateJavascript(
+        source: '''
         {
           (async () => {
             const warningBtn = await _asyncQuerySelector('button[data-a-target*="content-classification-gate"]', 10000);
@@ -593,7 +627,8 @@ abstract class VideoStoreBase with Store {
             }
           })();
         }
-      ''');
+      ''',
+      );
     } catch (e) {
       debugPrint(e.toString());
     }
@@ -602,7 +637,8 @@ abstract class VideoStoreBase with Store {
   /// Sets up visibility-aware latency tracking.
   Future<void> _listenOnLatencyChanges() async {
     try {
-      await _webViewController?.evaluateJavascript(source: r'''
+      await _webViewController?.evaluateJavascript(
+        source: r'''
         window._latencyTracker = {
           CYCLE_INTERVAL: 15000,  // Update every 15 seconds
           STATS_ACTIVE_TIME: 2000,
@@ -804,7 +840,8 @@ abstract class VideoStoreBase with Store {
         };
 
         window._latencyTracker.init();
-      ''');
+      ''',
+      );
     } catch (e) {
       debugPrint(e.toString());
     }
@@ -814,7 +851,9 @@ abstract class VideoStoreBase with Store {
   Future<void> _initAudioCompressor() async {
     final shouldEnable = settingsStore.audioCompressorEnabled;
     try {
-      await _webViewController?.evaluateJavascript(source: '''
+      await _webViewController?.evaluateJavascript(
+        source:
+            '''
         window._audioCompressor = {
           DEFAULTS: {
             threshold: -50,
@@ -951,7 +990,8 @@ abstract class VideoStoreBase with Store {
             }
           }, 1000);
         }
-      ''');
+      ''',
+      );
     } catch (e) {
       debugPrint('Audio compressor init error: $e');
     }
@@ -978,7 +1018,8 @@ abstract class VideoStoreBase with Store {
     try {
       final transform = _videoMirrored ? 'scaleX(-1)' : 'scaleX(1)';
       await _webViewController?.evaluateJavascript(
-        source: '''
+        source:
+            '''
           (function() {
             const video = document.querySelector('video');
             if (video) {
@@ -1020,12 +1061,14 @@ abstract class VideoStoreBase with Store {
   /// Performs a soft reset of JavaScript state to prevent memory accumulation.
   void _performJsSoftReset() {
     try {
-      _webViewController?.evaluateJavascript(source: '''
+      _webViewController?.evaluateJavascript(
+        source: '''
         if (window._promiseQueueLength === 0) {
           window._PROMISE_QUEUE = Promise.resolve();
           window._promiseQueueGen = (window._promiseQueueGen || 0) + 1;
         }
-      ''');
+      ''',
+      );
     } catch (e) {
       debugPrint('JS soft reset error: $e');
     }
@@ -1037,7 +1080,8 @@ abstract class VideoStoreBase with Store {
     final currentUrl = await _webViewController?.getUrl();
     if (currentUrl?.toString() == videoUrl) {
       try {
-        await _webViewController?.evaluateJavascript(source: '''
+        await _webViewController?.evaluateJavascript(
+          source: '''
           // Promise queue with length limit and generation tracking
           window._PROMISE_QUEUE = Promise.resolve();
           window._promiseQueueLength = 0;
@@ -1135,7 +1179,8 @@ abstract class VideoStoreBase with Store {
               }
             }
           });
-        ''');
+        ''',
+        );
         if (settingsStore.showOverlay) {
           await _hideDefaultOverlay();
           if (settingsStore.showLatency || settingsStore.autoSyncChatDelay) {
@@ -1333,13 +1378,15 @@ abstract class VideoStoreBase with Store {
   void togglePictureInPicture() {
     try {
       if (Platform.isIOS && _isInPipMode) {
-        _webViewController?.evaluateJavascript(source: '''
+        _webViewController?.evaluateJavascript(
+          source: '''
           (function() {
             if (document.pictureInPictureElement) {
               document.exitPictureInPicture();
             }
           })();
-          ''');
+          ''',
+        );
       } else {
         requestPictureInPicture();
       }
@@ -1396,7 +1443,9 @@ abstract class VideoStoreBase with Store {
         callback: backgroundAudioTaskCallback,
       );
       _isForegroundServiceRunning = true;
-      BackgroundPlaybackCallbackRegistry.register(_onNotificationPauseOrDismiss);
+      BackgroundPlaybackCallbackRegistry.register(
+        _onNotificationPauseOrDismiss,
+      );
     } catch (e) {
       debugPrint('Failed to start foreground service: $e');
     }
@@ -1469,4 +1518,3 @@ abstract class VideoStoreBase with Store {
     _dio.close();
   }
 }
-

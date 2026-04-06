@@ -63,8 +63,7 @@ class _ChatUserModalState extends State<ChatUserModal> {
                   IconButton(
                     tooltip: 'Reply',
                     onPressed: () {
-                      widget.chatStore.textController.text =
-                          '@${widget.username} ';
+                      widget.chatStore.textController.text = '@${widget.username} ';
                       Navigator.pop(context);
                       widget.chatStore.safeRequestFocus();
                     },
@@ -87,25 +86,25 @@ class _ChatUserModalState extends State<ChatUserModal> {
                         canModerate: chatStore.canModerate,
                         onTimeout: chatStore.canModerate && moderatorId != null
                             ? (duration) => twitchApi.timeoutUser(
-                                  broadcasterId: chatStore.channelId,
-                                  moderatorId: moderatorId,
-                                  userId: widget.userId,
-                                  duration: duration,
-                                )
+                                broadcasterId: chatStore.channelId,
+                                moderatorId: moderatorId,
+                                userId: widget.userId,
+                                duration: duration,
+                              )
                             : null,
                         onBan: chatStore.canModerate && moderatorId != null
                             ? () => twitchApi.banUser(
-                                  broadcasterId: chatStore.channelId,
-                                  moderatorId: moderatorId,
-                                  userId: widget.userId,
-                                )
+                                broadcasterId: chatStore.channelId,
+                                moderatorId: moderatorId,
+                                userId: widget.userId,
+                              )
                             : null,
                         onUnban: chatStore.canModerate && moderatorId != null
                             ? () => twitchApi.unbanUser(
-                                  broadcasterId: chatStore.channelId,
-                                  moderatorId: moderatorId,
-                                  userId: widget.userId,
-                                )
+                                broadcasterId: chatStore.channelId,
+                                moderatorId: moderatorId,
+                                userId: widget.userId,
+                              )
                             : null,
                         onModerationNotice: chatStore.addModerationNotice,
                         onError: chatStore.updateNotification,
@@ -130,25 +129,18 @@ class _ChatUserModalState extends State<ChatUserModal> {
                 }
 
                 return MediaQuery(
-                  data: MediaQuery.of(context).copyWith(
-                    textScaler: TextScaler.linear(
-                      widget.chatStore.settings.messageScale,
-                    ),
-                  ),
+                  data: MediaQuery.of(
+                    context,
+                  ).copyWith(textScaler: TextScaler.linear(widget.chatStore.settings.messageScale)),
                   child: DefaultTextStyle(
-                    style: DefaultTextStyle.of(context).style.copyWith(
-                      fontSize: widget.chatStore.settings.fontSize,
-                    ),
+                    style: DefaultTextStyle.of(context).style.copyWith(fontSize: widget.chatStore.settings.fontSize),
                     child: FrostyScrollbar(
                       child: ListView.builder(
                         reverse: true,
                         primary: false,
                         itemCount: userMessages.length,
-                        itemBuilder: (context, index) => ChatMessage(
-                          ircMessage: userMessages[index],
-                          chatStore: widget.chatStore,
-                          isModal: true,
-                        ),
+                        itemBuilder: (context, index) =>
+                            ChatMessage(ircMessage: userMessages[index], chatStore: widget.chatStore, isModal: true),
                       ),
                     ),
                   ),

@@ -37,14 +37,7 @@ void main() {
     });
 
     test('uses title for badge name, not id', () {
-      final twitchBadge = BadgeInfoTwitch(
-        'url1',
-        'url2',
-        'url4',
-        'vip',
-        'VIP',
-        'Very Important Person',
-      );
+      final twitchBadge = BadgeInfoTwitch('url1', 'url2', 'url4', 'vip', 'VIP', 'Very Important Person');
 
       final badge = ChatBadge.fromTwitch(twitchBadge);
 
@@ -79,10 +72,7 @@ void main() {
     });
 
     test('uses badge SVG URL', () {
-      final bttvBadge = BadgeInfoBTTV(
-        'providerid',
-        BadgeDetailsBTTV('Test Badge', 'https://custom.svg.url/badge.svg'),
-      );
+      final bttvBadge = BadgeInfoBTTV('providerid', BadgeDetailsBTTV('Test Badge', 'https://custom.svg.url/badge.svg'));
 
       final badge = ChatBadge.fromBTTV(bttvBadge);
 
@@ -96,11 +86,7 @@ void main() {
         1,
         'FFZ Supporter',
         '#FF5500',
-        const BadgeUrlsFFZ(
-          'https://cdn.ffz.net/1x.png',
-          'https://cdn.ffz.net/2x.png',
-          'https://cdn.ffz.net/4x.png',
-        ),
+        const BadgeUrlsFFZ('https://cdn.ffz.net/1x.png', 'https://cdn.ffz.net/2x.png', 'https://cdn.ffz.net/4x.png'),
       );
 
       final badge = ChatBadge.fromFFZ(ffzBadge);
@@ -116,11 +102,7 @@ void main() {
         2,
         'Test Badge',
         '#00FF00',
-        const BadgeUrlsFFZ(
-          'https://cdn/1x.png',
-          'https://cdn/2x.png',
-          'https://cdn/4x.png',
-        ),
+        const BadgeUrlsFFZ('https://cdn/1x.png', 'https://cdn/2x.png', 'https://cdn/4x.png'),
       );
 
       final badge = ChatBadge.fromFFZ(ffzBadge);
@@ -129,12 +111,7 @@ void main() {
     });
 
     test('preserves hex color string', () {
-      final ffzBadge = BadgeInfoFFZ(
-        3,
-        'Colored Badge',
-        '#ABCDEF',
-        const BadgeUrlsFFZ('1x', '2x', '4x'),
-      );
+      final ffzBadge = BadgeInfoFFZ(3, 'Colored Badge', '#ABCDEF', const BadgeUrlsFFZ('1x', '2x', '4x'));
 
       final badge = ChatBadge.fromFFZ(ffzBadge);
 
@@ -143,21 +120,11 @@ void main() {
 
     test('handles various color formats', () {
       // Test lowercase hex
-      final ffzBadge1 = BadgeInfoFFZ(
-        4,
-        'Badge1',
-        '#aabbcc',
-        const BadgeUrlsFFZ('1x', '2x', '4x'),
-      );
+      final ffzBadge1 = BadgeInfoFFZ(4, 'Badge1', '#aabbcc', const BadgeUrlsFFZ('1x', '2x', '4x'));
       expect(ChatBadge.fromFFZ(ffzBadge1).color, '#aabbcc');
 
       // Test uppercase hex
-      final ffzBadge2 = BadgeInfoFFZ(
-        5,
-        'Badge2',
-        '#AABBCC',
-        const BadgeUrlsFFZ('1x', '2x', '4x'),
-      );
+      final ffzBadge2 = BadgeInfoFFZ(5, 'Badge2', '#AABBCC', const BadgeUrlsFFZ('1x', '2x', '4x'));
       expect(ChatBadge.fromFFZ(ffzBadge2).color, '#AABBCC');
     });
   });
@@ -182,15 +149,11 @@ void main() {
     });
 
     test('uses urls[2][1] for badge URL (3x size)', () {
-      final badge7TV = BadgeInfo7TV(
-        'Test Badge',
-        [
-          ['1x', 'https://cdn.7tv.app/1x.png'],
-          ['2x', 'https://cdn.7tv.app/2x.png'],
-          ['3x', 'https://cdn.7tv.app/3x.png'],
-        ],
-        [],
-      );
+      final badge7TV = BadgeInfo7TV('Test Badge', [
+        ['1x', 'https://cdn.7tv.app/1x.png'],
+        ['2x', 'https://cdn.7tv.app/2x.png'],
+        ['3x', 'https://cdn.7tv.app/3x.png'],
+      ], []);
 
       final badge = ChatBadge.from7TV(badge7TV);
 
@@ -199,15 +162,11 @@ void main() {
     });
 
     test('uses tooltip as badge name', () {
-      final badge7TV = BadgeInfo7TV(
-        'Custom Tooltip Text',
-        [
-          ['1x', 'url1'],
-          ['2x', 'url2'],
-          ['3x', 'url3'],
-        ],
-        [],
-      );
+      final badge7TV = BadgeInfo7TV('Custom Tooltip Text', [
+        ['1x', 'url1'],
+        ['2x', 'url2'],
+        ['3x', 'url3'],
+      ], []);
 
       final badge = ChatBadge.from7TV(badge7TV);
 
@@ -231,11 +190,7 @@ void main() {
 
   group('ChatBadge constructor', () {
     test('creates badge with all required fields', () {
-      const badge = ChatBadge(
-        name: 'Test Badge',
-        url: 'https://example.com/badge.png',
-        type: BadgeType.twitch,
-      );
+      const badge = ChatBadge(name: 'Test Badge', url: 'https://example.com/badge.png', type: BadgeType.twitch);
 
       expect(badge.name, 'Test Badge');
       expect(badge.url, 'https://example.com/badge.png');
@@ -283,11 +238,7 @@ void main() {
         'id': 123,
         'title': 'FFZ Badge',
         'color': '#00FF00',
-        'urls': {
-          '1': 'https://cdn/1x.png',
-          '2': 'https://cdn/2x.png',
-          '4': 'https://cdn/4x.png',
-        },
+        'urls': {'1': 'https://cdn/1x.png', '2': 'https://cdn/2x.png', '4': 'https://cdn/4x.png'},
       };
 
       final badge = BadgeInfoFFZ.fromJson(json);
@@ -325,10 +276,7 @@ void main() {
     test('fromJson creates correct instance', () {
       final json = {
         'providerId': 'provider123',
-        'badge': {
-          'description': 'BTTV Badge',
-          'svg': 'https://cdn.bttv.net/badge.svg',
-        },
+        'badge': {'description': 'BTTV Badge', 'svg': 'https://cdn.bttv.net/badge.svg'},
       };
 
       final badge = BadgeInfoBTTV.fromJson(json);

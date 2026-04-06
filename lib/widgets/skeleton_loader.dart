@@ -14,21 +14,18 @@ class SkeletonLoader extends StatefulWidget {
   State<SkeletonLoader> createState() => _SkeletonLoaderState();
 }
 
-class _SkeletonLoaderState extends State<SkeletonLoader>
-    with SingleTickerProviderStateMixin {
+class _SkeletonLoaderState extends State<SkeletonLoader> with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _animation;
 
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 1200),
-      vsync: this,
-    );
-    _animation = Tween<double>(begin: 0.3, end: 0.9).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
-    );
+    _animationController = AnimationController(duration: const Duration(milliseconds: 1200), vsync: this);
+    _animation = Tween<double>(
+      begin: 0.3,
+      end: 0.9,
+    ).animate(CurvedAnimation(parent: _animationController, curve: Curves.easeInOut));
     _animationController.repeat(reverse: true);
   }
 
@@ -71,13 +68,7 @@ class SkeletonText extends StatelessWidget {
   final double? maxWidth;
   final BorderRadius? borderRadius;
 
-  const SkeletonText({
-    super.key,
-    required this.height,
-    this.minWidth,
-    this.maxWidth,
-    this.borderRadius,
-  });
+  const SkeletonText({super.key, required this.height, this.minWidth, this.maxWidth, this.borderRadius});
 
   @override
   Widget build(BuildContext context) {
@@ -102,11 +93,7 @@ class ChannelSkeletonLoader extends StatelessWidget {
   final bool showSubtitle;
   final int index;
 
-  const ChannelSkeletonLoader({
-    super.key,
-    this.showSubtitle = true,
-    this.index = 0,
-  });
+  const ChannelSkeletonLoader({super.key, this.showSubtitle = true, this.index = 0});
 
   @override
   Widget build(BuildContext context) {
@@ -117,15 +104,9 @@ class ChannelSkeletonLoader extends StatelessWidget {
     return ListTile(
       dense: true,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      leading: const SkeletonLoader(
-        width: 32,
-        height: 32,
-        borderRadius: BorderRadius.all(Radius.circular(16)),
-      ),
+      leading: const SkeletonLoader(width: 32, height: 32, borderRadius: BorderRadius.all(Radius.circular(16))),
       title: SkeletonText(height: 16, minWidth: 60, maxWidth: 140),
-      subtitle: shouldShowSubtitle
-          ? SkeletonText(height: 14, minWidth: 30, maxWidth: 80)
-          : null,
+      subtitle: shouldShowSubtitle ? SkeletonText(height: 14, minWidth: 30, maxWidth: 80) : null,
     );
   }
 }
@@ -151,15 +132,11 @@ class CategorySkeletonLoader extends StatelessWidget {
             width: 80,
             child: AspectRatio(
               aspectRatio: 3 / 4,
-              child: const SkeletonLoader(
-                borderRadius: BorderRadius.all(Radius.circular(8)),
-              ),
+              child: const SkeletonLoader(borderRadius: BorderRadius.all(Radius.circular(8))),
             ),
           ),
           // Category name skeleton with random width (matches bodyLarge text)
-          Flexible(
-            child: SkeletonText(height: 18, minWidth: 80, maxWidth: 180),
-          ),
+          Flexible(child: SkeletonText(height: 18, minWidth: 80, maxWidth: 180)),
         ],
       ),
     );
@@ -171,11 +148,7 @@ class StreamCardSkeletonLoader extends StatelessWidget {
   final bool showThumbnail;
   final bool showCategory;
 
-  const StreamCardSkeletonLoader({
-    super.key,
-    this.showThumbnail = true,
-    this.showCategory = true,
-  });
+  const StreamCardSkeletonLoader({super.key, this.showThumbnail = true, this.showCategory = true});
 
   @override
   Widget build(BuildContext context) {
@@ -183,12 +156,8 @@ class StreamCardSkeletonLoader extends StatelessWidget {
       padding: EdgeInsets.only(
         top: 8,
         bottom: 8,
-        left: showThumbnail
-            ? 16 + MediaQuery.of(context).padding.left
-            : 4 + MediaQuery.of(context).padding.left,
-        right: showThumbnail
-            ? 16 + MediaQuery.of(context).padding.right
-            : 4 + MediaQuery.of(context).padding.right,
+        left: showThumbnail ? 16 + MediaQuery.of(context).padding.left : 4 + MediaQuery.of(context).padding.left,
+        right: showThumbnail ? 16 + MediaQuery.of(context).padding.right : 4 + MediaQuery.of(context).padding.right,
       ),
       child: Row(
         children: [
@@ -197,9 +166,7 @@ class StreamCardSkeletonLoader extends StatelessWidget {
             Flexible(
               child: AspectRatio(
                 aspectRatio: 16 / 9,
-                child: const SkeletonLoader(
-                  borderRadius: BorderRadius.all(Radius.circular(8)),
-                ),
+                child: const SkeletonLoader(borderRadius: BorderRadius.all(Radius.circular(8))),
               ),
             ),
           ],
@@ -216,18 +183,8 @@ class StreamCardSkeletonLoader extends StatelessWidget {
                   Row(
                     spacing: 4,
                     children: [
-                      const SkeletonLoader(
-                        width: 20,
-                        height: 20,
-                        borderRadius: BorderRadius.all(Radius.circular(10)),
-                      ),
-                      Expanded(
-                        child: SkeletonText(
-                          height: 16,
-                          minWidth: 60,
-                          maxWidth: 120,
-                        ),
-                      ),
+                      const SkeletonLoader(width: 20, height: 20, borderRadius: BorderRadius.all(Radius.circular(10))),
+                      Expanded(child: SkeletonText(height: 16, minWidth: 60, maxWidth: 120)),
                     ],
                   ),
                   // Stream title skeleton with random width
@@ -274,11 +231,7 @@ class StreamInfoBarSkeletonLoader extends StatelessWidget {
         spacing: 12,
         children: [
           // ProfilePicture skeleton (radius 16)
-          const SkeletonLoader(
-            width: 32,
-            height: 32,
-            borderRadius: BorderRadius.all(Radius.circular(16)),
-          ),
+          const SkeletonLoader(width: 32, height: 32, borderRadius: BorderRadius.all(Radius.circular(16))),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -294,13 +247,7 @@ class StreamInfoBarSkeletonLoader extends StatelessWidget {
                     // Streamer name skeleton
                     SkeletonText(height: 14, minWidth: 60, maxWidth: 120),
                     // Stream title skeleton (flexible)
-                    Flexible(
-                      child: SkeletonText(
-                        height: 14,
-                        minWidth: 80,
-                        maxWidth: 200,
-                      ),
-                    ),
+                    Flexible(child: SkeletonText(height: 14, minWidth: 80, maxWidth: 200)),
                   ],
                 ),
                 // Bottom row: Live indicator, uptime, viewer count, game name
@@ -323,34 +270,18 @@ class StreamInfoBarSkeletonLoader extends StatelessWidget {
                       ],
                       if (showViewerCount) ...[
                         // Viewer count icon skeleton
-                        const SkeletonLoader(
-                          width: 14,
-                          height: 14,
-                          borderRadius: BorderRadius.all(Radius.circular(2)),
-                        ),
+                        const SkeletonLoader(width: 14, height: 14, borderRadius: BorderRadius.all(Radius.circular(2))),
                         const SizedBox(width: 4),
                         // Viewer count text skeleton
                         SkeletonText(height: 14, minWidth: 30, maxWidth: 80),
                       ],
-                      if (showCategory && (showUptime || showViewerCount)) ...[
-                        const SizedBox(width: 8),
-                      ],
+                      if (showCategory && (showUptime || showViewerCount)) ...[const SizedBox(width: 8)],
                       if (showCategory) ...[
                         // Category icon skeleton (gamepad)
-                        const SkeletonLoader(
-                          width: 14,
-                          height: 14,
-                          borderRadius: BorderRadius.all(Radius.circular(2)),
-                        ),
+                        const SkeletonLoader(width: 14, height: 14, borderRadius: BorderRadius.all(Radius.circular(2))),
                         const SizedBox(width: 4),
                         // Category text skeleton (flexible)
-                        Flexible(
-                          child: SkeletonText(
-                            height: 14,
-                            minWidth: 60,
-                            maxWidth: 140,
-                          ),
-                        ),
+                        Flexible(child: SkeletonText(height: 14, minWidth: 60, maxWidth: 140)),
                       ],
                     ],
                   ),
@@ -369,11 +300,7 @@ class LargeStreamCardSkeletonLoader extends StatelessWidget {
   final bool showThumbnail;
   final bool showCategory;
 
-  const LargeStreamCardSkeletonLoader({
-    super.key,
-    this.showThumbnail = true,
-    this.showCategory = true,
-  });
+  const LargeStreamCardSkeletonLoader({super.key, this.showThumbnail = true, this.showCategory = true});
 
   @override
   Widget build(BuildContext context) {
@@ -394,18 +321,13 @@ class LargeStreamCardSkeletonLoader extends StatelessWidget {
                 borderRadius: const BorderRadius.all(Radius.circular(8)),
                 child: AspectRatio(
                   aspectRatio: 16 / 9,
-                  child: const SkeletonLoader(
-                    borderRadius: BorderRadius.all(Radius.circular(8)),
-                  ),
+                  child: const SkeletonLoader(borderRadius: BorderRadius.all(Radius.circular(8))),
                 ),
               ),
             ),
           ],
           // Stream info bar skeleton - matches the actual StreamInfoBar usage
-          StreamInfoBarSkeletonLoader(
-            showCategory: showCategory,
-            padding: const EdgeInsets.symmetric(vertical: 12),
-          ),
+          StreamInfoBarSkeletonLoader(showCategory: showCategory, padding: const EdgeInsets.symmetric(vertical: 12)),
         ],
       ),
     );
@@ -419,19 +341,12 @@ class OfflineChannelCardSkeletonLoader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.symmetric(
-        horizontal: 16 + MediaQuery.of(context).padding.left,
-        vertical: 8,
-      ),
+      padding: EdgeInsets.symmetric(horizontal: 16 + MediaQuery.of(context).padding.left, vertical: 8),
       child: Row(
         spacing: 12,
         children: [
           // Profile picture skeleton (radius 24 = 48px diameter)
-          const SkeletonLoader(
-            width: 48,
-            height: 48,
-            borderRadius: BorderRadius.all(Radius.circular(24)),
-          ),
+          const SkeletonLoader(width: 48, height: 48, borderRadius: BorderRadius.all(Radius.circular(24))),
           // Channel info skeleton
           Expanded(
             child: Column(

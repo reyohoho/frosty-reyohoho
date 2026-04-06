@@ -7,12 +7,7 @@ class CustomCacheManager {
   static const key = 'libCachedImageData';
   static final _repo = CacheObjectProvider(databaseName: key);
   static final instance = CacheManager(
-    Config(
-      key,
-      stalePeriod: const Duration(days: 30),
-      maxNrOfCacheObjects: 10000,
-      repo: _repo,
-    ),
+    Config(key, stalePeriod: const Duration(days: 30), maxNrOfCacheObjects: 10000, repo: _repo),
   );
 
   static Future<void> removeOrphanedCacheFiles() async {

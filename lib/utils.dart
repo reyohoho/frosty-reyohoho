@@ -6,8 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:frosty/constants.dart';
 
 // --- Contrast helpers ---
-double _linearize(double c) =>
-    c <= 0.03928 ? c / 12.92 : math.pow((c + 0.055) / 1.055, 2.4).toDouble();
+double _linearize(double c) => c <= 0.03928 ? c / 12.92 : math.pow((c + 0.055) / 1.055, 2.4).toDouble();
 
 double _relativeLuminance(Color c) {
   final r = _linearize(c.r);
@@ -29,12 +28,7 @@ double _contrastRatio(Color a, Color b) {
 /// back to theme.colorScheme.surface.
 ///
 /// For normal-size text use 4.5; for large/bold labels you can pass 3.0.
-Color adjustChatNameColor(
-  BuildContext context,
-  Color color, {
-  Color? background,
-  double targetContrast = 4.5,
-}) {
+Color adjustChatNameColor(BuildContext context, Color color, {Color? background, double targetContrast = 4.5}) {
   final theme = Theme.of(context);
 
   // Pick background: scaffoldBackgroundColor -> surface (if scaffold is transparent).
@@ -58,10 +52,7 @@ Color adjustChatNameColor(
     final mid = (lo + hi) / 2.0;
     final t = (mid - 0.5).abs() * 2; // 0..1 near ends
     final easedSat = (hsl0.saturation * (1 - 0.25 * t * t)).clamp(0.0, 1.0);
-    final candidate = hsl0
-        .withLightness(mid)
-        .withSaturation(easedSat)
-        .toColor();
+    final candidate = hsl0.withLightness(mid).withSaturation(easedSat).toColor();
 
     if (_contrastRatio(candidate, bg) >= targetContrast) {
       bestL = mid;

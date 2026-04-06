@@ -17,12 +17,7 @@ class Chat extends StatelessWidget {
   /// Passes this to ChatBottomBar for the ChatDetails menu.
   final VoidCallback onAddChat;
 
-  const Chat({
-    super.key,
-    required this.chatStore,
-    this.listPadding,
-    required this.onAddChat,
-  });
+  const Chat({super.key, required this.chatStore, this.listPadding, required this.onAddChat});
 
   @override
   Widget build(BuildContext context) {
@@ -46,13 +41,9 @@ class Chat extends StatelessWidget {
                       }
                     },
                     child: MediaQuery(
-                      data: MediaQuery.of(context).copyWith(
-                        textScaler: chatStore.settings.messageScale.textScaler,
-                      ),
+                      data: MediaQuery.of(context).copyWith(textScaler: chatStore.settings.messageScale.textScaler),
                       child: DefaultTextStyle(
-                        style: context.defaultTextStyle.copyWith(
-                          fontSize: chatStore.settings.fontSize,
-                        ),
+                        style: context.defaultTextStyle.copyWith(fontSize: chatStore.settings.fontSize),
                         child: Builder(
                           builder: (context) {
                             // Don't add bottom padding in horizontal landscape
@@ -60,11 +51,8 @@ class Chat extends StatelessWidget {
                             // landscapeForceVerticalChat uses portrait layout
                             // with normal system UI, so still needs padding.
                             final isHorizontalLandscape =
-                                context.isLandscape &&
-                                !chatStore.settings.landscapeForceVerticalChat;
-                            final bottomPadding =
-                                chatStore.assetsStore.showEmoteMenu ||
-                                    isHorizontalLandscape
+                                context.isLandscape && !chatStore.settings.landscapeForceVerticalChat;
+                            final bottomPadding = chatStore.assetsStore.showEmoteMenu || isHorizontalLandscape
                                 ? 0.0
                                 : MediaQuery.of(context).padding.bottom;
 
@@ -72,34 +60,22 @@ class Chat extends StatelessWidget {
                               controller: chatStore.scrollController,
                               padding: EdgeInsets.only(
                                 top: MediaQuery.of(context).padding.top,
-                                bottom:
-                                    chatStore.bottomBarHeight + bottomPadding,
+                                bottom: chatStore.bottomBarHeight + bottomPadding,
                               ),
                               child: Observer(
                                 builder: (context) {
                                   return ListView.builder(
                                     reverse: true,
-                                    padding: (listPadding ?? EdgeInsets.zero)
-                                        .add(
-                                          EdgeInsets.only(
-                                            bottom:
-                                                chatStore.bottomBarHeight +
-                                                bottomPadding,
-                                          ),
-                                        ),
+                                    padding: (listPadding ?? EdgeInsets.zero).add(
+                                      EdgeInsets.only(bottom: chatStore.bottomBarHeight + bottomPadding),
+                                    ),
                                     addAutomaticKeepAlives: false,
                                     controller: chatStore.scrollController,
                                     itemCount: chatStore.renderMessages.length,
-                                    itemBuilder: (context, index) =>
-                                        ChatMessage(
-                                          ircMessage:
-                                              chatStore.renderMessages[chatStore
-                                                      .renderMessages
-                                                      .length -
-                                                  1 -
-                                                  index],
-                                          chatStore: chatStore,
-                                        ),
+                                    itemBuilder: (context, index) => ChatMessage(
+                                      ircMessage: chatStore.renderMessages[chatStore.renderMessages.length - 1 - index],
+                                      chatStore: chatStore,
+                                    ),
                                   );
                                 },
                               ),
@@ -117,25 +93,18 @@ class Chat extends StatelessWidget {
                       left: 0,
                       right: 0,
                       height: 24,
-                      child: GestureDetector(
-                        behavior: HitTestBehavior.translucent,
-                        onVerticalDragStart: (_) {},
-                      ),
+                      child: GestureDetector(behavior: HitTestBehavior.translucent, onVerticalDragStart: (_) {}),
                     ),
                   Positioned(
                     left: 0,
                     right: 0,
                     bottom: 0,
-                    child: ChatBottomBar(
-                      chatStore: chatStore,
-                      onAddChat: onAddChat,
-                    ),
+                    child: ChatBottomBar(chatStore: chatStore, onAddChat: onAddChat),
                   ),
                   Builder(
                     builder: (context) {
                       final isHorizontalLandscape =
-                          context.isLandscape &&
-                          !chatStore.settings.landscapeForceVerticalChat;
+                          context.isLandscape && !chatStore.settings.landscapeForceVerticalChat;
                       return AnimatedPadding(
                         duration: const Duration(milliseconds: 200),
                         padding: EdgeInsets.only(
@@ -144,8 +113,7 @@ class Chat extends StatelessWidget {
                           right: 4,
                           bottom:
                               chatStore.bottomBarHeight +
-                              (chatStore.assetsStore.showEmoteMenu ||
-                                      isHorizontalLandscape
+                              (chatStore.assetsStore.showEmoteMenu || isHorizontalLandscape
                                   ? 0
                                   : MediaQuery.of(context).padding.bottom),
                         ),
@@ -158,18 +126,12 @@ class Chat extends StatelessWidget {
                                 ? null
                                 : ElevatedButton.icon(
                                     onPressed: chatStore.resumeScroll,
-                                    icon: const Icon(
-                                      Icons.arrow_downward_rounded,
-                                    ),
+                                    icon: const Icon(Icons.arrow_downward_rounded),
                                     label: Text(
                                       chatStore.messageBuffer.isNotEmpty
                                           ? '${chatStore.messageBuffer.length} new ${chatStore.messageBuffer.length == 1 ? 'message' : 'messages'}'
                                           : 'Resume scroll',
-                                      style: const TextStyle(
-                                        fontFeatures: [
-                                          FontFeature.tabularFigures(),
-                                        ],
-                                      ),
+                                      style: const TextStyle(fontFeatures: [FontFeature.tabularFigures()]),
                                     ),
                                   ),
                           ),
@@ -183,9 +145,7 @@ class Chat extends StatelessWidget {
             AnimatedContainer(
               curve: Curves.ease,
               duration: const Duration(milliseconds: 200),
-              height: chatStore.assetsStore.showEmoteMenu
-                  ? context.screenHeight / (context.isPortrait ? 3 : 2)
-                  : 0,
+              height: chatStore.assetsStore.showEmoteMenu ? context.screenHeight / (context.isPortrait ? 3 : 2) : 0,
               child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 100),
                 switchInCurve: Curves.easeOut,
@@ -199,8 +159,7 @@ class Chat extends StatelessWidget {
                               child: FrostyPageView(
                                 headers: [
                                   'Recent',
-                                  if (chatStore.settings.showTwitchEmotes)
-                                    'Twitch',
+                                  if (chatStore.settings.showTwitchEmotes) 'Twitch',
                                   if (chatStore.settings.show7TVEmotes) '7TV',
                                   if (chatStore.settings.showBTTVEmotes) 'BTTV',
                                   if (chatStore.settings.showFFZEmotes) 'FFZ',
@@ -210,23 +169,13 @@ class Chat extends StatelessWidget {
                                   if (chatStore.settings.showTwitchEmotes)
                                     EmoteMenuPanel(
                                       chatStore: chatStore,
-                                      twitchEmotes: chatStore
-                                          .assetsStore
-                                          .userEmoteSectionToEmotes,
+                                      twitchEmotes: chatStore.assetsStore.userEmoteSectionToEmotes,
                                     ),
                                   ...[
-                                    if (chatStore.settings.show7TVEmotes)
-                                      chatStore.assetsStore.sevenTVEmotes,
-                                    if (chatStore.settings.showBTTVEmotes)
-                                      chatStore.assetsStore.bttvEmotes,
-                                    if (chatStore.settings.showFFZEmotes)
-                                      chatStore.assetsStore.ffzEmotes,
-                                  ].map(
-                                    (emotes) => EmoteMenuPanel(
-                                      chatStore: chatStore,
-                                      emotes: emotes,
-                                    ),
-                                  ),
+                                    if (chatStore.settings.show7TVEmotes) chatStore.assetsStore.sevenTVEmotes,
+                                    if (chatStore.settings.showBTTVEmotes) chatStore.assetsStore.bttvEmotes,
+                                    if (chatStore.settings.showFFZEmotes) chatStore.assetsStore.ffzEmotes,
+                                  ].map((emotes) => EmoteMenuPanel(chatStore: chatStore, emotes: emotes)),
                                 ],
                               ),
                             ),

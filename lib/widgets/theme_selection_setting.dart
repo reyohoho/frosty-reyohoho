@@ -14,8 +14,7 @@ class ThemeSelectionSetting extends StatelessWidget {
       builder: (context) => SettingsListSelect(
         selectedOption: themeNames[settingsStore.themeType.index],
         options: themeNames,
-        onChanged: (newTheme) => settingsStore.themeType =
-            ThemeType.values[themeNames.indexOf(newTheme)],
+        onChanged: (newTheme) => settingsStore.themeType = ThemeType.values[themeNames.indexOf(newTheme)],
       ),
     );
   }

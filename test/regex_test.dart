@@ -315,8 +315,7 @@ void main() {
   group('chatColorNames and chatColorValues', () {
     test('all color names have corresponding values', () {
       for (final name in chatColorNames) {
-        expect(chatColorValues.containsKey(name), isTrue,
-            reason: '$name should have a color value');
+        expect(chatColorValues.containsKey(name), isTrue, reason: '$name should have a color value');
       }
     });
 
@@ -330,8 +329,7 @@ void main() {
 
     test('color values are non-null', () {
       for (final entry in chatColorValues.entries) {
-        expect(entry.value, isNotNull,
-            reason: '${entry.key} should have a valid color');
+        expect(entry.value, isNotNull, reason: '${entry.key} should have a valid color');
       }
     });
   });

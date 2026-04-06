@@ -19,9 +19,7 @@ class FFZApi extends BaseApiClient {
       emotes.addAll(emoticons.map((emote) => EmoteFFZ.fromJson(emote)));
     }
 
-    return emotes
-        .map((emote) => Emote.fromFFZ(emote, EmoteType.ffzGlobal))
-        .toList();
+    return emotes.map((emote) => Emote.fromFFZ(emote, EmoteType.ffzGlobal)).toList();
   }
 
   /// Returns a channel's FFZ room info including custom badges and emote used.
@@ -29,17 +27,11 @@ class FFZApi extends BaseApiClient {
     final data = await get<JsonMap>('/room/id/$id');
 
     final roomInfo = RoomFFZ.fromJson(data['room']);
-    final emoticons =
-        data['sets'][roomInfo.set.toString()]['emoticons'] as JsonList;
+    final emoticons = data['sets'][roomInfo.set.toString()]['emoticons'] as JsonList;
 
     final emotes = emoticons.map((emote) => EmoteFFZ.fromJson(emote));
 
-    return (
-      roomInfo,
-      emotes
-          .map((emote) => Emote.fromFFZ(emote, EmoteType.ffzChannel))
-          .toList(),
-    );
+    return (roomInfo, emotes.map((emote) => Emote.fromFFZ(emote, EmoteType.ffzChannel)).toList());
   }
 
   /// Returns a map of badges user IDs to a list of their FFZ badges.
@@ -47,9 +39,7 @@ class FFZApi extends BaseApiClient {
     final data = await get<JsonMap>('/badges/ids');
 
     final badges = data['badges'] as JsonList;
-    final badgeObjects = badges
-        .map((badge) => BadgeInfoFFZ.fromJson(badge))
-        .toList();
+    final badgeObjects = badges.map((badge) => BadgeInfoFFZ.fromJson(badge)).toList();
 
     final result = <String, List<ChatBadge>>{};
     for (final badge in badgeObjects.reversed) {

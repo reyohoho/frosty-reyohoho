@@ -24,9 +24,7 @@ class SettingsTileRoute extends StatelessWidget {
       trailing: const Icon(Icons.chevron_right_rounded),
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (context) => useScaffold
-              ? _BlurredSettingsPage(title: title, child: child)
-              : child,
+          builder: (context) => useScaffold ? _BlurredSettingsPage(title: title, child: child) : child,
         ),
       ),
     );
@@ -54,9 +52,7 @@ class _BlurredSettingsPage extends StatelessWidget {
         surfaceTintColor: Colors.transparent,
         systemOverlayStyle: SystemUiOverlayStyle(
           statusBarColor: Colors.transparent,
-          statusBarIconBrightness: theme.brightness == Brightness.dark
-              ? Brightness.light
-              : Brightness.dark,
+          statusBarIconBrightness: theme.brightness == Brightness.dark ? Brightness.light : Brightness.dark,
         ),
         leading: IconButton(
           tooltip: 'Back',
@@ -69,11 +65,7 @@ class _BlurredSettingsPage extends StatelessWidget {
         children: [
           // Main scrollable content
           Positioned.fill(
-            child: MediaQuery.removePadding(
-              context: context,
-              removeTop: true,
-              child: child,
-            ),
+            child: MediaQuery.removePadding(context: context, removeTop: true, child: child),
           ),
           // Blurred app bar overlay - positioned AFTER content so it renders on top
           Positioned(

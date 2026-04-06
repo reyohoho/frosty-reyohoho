@@ -12,8 +12,7 @@ class UserTwitch {
 
   const UserTwitch(this.id, this.login, this.displayName, this.profileImageUrl);
 
-  factory UserTwitch.fromJson(Map<String, dynamic> json) =>
-      _$UserTwitchFromJson(json);
+  factory UserTwitch.fromJson(Map<String, dynamic> json) => _$UserTwitchFromJson(json);
 }
 
 @JsonSerializable(createToJson: false, fieldRename: FieldRename.snake)
@@ -24,6 +23,5 @@ class UserBlockedTwitch {
 
   const UserBlockedTwitch(this.userId, this.userLogin, this.displayName);
 
-  factory UserBlockedTwitch.fromJson(Map<String, dynamic> json) =>
-      _$UserBlockedTwitchFromJson(json);
+  factory UserBlockedTwitch.fromJson(Map<String, dynamic> json) => _$UserBlockedTwitchFromJson(json);
 }

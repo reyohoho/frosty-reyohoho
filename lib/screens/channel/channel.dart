@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -10,12 +11,14 @@ import 'package:frosty/screens/channel/video/stream_info_bar.dart';
 import 'package:frosty/screens/channel/video/video.dart';
 import 'package:frosty/screens/channel/video/video_overlay.dart';
 import 'package:frosty/screens/channel/video/video_store.dart';
+import 'package:frosty/screens/channel/vods/vod_list_screen.dart';
 import 'package:frosty/screens/settings/stores/settings_store.dart';
 import 'package:frosty/theme.dart';
 import 'package:frosty/utils/context_extensions.dart';
 import 'package:frosty/widgets/blurred_container.dart';
 import 'package:frosty/widgets/draggable_divider.dart';
 import 'package:frosty/widgets/frosty_notification.dart';
+import 'package:frosty/widgets/loading_indicator.dart';
 import 'package:provider/provider.dart';
 import 'package:simple_pip_mode/actions/pip_actions_layout.dart';
 import 'package:simple_pip_mode/pip_widget.dart';
@@ -59,31 +62,53 @@ class _VideoChatState extends State<VideoChat>
   late AnimationController _animationController;
   late Animation<double> _springBackAnimation;
 
-  late final ChatTabsStore _chatTabsStore = ChatTabsStore(
-    twitchApi: context.twitchApi,
-    bttvApi: context.bttvApi,
-    ffzApi: context.ffzApi,
-    sevenTVApi: context.sevenTVApi,
-    reyohohoApi: context.reyohohoApi,
-    authStore: context.authStore,
-    settingsStore: context.settingsStore,
-    globalAssetsStore: context.globalAssetsStore,
-    primaryChannelId: widget.userId,
-    primaryChannelLogin: widget.userLogin,
-    primaryDisplayName: widget.userName,
-  );
+  bool _channelStoresReady = false;
+  late ChatTabsStore _chatTabsStore;
+  late VideoStore _videoStore;
 
-  late final VideoStore _videoStore = VideoStore(
-    userLogin: widget.userLogin,
-    userId: widget.userId,
-    twitchApi: context.twitchApi,
-    authStore: context.authStore,
-    settingsStore: context.settingsStore,
-  );
+  Future<void> _initChannelStores() async {
+    final emoteProxyAndQuality = await Future.wait<String?>([
+      context.reyohohoApi.findStaregeDomain(),
+      context.reyohohoApi.findQualityDomain(),
+    ]);
+    if (!mounted) return;
+    final emoteProxy = emoteProxyAndQuality[0];
+    final qualityProxy = emoteProxyAndQuality[1];
+    if (emoteProxy != null) {
+      context.bttvApi.proxyUrlPrefix = emoteProxy;
+      context.ffzApi.proxyUrlPrefix = emoteProxy;
+      context.sevenTVApi.proxyUrlPrefix = emoteProxy;
+      context.globalAssetsStore.refresh();
+    }
+    if (!mounted) return;
+    _chatTabsStore = ChatTabsStore(
+      twitchApi: context.twitchApi,
+      bttvApi: context.bttvApi,
+      ffzApi: context.ffzApi,
+      sevenTVApi: context.sevenTVApi,
+      reyohohoApi: context.reyohohoApi,
+      authStore: context.authStore,
+      settingsStore: context.settingsStore,
+      globalAssetsStore: context.globalAssetsStore,
+      primaryChannelId: widget.userId,
+      primaryChannelLogin: widget.userLogin,
+      primaryDisplayName: widget.userName,
+    );
+    _videoStore = VideoStore(
+      userLogin: widget.userLogin,
+      userId: widget.userId,
+      twitchApi: context.twitchApi,
+      authStore: context.authStore,
+      settingsStore: context.settingsStore,
+      usherProxyBaseUrl: qualityProxy,
+    );
+    setState(() => _channelStoresReady = true);
+  }
 
   @override
   void initState() {
     super.initState();
+    unawaited(_initChannelStores());
 
     // Initialize animation controller for smooth drag interactions
     _animationController = AnimationController(
@@ -109,9 +134,27 @@ class _VideoChatState extends State<VideoChat>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
 
-    if (state == AppLifecycleState.resumed) {
+    if (state == AppLifecycleState.resumed && _channelStoresReady) {
       _videoStore.handleAppResume();
     }
+  }
+
+  void _openVodsReplacingChannel() {
+    final navigator = Navigator.of(context);
+    navigator.pushReplacement(
+      MaterialPageRoute<void>(
+        builder: (_) => VodListScreen(
+          userId: widget.userId,
+          userLogin: widget.userLogin,
+          displayName: widget.userName,
+          restoreChannelBuilder: () => VideoChat(
+            userId: widget.userId,
+            userName: widget.userName,
+            userLogin: widget.userLogin,
+          ),
+        ),
+      ),
+    );
   }
 
   void _handlePipDragStart(DragStartDetails details) {
@@ -269,6 +312,10 @@ class _VideoChatState extends State<VideoChat>
 
   @override
   Widget build(BuildContext context) {
+    if (!_channelStoresReady) {
+      return const Scaffold(body: LoadingIndicator());
+    }
+
     final settingsStore = _chatTabsStore.settingsStore;
 
     final player = GestureDetector(
@@ -298,6 +345,7 @@ class _VideoChatState extends State<VideoChat>
             videoStore: _videoStore,
             chatStore: _chatStore,
             settingsStore: settingsStore,
+            onOpenVodList: _openVodsReplacingChannel,
           );
 
           if (_videoStore.paused || _videoStore.streamInfo == null) {
@@ -395,6 +443,7 @@ class _VideoChatState extends State<VideoChat>
               isOffline: streamInfo == null,
               isInSharedChatMode: _chatStore.isInSharedChatMode,
               showTextShadows: false,
+              onAvatarTap: _openVodsReplacingChannel,
             ),
             flexibleSpace: BlurredContainer(
               gradientDirection: GradientDirection.up,
@@ -717,9 +766,10 @@ class _VideoChatState extends State<VideoChat>
     // Remove observer for app lifecycle events
     WidgetsBinding.instance.removeObserver(this);
 
-    _chatTabsStore.dispose();
-
-    _videoStore.dispose();
+    if (_channelStoresReady) {
+      _chatTabsStore.dispose();
+      _videoStore.dispose();
+    }
 
     _animationController.dispose();
 

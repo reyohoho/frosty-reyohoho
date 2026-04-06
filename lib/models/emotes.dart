@@ -14,8 +14,7 @@ class EmoteTwitch {
 
   const EmoteTwitch(this.id, this.name, this.emoteType, this.ownerId);
 
-  factory EmoteTwitch.fromJson(Map<String, dynamic> json) =>
-      _$EmoteTwitchFromJson(json);
+  factory EmoteTwitch.fromJson(Map<String, dynamic> json) => _$EmoteTwitchFromJson(json);
 }
 
 // * BTTV Emotes *
@@ -26,8 +25,7 @@ class EmoteBTTV {
 
   const EmoteBTTV(this.id, this.code);
 
-  factory EmoteBTTV.fromJson(Map<String, dynamic> json) =>
-      _$EmoteBTTVFromJson(json);
+  factory EmoteBTTV.fromJson(Map<String, dynamic> json) => _$EmoteBTTVFromJson(json);
 }
 
 @JsonSerializable(createToJson: false)
@@ -37,8 +35,7 @@ class EmoteBTTVChannel {
 
   const EmoteBTTVChannel(this.channelEmotes, this.sharedEmotes);
 
-  factory EmoteBTTVChannel.fromJson(Map<String, dynamic> json) =>
-      _$EmoteBTTVChannelFromJson(json);
+  factory EmoteBTTVChannel.fromJson(Map<String, dynamic> json) => _$EmoteBTTVChannelFromJson(json);
 }
 
 // * FFZ Emotes *
@@ -50,8 +47,7 @@ class RoomFFZ {
 
   const RoomFFZ(this.set, this.vipBadge, this.modUrls);
 
-  factory RoomFFZ.fromJson(Map<String, dynamic> json) =>
-      _$RoomFFZFromJson(json);
+  factory RoomFFZ.fromJson(Map<String, dynamic> json) => _$RoomFFZFromJson(json);
 }
 
 @JsonSerializable(createToJson: false)
@@ -65,8 +61,7 @@ class ImagesFFZ {
 
   const ImagesFFZ(this.url1x, this.url2x, this.url4x);
 
-  factory ImagesFFZ.fromJson(Map<String, dynamic> json) =>
-      _$ImagesFFZFromJson(json);
+  factory ImagesFFZ.fromJson(Map<String, dynamic> json) => _$ImagesFFZFromJson(json);
 }
 
 @JsonSerializable(createToJson: false, fieldRename: FieldRename.snake)
@@ -76,8 +71,7 @@ class OwnerFFZ {
 
   const OwnerFFZ({required this.displayName, required this.name});
 
-  factory OwnerFFZ.fromJson(Map<String, dynamic> json) =>
-      _$OwnerFFZFromJson(json);
+  factory OwnerFFZ.fromJson(Map<String, dynamic> json) => _$OwnerFFZFromJson(json);
 }
 
 @JsonSerializable(createToJson: false)
@@ -89,17 +83,9 @@ class EmoteFFZ {
   final ImagesFFZ urls;
   final ImagesFFZ? animated;
 
-  const EmoteFFZ(
-    this.name,
-    this.height,
-    this.width,
-    this.owner,
-    this.urls,
-    this.animated,
-  );
+  const EmoteFFZ(this.name, this.height, this.width, this.owner, this.urls, this.animated);
 
-  factory EmoteFFZ.fromJson(Map<String, dynamic> json) =>
-      _$EmoteFFZFromJson(json);
+  factory EmoteFFZ.fromJson(Map<String, dynamic> json) => _$EmoteFFZFromJson(json);
 }
 
 @JsonSerializable(createToJson: false, fieldRename: FieldRename.snake)
@@ -110,8 +96,7 @@ class Emote7TV {
 
   const Emote7TV(this.id, this.name, this.data);
 
-  factory Emote7TV.fromJson(Map<String, dynamic> json) =>
-      _$Emote7TVFromJson(json);
+  factory Emote7TV.fromJson(Map<String, dynamic> json) => _$Emote7TVFromJson(json);
 }
 
 @JsonSerializable(createToJson: false, fieldRename: FieldRename.snake)
@@ -121,8 +106,7 @@ class Owner7TV {
 
   const Owner7TV({required this.username, required this.displayName});
 
-  factory Owner7TV.fromJson(Map<String, dynamic> json) =>
-      _$Owner7TVFromJson(json);
+  factory Owner7TV.fromJson(Map<String, dynamic> json) => _$Owner7TVFromJson(json);
 }
 
 @JsonSerializable(createToJson: false, fieldRename: FieldRename.snake)
@@ -135,8 +119,7 @@ class Emote7TVData {
 
   const Emote7TVData(this.id, this.name, this.flags, this.owner, this.host);
 
-  factory Emote7TVData.fromJson(Map<String, dynamic> json) =>
-      _$Emote7TVDataFromJson(json);
+  factory Emote7TVData.fromJson(Map<String, dynamic> json) => _$Emote7TVDataFromJson(json);
 }
 
 @JsonSerializable(createToJson: false, fieldRename: FieldRename.snake)
@@ -146,8 +129,7 @@ class Emote7TVHost {
 
   Emote7TVHost(this.url, this.files);
 
-  factory Emote7TVHost.fromJson(Map<String, dynamic> json) =>
-      _$Emote7TVHostFromJson(json);
+  factory Emote7TVHost.fromJson(Map<String, dynamic> json) => _$Emote7TVHostFromJson(json);
 }
 
 @JsonSerializable(createToJson: false, fieldRename: FieldRename.snake)
@@ -159,8 +141,7 @@ class Emote7TVFile {
 
   Emote7TVFile(this.name, this.width, this.height, this.format);
 
-  factory Emote7TVFile.fromJson(Map<String, dynamic> json) =>
-      _$Emote7TVFileFromJson(json);
+  factory Emote7TVFile.fromJson(Map<String, dynamic> json) => _$Emote7TVFileFromJson(json);
 }
 
 /// The common emote class.
@@ -193,8 +174,7 @@ class Emote {
   factory Emote.fromTwitch(EmoteTwitch emote, EmoteType type) => Emote(
     name: emote.name,
     zeroWidth: false,
-    url:
-        'https://static-cdn.jtvnw.net/emoticons/v2/${emote.id}/default/dark/3.0',
+    url: 'https://static-cdn.jtvnw.net/emoticons/v2/${emote.id}/default/dark/3.0',
     type: type,
     ownerId: emote.ownerId,
   );
@@ -229,9 +209,7 @@ class Emote {
     final url = emoteData.host.url;
 
     // TODO: Remove if/when Flutter natively supports AVIF.
-    final file = emoteData.host.files.lastWhereOrNull(
-      (file) => file.format != 'AVIF',
-    );
+    final file = emoteData.host.files.lastWhereOrNull((file) => file.format != 'AVIF');
 
     // Check if the flag has 1 at the 8th bit.
     final isZeroWidth = (emoteData.flags & 256) == 256;

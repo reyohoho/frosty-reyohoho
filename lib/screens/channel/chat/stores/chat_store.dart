@@ -293,15 +293,9 @@ abstract class ChatStoreBase with Store {
   @computed
   List<String> get matchingChatters {
     if (!_showMentionAutocomplete) return const [];
-    final searchTerm = _inputText
-        .split(' ')
-        .last
-        .replaceFirst('@', '')
-        .toLowerCase();
+    final searchTerm = _inputText.split(' ').last.replaceFirst('@', '').toLowerCase();
 
-    final results = chatDetailsStore.chatUsers
-        .where((chatter) => chatter.contains(searchTerm))
-        .toList();
+    final results = chatDetailsStore.chatUsers.where((chatter) => chatter.contains(searchTerm)).toList();
 
     // Always prioritize the broadcaster at the top of the list.
     final broadcasterIndex = results.indexOf(channelName);
@@ -346,9 +340,7 @@ abstract class ChatStoreBase with Store {
   }) {
     // Create a reaction that will reconnect to chat when logging in or out.
     // Closing the channel will trigger a reconnect with the new credentials.
-    reactions.add(
-      reaction((_) => auth.isLoggedIn, (_) => _channel?.sink.close(1000)),
-    );
+    reactions.add(reaction((_) => auth.isLoggedIn, (_) => _channel?.sink.close(1000)));
 
     reactions.add(
       reaction(
@@ -397,10 +389,7 @@ abstract class ChatStoreBase with Store {
         if (chatDelay == 0) {
           _cancelChatDelayCountdown();
           _chatDelaySyncCompleted = false;
-        } else if (settings.autoSyncChatDelay &&
-            settings.showVideo &&
-            chatDelay > 0 &&
-            !_chatDelaySyncCompleted) {
+        } else if (settings.autoSyncChatDelay && settings.showVideo && chatDelay > 0 && !_chatDelaySyncCompleted) {
           _startChatDelayCountdown();
         }
       }),
@@ -449,14 +438,10 @@ abstract class ChatStoreBase with Store {
       _inputText = textController.text;
 
       _showEmoteAutocomplete =
-          !_showMentionAutocomplete &&
-          textFieldFocusNode.hasFocus &&
-          textController.text.split(' ').last.isNotEmpty;
+          !_showMentionAutocomplete && textFieldFocusNode.hasFocus && textController.text.split(' ').last.isNotEmpty;
 
       _showSendButton = textController.text.isNotEmpty;
-      _showMentionAutocomplete =
-          textFieldFocusNode.hasFocus &&
-          textController.text.split(' ').last.startsWith('@');
+      _showMentionAutocomplete = textFieldFocusNode.hasFocus && textController.text.split(' ').last.startsWith('@');
     });
   }
 
@@ -471,10 +456,7 @@ abstract class ChatStoreBase with Store {
     for (final message in data.trimRight().split('\r\n')) {
       // debugPrint('$message\n');
       if (message.startsWith('@')) {
-        final parsedIRCMessage = IRCMessage.fromString(
-          message,
-          userLogin: auth.user.details?.login,
-        );
+        final parsedIRCMessage = IRCMessage.fromString(message, userLogin: auth.user.details?.login);
 
         if (parsedIRCMessage.user != null) {
           chatDetailsStore.chatUsers.add(parsedIRCMessage.user!);
@@ -483,12 +465,7 @@ abstract class ChatStoreBase with Store {
         // Filter messages from any blocked users if not a moderator or not the channel owner.
         if (!_userState.mod &&
             channelName != auth.user.details?.login &&
-            auth.user.blockedUsers
-                .where(
-                  (blockedUser) =>
-                      blockedUser.userLogin == parsedIRCMessage.user,
-                )
-                .isNotEmpty) {
+            auth.user.blockedUsers.where((blockedUser) => blockedUser.userLogin == parsedIRCMessage.user).isNotEmpty) {
           continue;
         }
 
@@ -512,8 +489,7 @@ abstract class ChatStoreBase with Store {
           case Command.notice:
           case Command.userNotice:
             // Check if this is a rejection notice for a pending message
-            if (parsedIRCMessage.command == Command.notice &&
-                _isWaitingForAck) {
+            if (parsedIRCMessage.command == Command.notice && _isWaitingForAck) {
               final msgId = parsedIRCMessage.tags['msg-id'];
               if (msgId != null && _rejectionMsgIds.contains(msgId)) {
                 // Message was rejected - clear pending but preserve text field for retry
@@ -530,9 +506,7 @@ abstract class ChatStoreBase with Store {
 
             // Update shared chat mode based on source-room-id tag presence
             final wasShared = _isInSharedChatMode;
-            _isInSharedChatMode = parsedIRCMessage.tags.containsKey(
-              'source-room-id',
-            );
+            _isInSharedChatMode = parsedIRCMessage.tags.containsKey('source-room-id');
             // On transition into shared chat mode, fetch assets for participants.
             if (!wasShared && _isInSharedChatMode) {
               assetsStore.fetchSharedChatAssets(
@@ -569,22 +543,13 @@ abstract class ChatStoreBase with Store {
             messageBuffer.add(parsedIRCMessage);
             break;
           case Command.clearChat:
-            IRCMessage.clearChat(
-              messages: _messages,
-              bufferedMessages: messageBuffer,
-              ircMessage: parsedIRCMessage,
-            );
+            IRCMessage.clearChat(messages: _messages, bufferedMessages: messageBuffer, ircMessage: parsedIRCMessage);
             break;
           case Command.clearMessage:
-            IRCMessage.clearMessage(
-              messages: _messages,
-              bufferedMessages: messageBuffer,
-              ircMessage: parsedIRCMessage,
-            );
+            IRCMessage.clearMessage(messages: _messages, bufferedMessages: messageBuffer, ircMessage: parsedIRCMessage);
             break;
           case Command.roomState:
-            chatDetailsStore.roomState = chatDetailsStore.roomState
-                .fromIRCMessage(parsedIRCMessage);
+            chatDetailsStore.roomState = chatDetailsStore.roomState.fromIRCMessage(parsedIRCMessage);
             continue;
           case Command.userState:
             _userState = _userState.fromIRCMessage(parsedIRCMessage);
@@ -596,8 +561,7 @@ abstract class ChatStoreBase with Store {
                 toSend!.tags['id'] = messageId;
               } else {
                 // Fallback ID for edge cases where Twitch doesn't provide one
-                toSend!.tags['id'] =
-                    'local-${DateTime.now().millisecondsSinceEpoch}';
+                toSend!.tags['id'] = 'local-${DateTime.now().millisecondsSinceEpoch}';
               }
               messageBuffer.add(toSend!);
               toSend = null;
@@ -643,20 +607,14 @@ abstract class ChatStoreBase with Store {
         return;
       } else if (message.contains('Welcome, GLHF!')) {
         messageBuffer.add(
-          IRCMessage.createNotice(
-            message:
-                "Welcome to ${getReadableName(displayName, channelName)}'s chat!",
-          ),
+          IRCMessage.createNotice(message: "Welcome to ${getReadableName(displayName, channelName)}'s chat!"),
         );
 
         // Activate the message buffer.
         // Cancel any existing timer before creating a new one to prevent duplicates on reconnect.
         _messageBufferTimer?.cancel();
         // Create a timer that will add messages from the buffer every 200 milliseconds.
-        _messageBufferTimer = Timer.periodic(
-          const Duration(milliseconds: 200),
-          (timer) => addMessages(),
-        );
+        _messageBufferTimer = Timer.periodic(const Duration(milliseconds: 200), (timer) => addMessages());
 
         // Set up 7TV real-time listener (assets already fetched in connectToChat)
         if (settings.show7TVEmotes) {
@@ -668,15 +626,12 @@ abstract class ChatStoreBase with Store {
 
         // Transform reconnect message to summary on successful connection
         if (_reconnectMessage != null && _reconnectStartTime != null) {
-          final elapsed = DateTime.now()
-              .difference(_reconnectStartTime!)
-              .inSeconds;
+          final elapsed = DateTime.now().difference(_reconnectStartTime!).inSeconds;
           final attempts = _retries;
           final index = _messages.indexOf(_reconnectMessage!);
           if (index != -1) {
             _messages[index] = IRCMessage.createNotice(
-              message:
-                  'Reconnected ($attempts ${attempts == 1 ? 'attempt' : 'attempts'}, ${elapsed}s)',
+              message: 'Reconnected ($attempts ${attempts == 1 ? 'attempt' : 'attempts'}, ${elapsed}s)',
             );
           }
         }
@@ -761,16 +716,11 @@ abstract class ChatStoreBase with Store {
   void listenToSevenTVEmoteSet({required String emoteSetId}) {
     final subscribePayload = SevenTVEvent(
       op: 35,
-      d: SevenTVEventData(
-        type: 'emote_set.update',
-        condition: {'object_id': emoteSetId},
-      ),
+      d: SevenTVEventData(type: 'emote_set.update', condition: {'object_id': emoteSetId}),
     );
 
     _sevenTVChannel?.sink.close(1000);
-    _sevenTVChannel = WebSocketChannel.connect(
-      Uri.parse('wss://events.7tv.io/v3'),
-    );
+    _sevenTVChannel = WebSocketChannel.connect(Uri.parse('wss://events.7tv.io/v3'));
 
     // Track the current connection to prevent stale delayed callbacks
     final connectionId = DateTime.now().millisecondsSinceEpoch;
@@ -805,9 +755,7 @@ abstract class ChatStoreBase with Store {
 
         if (pulledEmote == null) return;
 
-        assetsStore.emoteToObject.removeWhere(
-          (name, _) => name == pulledEmote.name,
-        );
+        assetsStore.emoteToObject.removeWhere((name, _) => name == pulledEmote.name);
 
         messageBuffer.add(
           IRCMessage.createNotice(
@@ -862,9 +810,7 @@ abstract class ChatStoreBase with Store {
     _channelListener?.cancel();
 
     _channel?.sink.close(1000);
-    _channel = WebSocketChannel.connect(
-      Uri.parse('wss://irc-ws.chat.twitch.tv:443'),
-    );
+    _channel = WebSocketChannel.connect(Uri.parse('wss://irc-ws.chat.twitch.tv:443'));
 
     // Only show chat delay countdown on initial connection or video toggle, not on reconnects
     if (!isReconnect && settings.showVideo && settings.chatDelay > 0) {
@@ -881,9 +827,7 @@ abstract class ChatStoreBase with Store {
         final dataStr = data.toString();
 
         // Process immediately if delay is disabled or command should bypass delay
-        if (!settings.showVideo ||
-            settings.chatDelay == 0 ||
-            _shouldBypassDelay(dataStr)) {
+        if (!settings.showVideo || settings.chatDelay == 0 || _shouldBypassDelay(dataStr)) {
           _handleIRCData(dataStr);
         } else {
           final capturedConnectionId = currentConnectionId;
@@ -950,8 +894,7 @@ abstract class ChatStoreBase with Store {
         void updateReconnectMessage(String text) {
           final msg = IRCMessage.createNotice(message: text);
           if (_reconnectMessage == null) {
-            _reconnectStartTime ??=
-                DateTime.now(); // Record when reconnection started
+            _reconnectStartTime ??= DateTime.now(); // Record when reconnection started
             _reconnectMessage = msg;
             _messages.add(_reconnectMessage!);
           } else {
@@ -970,9 +913,7 @@ abstract class ChatStoreBase with Store {
         // Countdown phase (if backoff time > 0)
         if (_backoffTime > 0) {
           var remainingSeconds = _backoffTime;
-          updateReconnectMessage(
-            'Reconnecting in ${remainingSeconds}s... (attempt $_retries of $_maxRetries)',
-          );
+          updateReconnectMessage('Reconnecting in ${remainingSeconds}s... (attempt $_retries of $_maxRetries)');
 
           // Update countdown every second
           await Future.doWhile(() async {
@@ -992,9 +933,7 @@ abstract class ChatStoreBase with Store {
             remainingSeconds--;
 
             if (remainingSeconds > 0) {
-              updateReconnectMessage(
-                'Reconnecting in ${remainingSeconds}s... (attempt $_retries of $_maxRetries)',
-              );
+              updateReconnectMessage('Reconnecting in ${remainingSeconds}s... (attempt $_retries of $_maxRetries)');
               return true; // Continue loop
             }
             return false; // Exit loop
@@ -1005,9 +944,7 @@ abstract class ChatStoreBase with Store {
         }
 
         // Attempting phase - update same message, no add/remove
-        updateReconnectMessage(
-          'Reconnecting... (attempt $_retries of $_maxRetries)',
-        );
+        updateReconnectMessage('Reconnecting... (attempt $_retries of $_maxRetries)');
 
         _channelListener?.cancel();
         connectToChat(isReconnect: true);
@@ -1072,23 +1009,18 @@ abstract class ChatStoreBase with Store {
     var remainingSeconds = settings.chatDelay.toInt();
 
     // Create and store reference to the countdown message
-    _countdownMessage = IRCMessage.createNotice(
-      message: 'Chat will sync in ${remainingSeconds}s...',
-    );
+    _countdownMessage = IRCMessage.createNotice(message: 'Chat will sync in ${remainingSeconds}s...');
     _messages.add(_countdownMessage!);
 
     // Update countdown every second
-    _chatDelayCountdownTimer = Timer.periodic(const Duration(seconds: 1), (
-      timer,
-    ) {
+    _chatDelayCountdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       remainingSeconds--;
 
       // Use runInAction for proper MobX reactivity in async callbacks
       runInAction(() {
         // Check if countdown message still exists in the list
         // (could be removed by message limit cleanup)
-        if (_countdownMessage == null ||
-            !_messages.contains(_countdownMessage)) {
+        if (_countdownMessage == null || !_messages.contains(_countdownMessage)) {
           timer.cancel();
           _countdownMessage = null;
           _chatDelayCountdownTimer = null;
@@ -1099,9 +1031,7 @@ abstract class ChatStoreBase with Store {
         if (index != -1) {
           if (remainingSeconds > 0) {
             // Create new message and update reference
-            _countdownMessage = IRCMessage.createNotice(
-              message: 'Chat will sync in ${remainingSeconds}s...',
-            );
+            _countdownMessage = IRCMessage.createNotice(message: 'Chat will sync in ${remainingSeconds}s...');
             _messages[index] = _countdownMessage!;
           } else {
             // Remove countdown message when done
@@ -1134,10 +1064,7 @@ abstract class ChatStoreBase with Store {
 
     if (_channel == null || _channel?.closeCode != null) {
       messageBuffer.add(
-        IRCMessage.createNotice(
-          message:
-              'Cannot send message - chat is disconnected. Reconnecting...',
-        ),
+        IRCMessage.createNotice(message: 'Cannot send message - chat is disconnected. Reconnecting...'),
       );
       return;
     }
@@ -1171,8 +1098,7 @@ abstract class ChatStoreBase with Store {
     var userStateString = _userState.raw;
     if (userStateString != null) {
       if (message.length > 3 && message.substring(0, 3) == '/me') {
-        userStateString +=
-            ' :\x01ACTION ${message.replaceRange(0, 3, '').trim()}\x01';
+        userStateString += ' :\x01ACTION ${message.replaceRange(0, 3, '').trim()}\x01';
       } else {
         userStateString +=
             ' :${replyingToMessage?.tags['display-name'] != null ? '@${replyingToMessage!.tags['display-name']} ' : ''}${message.trim()}';
@@ -1185,12 +1111,9 @@ abstract class ChatStoreBase with Store {
       }
 
       if (replyingToMessage != null && replyingToMessage!.tags['id'] != null) {
-        userChatMessage.tags['reply-parent-msg-id'] =
-            replyingToMessage!.tags['id']!;
-        userChatMessage.tags['reply-parent-display-name'] =
-            replyingToMessage!.tags['display-name'] ?? '';
-        userChatMessage.tags['reply-parent-msg-body'] =
-            replyingToMessage!.message ?? '';
+        userChatMessage.tags['reply-parent-msg-id'] = replyingToMessage!.tags['id']!;
+        userChatMessage.tags['reply-parent-display-name'] = replyingToMessage!.tags['display-name'] ?? '';
+        userChatMessage.tags['reply-parent-msg-body'] = replyingToMessage!.message ?? '';
       }
 
       toSend = userChatMessage;
@@ -1202,9 +1125,7 @@ abstract class ChatStoreBase with Store {
   void addEmote(Emote emote, {bool autocompleteMode = false}) {
     if (textController.text.isEmpty || textController.text.endsWith(' ')) {
       textController.text += '${emote.name} ';
-    } else if (autocompleteMode &&
-        _showEmoteAutocomplete &&
-        textController.text.endsWith('')) {
+    } else if (autocompleteMode && _showEmoteAutocomplete && textController.text.endsWith('')) {
       final split = textController.text.split(' ')
         ..removeLast()
         ..add('${emote.name} ');
@@ -1215,15 +1136,10 @@ abstract class ChatStoreBase with Store {
     }
 
     assetsStore.recentEmotes
-      ..removeWhere(
-        (recentEmote) =>
-            recentEmote.name == emote.name && recentEmote.type == emote.type,
-      )
+      ..removeWhere((recentEmote) => recentEmote.name == emote.name && recentEmote.type == emote.type)
       ..insert(0, emote);
 
-    textController.selection = TextSelection.fromPosition(
-      TextPosition(offset: textController.text.length),
-    );
+    textController.selection = TextSelection.fromPosition(TextPosition(offset: textController.text.length));
   }
 
   /// Cancels the previous notification/timer and creates a new one with the provided [notificationMessage].
@@ -1238,10 +1154,7 @@ abstract class ChatStoreBase with Store {
 
     // Set the new notification message and create a new timer that will dismiss it after 3 seconds.
     _notification = notificationMessage;
-    _notificationTimer = Timer(
-      const Duration(seconds: 5),
-      () => _notification = null,
-    );
+    _notificationTimer = Timer(const Duration(seconds: 5), () => _notification = null);
   }
 
   /// Clears the current notification immediately.
@@ -1261,10 +1174,7 @@ abstract class ChatStoreBase with Store {
   /// Updates the sleep timer with the given [duration].
   /// Calls [onTimerFinished] when the sleep timer completes.
   @action
-  void updateSleepTimer({
-    required Duration duration,
-    required VoidCallback onTimerFinished,
-  }) {
+  void updateSleepTimer({required Duration duration, required VoidCallback onTimerFinished}) {
     // If there is an ongoing timer, cancel it since it'll be replaced.
     if (sleepTimer != null) cancelSleepTimer();
 
@@ -1294,9 +1204,7 @@ abstract class ChatStoreBase with Store {
 
   @action
   Future<void> getRecentMessage() async {
-    final recentMessages = await twitchApi.getRecentMessages(
-      userLogin: channelName,
-    );
+    final recentMessages = await twitchApi.getRecentMessages(userLogin: channelName);
 
     for (final message in recentMessages) {
       _handleIRCData(message);

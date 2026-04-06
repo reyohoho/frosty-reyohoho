@@ -10,15 +10,12 @@ final AudioContext _mentionAudioContext = AudioContext(
     contentType: AndroidContentType.sonification,
     usageType: AndroidUsageType.notification,
   ),
-  iOS: AudioContextIOS(
-    options: {AVAudioSessionOptions.mixWithOthers},
-  ),
+  iOS: AudioContextIOS(options: {AVAudioSessionOptions.mixWithOthers}),
 );
 
 /// Service for handling mention notifications (vibration and sound).
 class MentionNotificationService {
-  static final MentionNotificationService _instance =
-      MentionNotificationService._internal();
+  static final MentionNotificationService _instance = MentionNotificationService._internal();
 
   factory MentionNotificationService() => _instance;
 
@@ -59,11 +56,7 @@ class MentionNotificationService {
   }
 
   /// Trigger mention notification based on settings.
-  Future<void> notify({
-    required bool vibrationEnabled,
-    required bool soundEnabled,
-    double soundVolume = 0.5,
-  }) async {
+  Future<void> notify({required bool vibrationEnabled, required bool soundEnabled, double soundVolume = 0.5}) async {
     if (vibrationEnabled) {
       vibrate();
     }

@@ -107,26 +107,20 @@ void main() async {
   final ffzApiService = FFZApi(dioClient);
   final sevenTVApiService = SevenTVApi(dioClient);
   final reyohohoApiService = ReyohohoApi(dioClient);
-
-  // Set up emote proxy for third-party APIs when enabled
-  void updateEmoteApiProxy() {
-    final proxyUrl = settingsStore.useEmoteProxy
-        ? settingsStore.selectedEmoteProxyUrl
-        : null;
-    bttvApiService.proxyUrlPrefix = proxyUrl;
-    ffzApiService.proxyUrlPrefix = proxyUrl;
-    sevenTVApiService.proxyUrlPrefix = proxyUrl;
+  if (false) {
+    final workingStaregeDomain = await reyohohoApiService.findStaregeDomain();
+    if (workingStaregeDomain != null) {
+      bttvApiService.proxyUrlPrefix = workingStaregeDomain;
+      ffzApiService.proxyUrlPrefix = workingStaregeDomain;
+      sevenTVApiService.proxyUrlPrefix = workingStaregeDomain;
+    }
   }
-
-  // Apply initial proxy settings
-  updateEmoteApiProxy();
 
   // React to proxy setting changes
   autorun((_) {
     // Access observables to trigger reaction
     settingsStore.useEmoteProxy;
     settingsStore.selectedEmoteProxyUrl;
-    updateEmoteApiProxy();
   });
 
   // Create global assets store (shared cache for global emotes/badges)

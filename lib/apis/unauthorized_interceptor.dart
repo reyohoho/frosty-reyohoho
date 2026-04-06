@@ -69,10 +69,7 @@ class UnauthorizedInterceptor extends Interceptor {
                 // Navigate to login WebView
                 Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (context) => Provider<AuthStore>.value(
-                      value: _authStore,
-                      child: const LoginWebView(),
-                    ),
+                    builder: (context) => Provider<AuthStore>.value(value: _authStore, child: const LoginWebView()),
                   ),
                 );
               },

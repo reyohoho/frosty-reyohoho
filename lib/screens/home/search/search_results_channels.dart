@@ -19,11 +19,7 @@ class SearchResultsChannels extends StatefulWidget {
   final SearchStore searchStore;
   final String query;
 
-  const SearchResultsChannels({
-    super.key,
-    required this.searchStore,
-    required this.query,
-  });
+  const SearchResultsChannels({super.key, required this.searchStore, required this.query});
 
   @override
   State<SearchResultsChannels> createState() => _SearchResultsChannelsState();
@@ -48,19 +44,12 @@ class _SearchResultsChannelsState extends State<SearchResultsChannels> {
       );
     } on ApiException catch (e) {
       debugPrint('Search channels ApiException: $e');
-      final snackBar = SnackBar(
-        content: AlertMessage(message: e.message, centered: false),
-      );
+      final snackBar = SnackBar(content: AlertMessage(message: e.message, centered: false));
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(snackBar);
     } catch (error) {
       debugPrint('Search channels error: $error');
-      final snackBar = SnackBar(
-        content: AlertMessage(
-          message: 'Unable to find channel',
-          centered: false,
-        ),
-      );
+      final snackBar = SnackBar(content: AlertMessage(message: 'Unable to find channel', centered: false));
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(snackBar);
     }
@@ -77,8 +66,7 @@ class _SearchResultsChannelsState extends State<SearchResultsChannels> {
           if (widget.searchStore.isSearching) {
             return SliverList.builder(
               itemCount: 8,
-              itemBuilder: (context, index) =>
-                  ChannelSkeletonLoader(index: index),
+              itemBuilder: (context, index) => ChannelSkeletonLoader(index: index),
             );
           }
           return const SliverToBoxAdapter(child: SizedBox.shrink());
@@ -88,18 +76,11 @@ class _SearchResultsChannelsState extends State<SearchResultsChannels> {
           case FutureStatus.pending:
             return SliverList.builder(
               itemCount: 8,
-              itemBuilder: (context, index) =>
-                  ChannelSkeletonLoader(index: index),
+              itemBuilder: (context, index) => ChannelSkeletonLoader(index: index),
             );
           case FutureStatus.rejected:
             return const SliverToBoxAdapter(
-              child: SizedBox(
-                height: 100.0,
-                child: AlertMessage(
-                  message: 'Unable to load channels',
-                  vertical: true,
-                ),
-              ),
+              child: SizedBox(height: 100.0, child: AlertMessage(message: 'Unable to load channels', vertical: true)),
             );
           case FutureStatus.fulfilled:
             final results = (future.result as List<ChannelQuery>).where(
@@ -111,10 +92,7 @@ class _SearchResultsChannelsState extends State<SearchResultsChannels> {
             return SliverList.list(
               children: [
                 ...results.map((channel) {
-                  final displayName = getReadableName(
-                    channel.displayName,
-                    channel.broadcasterLogin,
-                  );
+                  final displayName = getReadableName(channel.displayName, channel.broadcasterLogin);
 
                   return InkWell(
                     onTap: () => Navigator.push(
@@ -142,10 +120,7 @@ class _SearchResultsChannelsState extends State<SearchResultsChannels> {
                     },
                     child: ListTile(
                       title: Text(displayName),
-                      leading: ProfilePicture(
-                        userLogin: channel.broadcasterLogin,
-                        radius: 16,
-                      ),
+                      leading: ProfilePicture(userLogin: channel.broadcasterLogin, radius: 16),
                       subtitle: channel.isLive
                           ? Row(
                               spacing: 6,

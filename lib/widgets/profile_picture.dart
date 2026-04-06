@@ -37,10 +37,7 @@ class _ProfilePictureState extends State<ProfilePicture> {
     }
 
     // Make new request and cache it
-    final future = context
-        .read<TwitchApi>()
-        .getUser(userLogin: userLogin)
-        .then((user) => user.profileImageUrl);
+    final future = context.read<TwitchApi>().getUser(userLogin: userLogin).then((user) => user.profileImageUrl);
     _pendingRequests[userLogin] = future;
 
     try {
@@ -68,14 +65,9 @@ class _ProfilePictureState extends State<ProfilePicture> {
                   width: diameter,
                   height: diameter,
                   imageUrl: snapshot.data!,
-                  placeholder: (context, url) =>
-                      ColoredBox(color: placeholderColor),
+                  placeholder: (context, url) => ColoredBox(color: placeholderColor),
                 )
-              : Container(
-                  color: placeholderColor,
-                  width: diameter,
-                  height: diameter,
-                );
+              : Container(color: placeholderColor, width: diameter, height: diameter);
         },
       ),
     );

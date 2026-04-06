@@ -24,8 +24,7 @@ class OnboardingSetup extends StatelessWidget {
 
     return OnboardingScaffold(
       header: 'Setup',
-      subtitle:
-          'Let\'s tweak some settings before you get started. You can always change these and more later.',
+      subtitle: 'Let\'s tweak some settings before you get started. You can always change these and more later.',
       content: Observer(
         builder: (context) {
           return ListView(
@@ -36,8 +35,7 @@ class OnboardingSetup extends StatelessWidget {
                 title: 'Show historical recent messages',
                 subtitle: Text.rich(
                   TextSpan(
-                    text:
-                        'Loads historical recent messages in chat through a third-party API service at ',
+                    text: 'Loads historical recent messages in chat through a third-party API service at ',
                     children: [
                       TextSpan(
                         text: 'https://recent-messages.robotty.de/',
@@ -58,8 +56,7 @@ class OnboardingSetup extends StatelessWidget {
                   ),
                 ),
                 value: settingsStore.showRecentMessages,
-                onChanged: (newValue) =>
-                    settingsStore.showRecentMessages = newValue,
+                onChanged: (newValue) => settingsStore.showRecentMessages = newValue,
               ),
               SettingsListSwitch(
                 title: 'Share crash logs and analytics',

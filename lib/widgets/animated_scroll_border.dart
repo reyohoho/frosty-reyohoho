@@ -141,12 +141,7 @@ class _AnimatedScrollBorderState extends State<AnimatedScrollBorder> {
       switchInCurve: Curves.easeOut,
       switchOutCurve: Curves.easeIn,
       duration: const Duration(milliseconds: 200),
-      child: _shouldShowBorder
-          ? const Divider()
-          : Divider(
-              key: ValueKey(_shouldShowBorder),
-              color: Colors.transparent,
-            ),
+      child: _shouldShowBorder ? const Divider() : Divider(key: ValueKey(_shouldShowBorder), color: Colors.transparent),
     );
   }
 }

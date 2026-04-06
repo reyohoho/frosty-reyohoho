@@ -15,10 +15,8 @@ class BlurConfig {
   static const double sigmaY = 16.0;
 
   // Theme-specific adjustments
-  static const double lightModeAlpha =
-      0.6; // Slightly more opaque in light mode
-  static const double darkModeAlpha =
-      0.3; // More opaque in dark mode for better visibility
+  static const double lightModeAlpha = 0.6; // Slightly more opaque in light mode
+  static const double darkModeAlpha = 0.3; // More opaque in dark mode for better visibility
 }
 
 /// A reusable container with consistent blur effect and background
@@ -48,22 +46,16 @@ class BlurredContainer extends StatelessWidget {
     final isDark = forceDarkMode ?? (theme.brightness == Brightness.dark);
 
     // Adaptive alpha based on theme for optimal visibility
-    final adaptiveAlpha =
-        backgroundAlpha ??
-        (isDark ? BlurConfig.darkModeAlpha : BlurConfig.lightModeAlpha);
+    final adaptiveAlpha = backgroundAlpha ?? (isDark ? BlurConfig.darkModeAlpha : BlurConfig.lightModeAlpha);
 
     // Use dark background color if forced, otherwise use theme color
-    final backgroundColor = forceDarkMode == true
-        ? Colors.black
-        : theme.scaffoldBackgroundColor;
+    final backgroundColor = forceDarkMode == true ? Colors.black : theme.scaffoldBackgroundColor;
 
     // Create decoration based on gradient direction
     Decoration decoration;
     if (gradientDirection == GradientDirection.none) {
       // Solid color (original behavior)
-      decoration = BoxDecoration(
-        color: backgroundColor.withValues(alpha: adaptiveAlpha),
-      );
+      decoration = BoxDecoration(color: backgroundColor.withValues(alpha: adaptiveAlpha));
     } else {
       List<Color> colors;
       Alignment begin;
@@ -96,21 +88,13 @@ class BlurredContainer extends StatelessWidget {
       }
 
       decoration = BoxDecoration(
-        gradient: LinearGradient(
-          begin: begin,
-          end: end,
-          colors: colors,
-          stops: stops,
-        ),
+        gradient: LinearGradient(begin: begin, end: end, colors: colors, stops: stops),
       );
     }
 
     return ClipRect(
       child: BackdropFilter(
-        filter: ImageFilter.blur(
-          sigmaX: sigmaX ?? BlurConfig.sigmaX,
-          sigmaY: sigmaY ?? BlurConfig.sigmaY,
-        ),
+        filter: ImageFilter.blur(sigmaX: sigmaX ?? BlurConfig.sigmaX, sigmaY: sigmaY ?? BlurConfig.sigmaY),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           padding: padding,

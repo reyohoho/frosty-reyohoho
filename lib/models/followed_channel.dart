@@ -17,8 +17,7 @@ class FollowedChannel {
     required this.followedAt,
   });
 
-  factory FollowedChannel.fromJson(Map<String, dynamic> json) =>
-      _$FollowedChannelFromJson(json);
+  factory FollowedChannel.fromJson(Map<String, dynamic> json) => _$FollowedChannelFromJson(json);
 }
 
 // Response object for followed channels API call.
@@ -28,12 +27,7 @@ class FollowedChannels {
   final Map<String, String> pagination;
   final int total;
 
-  const FollowedChannels({
-    required this.data,
-    required this.pagination,
-    required this.total,
-  });
+  const FollowedChannels({required this.data, required this.pagination, required this.total});
 
-  factory FollowedChannels.fromJson(Map<String, dynamic> json) =>
-      _$FollowedChannelsFromJson(json);
+  factory FollowedChannels.fromJson(Map<String, dynamic> json) => _$FollowedChannelsFromJson(json);
 }

@@ -31,15 +31,10 @@ class OnboardingScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-      DeviceOrientation.portraitDown,
-    ]);
+    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp, DeviceOrientation.portraitDown]);
 
     if (isLast) {
-      SharedPreferences.getInstance().then(
-        (prefs) => prefs.setBool('first_run', false),
-      );
+      SharedPreferences.getInstance().then((prefs) => prefs.setBool('first_run', false));
     }
 
     return Scaffold(
@@ -58,26 +53,14 @@ class OnboardingScaffold extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.center,
                       spacing: 12,
                       children: [
-                        if (showLogo) ...[
-                          SvgPicture.asset('assets/icons/logo.svg', height: 80),
-                        ],
-                        Text(
-                          header,
-                          style: const TextStyle(
-                            fontSize: 48,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                        if (showLogo) ...[SvgPicture.asset('assets/icons/logo.svg', height: 80)],
+                        Text(header, style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold)),
                       ],
                     ),
                     if (subtitle != null) ...[
                       Opacity(
                         opacity: 0.8,
-                        child: Text(
-                          subtitle!,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(fontSize: 16),
-                        ),
+                        child: Text(subtitle!, textAlign: TextAlign.center, style: const TextStyle(fontSize: 16)),
                       ),
                     ],
                   ],
@@ -85,25 +68,16 @@ class OnboardingScaffold extends StatelessWidget {
               ),
               Expanded(
                 child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    vertical: content == null ? 20 : 0,
-                  ),
+                  padding: EdgeInsets.symmetric(vertical: content == null ? 20 : 0),
                   child: content ?? const SizedBox(),
                 ),
               ),
               if (disclaimer != null)
                 Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   child: Opacity(
                     opacity: 0.5,
-                    child: Text(
-                      disclaimer!,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 12),
-                    ),
+                    child: Text(disclaimer!, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12)),
                   ),
                 ),
               Container(
@@ -116,10 +90,7 @@ class OnboardingScaffold extends StatelessWidget {
                           MaterialPageRoute(builder: (context) => route),
                           (_) => false,
                         )
-                      : Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => route),
-                        ),
+                      : Navigator.push(context, MaterialPageRoute(builder: (context) => route)),
                   icon: buttonIcon ?? const SizedBox(),
                   label: Text(buttonText ?? 'Next'),
                 ),
@@ -129,10 +100,7 @@ class OnboardingScaffold extends StatelessWidget {
                   margin: const EdgeInsets.symmetric(horizontal: 12),
                   width: double.infinity,
                   child: TextButton(
-                    onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => skipRoute!),
-                    ),
+                    onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => skipRoute!)),
                     child: const Text('Skip'),
                   ),
                 ),

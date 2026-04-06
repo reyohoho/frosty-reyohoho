@@ -72,9 +72,7 @@ class IRCMessage {
     if (ircMessage.message == null) {
       messages.clear();
       bufferedMessages.clear();
-      messages.add(
-        IRCMessage.createNotice(message: 'Chat was cleared by a moderator'),
-      );
+      messages.add(IRCMessage.createNotice(message: 'Chat was cleared by a moderator'));
       return;
     }
 
@@ -134,15 +132,10 @@ class IRCMessage {
   }
 
   /// Adds timestamp to the span if enabled
-  void _addTimestamp(
-    List<InlineSpan> span,
-    TextStyle? style,
-    TimestampType timestamp,
-  ) {
+  void _addTimestamp(List<InlineSpan> span, TextStyle? style, TimestampType timestamp) {
     if (timestamp == TimestampType.disabled) return;
 
-    final time =
-        tags['tmi-sent-ts'] ?? DateTime.now().millisecondsSinceEpoch.toString();
+    final time = tags['tmi-sent-ts'] ?? DateTime.now().millisecondsSinceEpoch.toString();
     final parsedTime = DateTime.fromMillisecondsSinceEpoch(int.parse(time));
 
     final timeText = timestamp == TimestampType.twentyFour
@@ -180,9 +173,7 @@ class IRCMessage {
             child: Icon(
               Icons.history_rounded,
               size: badgeSize,
-              color:
-                  Theme.of(context).iconTheme.color?.withValues(alpha: 0.5) ??
-                  Colors.grey.withValues(alpha: 0.5),
+              color: Theme.of(context).iconTheme.color?.withValues(alpha: 0.5) ?? Colors.grey.withValues(alpha: 0.5),
             ),
           ),
         ),
@@ -213,20 +204,14 @@ class IRCMessage {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: isCurrentChannel
-                      ? Border.all(
-                          color: Theme.of(context).colorScheme.primary,
-                          width: 1.5,
-                        )
+                      ? Border.all(color: Theme.of(context).colorScheme.primary, width: 1.5)
                       : null,
                 ),
                 child: Container(
                   margin: isCurrentChannel ? const EdgeInsets.all(1.5) : null,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    image: DecorationImage(
-                      image: imageProvider,
-                      fit: BoxFit.cover,
-                    ),
+                    image: DecorationImage(image: imageProvider, fit: BoxFit.cover),
                   ),
                 ),
               ),
@@ -236,10 +221,7 @@ class IRCMessage {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: isCurrentChannel
-                      ? Border.all(
-                          color: Theme.of(context).colorScheme.primary,
-                          width: 1.5,
-                        )
+                      ? Border.all(color: Theme.of(context).colorScheme.primary, width: 1.5)
                       : null,
                 ),
               ),
@@ -279,20 +261,14 @@ class IRCMessage {
           var badgeUrl = badgeInfo.url;
 
           // Handle custom FFZ mod badge
-          if (badgeInfo.name == 'Moderator' &&
-              (ffzUserBadges != null || ffzRoomInfo?.modUrls != null)) {
-            final botBadge = ffzUserBadges?.firstWhereOrNull(
-              (element) => element.name == 'Bot',
-            );
+          if (badgeInfo.name == 'Moderator' && (ffzUserBadges != null || ffzRoomInfo?.modUrls != null)) {
+            final botBadge = ffzUserBadges?.firstWhereOrNull((element) => element.name == 'Bot');
 
             if (botBadge != null) {
               badgeUrl = botBadge.url;
               skipBot = true;
             } else if (ffzRoomInfo?.modUrls != null) {
-              badgeUrl =
-                  ffzRoomInfo!.modUrls?.url4x ??
-                  ffzRoomInfo.modUrls?.url2x ??
-                  ffzRoomInfo.modUrls!.url1x;
+              badgeUrl = ffzRoomInfo!.modUrls?.url4x ?? ffzRoomInfo.modUrls?.url2x ?? ffzRoomInfo.modUrls!.url1x;
             }
 
             final newBadge = ChatBadge(
@@ -316,26 +292,12 @@ class IRCMessage {
 
           // Handle custom FFZ VIP badge
           if (badgeInfo.name == 'VIP' && ffzRoomInfo?.vipBadge != null) {
-            badgeUrl =
-                ffzRoomInfo!.vipBadge?.url4x ??
-                ffzRoomInfo.vipBadge?.url2x ??
-                ffzRoomInfo.vipBadge!.url1x;
+            badgeUrl = ffzRoomInfo!.vipBadge?.url4x ?? ffzRoomInfo.vipBadge?.url2x ?? ffzRoomInfo.vipBadge!.url1x;
           }
 
-          final newBadge = ChatBadge(
-            name: badgeInfo.name,
-            url: badgeUrl,
-            type: BadgeType.twitch,
-          );
+          final newBadge = ChatBadge(name: badgeInfo.name, url: badgeUrl, type: BadgeType.twitch);
 
-          span.add(
-            _createBadgeSpan(
-              context,
-              badge: newBadge,
-              size: badgeSize,
-              launchExternal: launchExternal,
-            ),
-          );
+          span.add(_createBadgeSpan(context, badge: newBadge, size: badgeSize, launchExternal: launchExternal));
           span.add(const TextSpan(text: ' '));
         }
       }
@@ -380,13 +342,7 @@ class IRCMessage {
     final userBTTVBadge = bttvUserToBadge[tags['user-id']];
     if (userBTTVBadge != null) {
       span.add(
-        _createBadgeSpan(
-          context,
-          badge: userBTTVBadge,
-          size: badgeSize,
-          isSvg: true,
-          launchExternal: launchExternal,
-        ),
+        _createBadgeSpan(context, badge: userBTTVBadge, size: badgeSize, isSvg: true, launchExternal: launchExternal),
       );
       span.add(const TextSpan(text: ' '));
     }
@@ -395,14 +351,7 @@ class IRCMessage {
     final user7TVBadges = sevenTVUserToBadges[tags['user-id']];
     if (user7TVBadges != null) {
       for (final badge in user7TVBadges) {
-        span.add(
-          _createBadgeSpan(
-            context,
-            badge: badge,
-            size: badgeSize,
-            launchExternal: launchExternal,
-          ),
-        );
+        span.add(_createBadgeSpan(context, badge: badge, size: badgeSize, launchExternal: launchExternal));
         span.add(const TextSpan(text: ' '));
       }
     }
@@ -412,14 +361,7 @@ class IRCMessage {
     if (userId != null && showReyohohoBadges) {
       final reyohohoBadge = assetsStore.getReyohohoBadge(userId);
       if (reyohohoBadge != null) {
-        span.add(
-          _createBadgeSpan(
-            context,
-            badge: reyohohoBadge,
-            size: badgeSize,
-            launchExternal: launchExternal,
-          ),
-        );
+        span.add(_createBadgeSpan(context, badge: reyohohoBadge, size: badgeSize, launchExternal: launchExternal));
         span.add(const TextSpan(text: ' '));
       }
     }
@@ -436,16 +378,13 @@ class IRCMessage {
     ChatAssetsStore? assetsStore,
     bool showPaints = false,
   }) {
-    var color = Color(
-      int.parse((tags['color'] ?? '#868686').replaceFirst('#', '0xFF')),
-    );
+    var color = Color(int.parse((tags['color'] ?? '#868686').replaceFirst('#', '0xFF')));
 
     // Adjust color for theme contrast using the common utility
     color = utils.adjustChatNameColor(context, color);
 
     final displayName = tags['display-name']!;
-    final nameText =
-        user != null ? utils.getReadableName(displayName, user!) : displayName;
+    final nameText = user != null ? utils.getReadableName(displayName, user!) : displayName;
 
     final userId = tags['user-id'];
 
@@ -512,23 +451,16 @@ class IRCMessage {
         TextSpan(
           text: ' <message deleted>',
           style: onTapDeletedMessage != null
-              ? textStyle?.copyWith(
-                  color: Theme.of(context).colorScheme.primary,
-                  fontWeight: FontWeight.w500,
-                )
+              ? textStyle?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w500)
               : null,
-          recognizer: onTapDeletedMessage != null
-              ? (TapGestureRecognizer()..onTap = onTapDeletedMessage)
-              : null,
+          recognizer: onTapDeletedMessage != null ? (TapGestureRecognizer()..onTap = onTapDeletedMessage) : null,
         ),
       );
       return;
     }
 
     // Check if the message is a reply. If it is, remove the reply username from the message.
-    final words = tags.containsKey('reply-parent-display-name')
-        ? split?.sublist(1)
-        : split;
+    final words = tags.containsKey('reply-parent-display-name') ? split?.sublist(1) : split;
 
     if (words != null) {
       // Keep a local span which will be reversed and added to the final span.
@@ -562,9 +494,7 @@ class IRCMessage {
               _createEmoteSpan(
                 context,
                 emote: emote,
-                height: emote.height != null
-                    ? emote.height! * emoteScale
-                    : emoteSize,
+                height: emote.height != null ? emote.height! * emoteScale : emoteSize,
                 width: emote.width != null ? emote.width! * emoteScale : null,
                 launchExternal: launchExternal,
               ),
@@ -577,9 +507,7 @@ class IRCMessage {
             localSpan.add(
               _createEmojiSpan(
                 emoji: word,
-                style: textStyle?.copyWith(
-                  fontSize: emoteSize - _emojiSizeOffset,
-                ),
+                style: textStyle?.copyWith(fontSize: emoteSize - _emojiSizeOffset),
               ),
             );
           } else {
@@ -637,11 +565,7 @@ class IRCMessage {
 
     // Create the stack of emotes with the base emoji if there is one.
     final children = [
-      if (nextWordIsEmoji)
-        Text(
-          words[index],
-          style: textStyle?.copyWith(fontSize: emoteSize - _emojiSizeOffset),
-        ),
+      if (nextWordIsEmoji) Text(words[index], style: textStyle?.copyWith(fontSize: emoteSize - _emojiSizeOffset)),
       ...emoteStack.reversed.map(
         (emote) => FrostyCachedNetworkImage(
           imageUrl: emote.url,
@@ -665,27 +589,16 @@ class IRCMessage {
             leading: Stack(
               alignment: AlignmentDirectional.center,
               children: [
-                if (nextWordIsEmoji)
-                  Text(emoji, style: textStyle?.copyWith(fontSize: 40)),
-                ...emoteStack.reversed.map(
-                  (emote) =>
-                      FrostyCachedNetworkImage(imageUrl: emote.url, width: 56),
-                ),
+                if (nextWordIsEmoji) Text(emoji, style: textStyle?.copyWith(fontSize: 40)),
+                ...emoteStack.reversed.map((emote) => FrostyCachedNetworkImage(imageUrl: emote.url, width: 56)),
               ],
             ),
             url: emoteStack.last.url,
-            title: nextWordIsEmoji
-                ? emoji
-                : '${emoteStack.last.name} (${emoteStack.last.type})',
-            subtitle: Text(
-              'with ${nextWordIsEmoji ? message.join(' + ') : message.skip(1).join(' + ')}',
-            ),
+            title: nextWordIsEmoji ? emoji : '${emoteStack.last.name} (${emoteStack.last.type})',
+            subtitle: Text('with ${nextWordIsEmoji ? message.join(' + ') : message.skip(1).join(' + ')}'),
             launchExternal: launchExternal,
           ),
-          child: Stack(
-            alignment: AlignmentDirectional.center,
-            children: children,
-          ),
+          child: Stack(alignment: AlignmentDirectional.center, children: children),
         ),
       ),
     );
@@ -693,13 +606,7 @@ class IRCMessage {
     // If the next word is neither an emote nor emoji, add it as a text span.
     if (nextEmote == null && !nextWordIsEmoji) {
       localSpan.add(const TextSpan(text: ' '));
-      localSpan.add(
-        _createTextSpan(
-          text: words[index],
-          style: textStyle,
-          launchExternal: launchExternal,
-        ),
-      );
+      localSpan.add(_createTextSpan(text: words[index], style: textStyle, launchExternal: launchExternal));
     }
 
     // Add space after the zero-width emote stack (like all other elements)
@@ -741,13 +648,7 @@ class IRCMessage {
     final span = <InlineSpan>[];
 
     _addTimestamp(span, style, timestamp);
-    _addHistoricalAndChannelBadges(
-      context,
-      span,
-      badgeSize,
-      channelIdToUserTwitch,
-      currentChannelId,
-    );
+    _addHistoricalAndChannelBadges(context, span, badgeSize, channelIdToUserTwitch, currentChannelId);
 
     final isHistorical = tags['historical'] == '1';
     _addUserBadges(
@@ -760,18 +661,10 @@ class IRCMessage {
       showReyohohoBadges: showReyohohoBadges,
     );
 
-    _addUsername(
-      span,
-      context,
-      onTapName,
-      assetsStore: assetsStore,
-      showPaints: showPaints,
-    );
+    _addUsername(span, context, onTapName, assetsStore: assetsStore, showPaints: showPaints);
 
     // Italicize the text if it was called with an IRC Action (e.g., "/me").
-    final textStyle = action == true
-        ? const TextStyle(fontStyle: FontStyle.italic)
-        : style;
+    final textStyle = action == true ? const TextStyle(fontStyle: FontStyle.italic) : style;
 
     _addMessageContent(
       context,
@@ -792,10 +685,7 @@ class IRCMessage {
     return span;
   }
 
-  static WidgetSpan _createEmojiSpan({
-    required String emoji,
-    TextStyle? style,
-  }) {
+  static WidgetSpan _createEmojiSpan({required String emoji, TextStyle? style}) {
     return WidgetSpan(
       alignment: PlaceholderAlignment.middle,
       child: Text(emoji, style: style),
@@ -812,23 +702,13 @@ class IRCMessage {
     if (backgroundColor != null) {
       return ColoredBox(
         color: backgroundColor,
-        child: FrostyCachedNetworkImage(
-          imageUrl: badge.url,
-          height: size,
-          width: size,
-          useFade: false,
-        ),
+        child: FrostyCachedNetworkImage(imageUrl: badge.url, height: size, width: size, useFade: false),
       );
     } else if (isSvg == true) {
       final proxiedUrl = getProxiedEmoteUrl(context, badge.url);
       return SvgPicture.network(proxiedUrl, height: size, width: size);
     } else {
-      return FrostyCachedNetworkImage(
-        imageUrl: badge.url,
-        height: size,
-        width: size,
-        useFade: false,
-      );
+      return FrostyCachedNetworkImage(imageUrl: badge.url, height: size, width: size, useFade: false);
     }
   }
 
@@ -845,26 +725,14 @@ class IRCMessage {
       child: InkWell(
         onTap: () => _showAssetDetailsBottomSheet(
           context,
-          leading: _createBadgeWidget(
-            context,
-            badge: badge,
-            backgroundColor: backgroundColor,
-            isSvg: isSvg,
-            size: 56,
-          ),
+          leading: _createBadgeWidget(context, badge: badge, backgroundColor: backgroundColor, isSvg: isSvg, size: 56),
           url: badge.url,
           title: badge.name,
           subtitle: Text(badge.type.toString()),
           launchExternal: launchExternal,
           showCopyName: false,
         ),
-        child: _createBadgeWidget(
-          context,
-          badge: badge,
-          size: size,
-          backgroundColor: backgroundColor,
-          isSvg: isSvg,
-        ),
+        child: _createBadgeWidget(context, badge: badge, size: size, backgroundColor: backgroundColor, isSvg: isSvg),
       ),
     );
   }
@@ -879,11 +747,7 @@ class IRCMessage {
     return WidgetSpan(
       alignment: PlaceholderAlignment.middle,
       child: InkWell(
-        onTap: () => showEmoteDetailsBottomSheet(
-          context,
-          emote: emote,
-          launchExternal: launchExternal,
-        ),
+        onTap: () => showEmoteDetailsBottomSheet(context, emote: emote, launchExternal: launchExternal),
         child: FrostyCachedNetworkImage(
           imageUrl: emote.url,
           height: height,
@@ -931,17 +795,11 @@ class IRCMessage {
 
       return TextSpan(
         text: text,
-        style: style?.copyWith(
-          color: Colors.blue,
-          decoration: TextDecoration.underline,
-          decorationColor: Colors.blue,
-        ),
+        style: style?.copyWith(color: Colors.blue, decoration: TextDecoration.underline, decorationColor: Colors.blue),
         recognizer: TapGestureRecognizer()
           ..onTap = () => launchUrl(
             Uri.parse(text),
-            mode: launchExternal
-                ? LaunchMode.externalApplication
-                : LaunchMode.inAppBrowserView,
+            mode: launchExternal ? LaunchMode.externalApplication : LaunchMode.inAppBrowserView,
           ),
       );
     } else {
@@ -949,26 +807,18 @@ class IRCMessage {
     }
   }
 
-  static void showEmoteDetailsBottomSheet(
-    BuildContext context, {
-    required Emote emote,
-    required bool launchExternal,
-  }) {
+  static void showEmoteDetailsBottomSheet(BuildContext context, {required Emote emote, required bool launchExternal}) {
     _showAssetDetailsBottomSheet(
       context,
       leading: FrostyCachedNetworkImage(imageUrl: emote.url, width: 56),
       url: emote.url,
-      title: emote.realName != null
-          ? '${emote.name} (${emote.realName})'
-          : emote.name,
+      title: emote.realName != null ? '${emote.name} (${emote.realName})' : emote.name,
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(emote.type.toString()),
           if (emote.ownerDisplayName != null && emote.ownerUsername != null)
-            Text(
-              'by ${utils.getReadableName(emote.ownerDisplayName!, emote.ownerUsername!)}',
-            ),
+            Text('by ${utils.getReadableName(emote.ownerDisplayName!, emote.ownerUsername!)}'),
         ],
       ),
       launchExternal: launchExternal,
@@ -998,10 +848,7 @@ class IRCMessage {
               ),
               child: leading,
             ),
-            title: Text(
-              title,
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
+            title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
             subtitle: subtitle,
           ),
           const Divider(indent: 16, endIndent: 16),
@@ -1030,9 +877,7 @@ class IRCMessage {
             onTap: () {
               launchUrl(
                 Uri.parse(url),
-                mode: launchExternal
-                    ? LaunchMode.externalApplication
-                    : LaunchMode.inAppBrowserView,
+                mode: launchExternal ? LaunchMode.externalApplication : LaunchMode.inAppBrowserView,
               );
 
               Navigator.pop(context);
@@ -1058,9 +903,7 @@ class IRCMessage {
 
     // Get the tags substring and escape characters.
     // IRC messages escape spaces with \s.
-    final tags = whole
-        .substring(1, tagAndIrcMessageDivider)
-        .replaceAll('\\s', ' ');
+    final tags = whole.substring(1, tagAndIrcMessageDivider).replaceAll('\\s', ' ');
 
     // Next, parse and map the tags.
     final mappedTags = <String, String>{};
@@ -1115,20 +958,14 @@ class IRCMessage {
 
       for (final emoteIdAndPosition in emotes) {
         final indexBetweenIdAndPositions = emoteIdAndPosition.indexOf(':');
-        final emoteId = emoteIdAndPosition.substring(
-          0,
-          indexBetweenIdAndPositions,
-        );
+        final emoteId = emoteIdAndPosition.substring(0, indexBetweenIdAndPositions);
 
         // Parse the range in order to extract the associated word.
         // If there are more than one indices, use the first one.
         // Else, use the one provided indices.
         final String range;
         if (emoteIdAndPosition.contains(',')) {
-          range = emoteIdAndPosition.substring(
-            indexBetweenIdAndPositions + 1,
-            emoteIdAndPosition.indexOf(','),
-          );
+          range = emoteIdAndPosition.substring(indexBetweenIdAndPositions + 1, emoteIdAndPosition.indexOf(','));
         } else {
           range = emoteIdAndPosition.substring(indexBetweenIdAndPositions + 1);
         }
@@ -1155,8 +992,7 @@ class IRCMessage {
     List<String>? split;
     if (message != null) {
       // Check if IRC actions like "/me" were called.
-      if (message.startsWith(_ircActionPrefix) &&
-          message.endsWith(_ircActionSuffix)) {
+      if (message.startsWith(_ircActionPrefix) && message.endsWith(_ircActionSuffix)) {
         action = true;
         message = message.substring(_ircActionPrefixLength, message.length - 1);
       }
@@ -1197,9 +1033,7 @@ class IRCMessage {
       }
 
       if (wordBuffer.isNotEmpty) {
-        split.addAll(
-          wordBuffer.toString().split(' ').where((element) => element != ''),
-        );
+        split.addAll(wordBuffer.toString().split(' ').where((element) => element != ''));
       }
       if (emojiBuffer.isNotEmpty) split.add(emojiBuffer.toString());
     }
@@ -1250,18 +1084,15 @@ class IRCMessage {
     );
   }
 
-  factory IRCMessage.createNotice({
-    required String message,
-    VoidCallback? actionCallback,
-    String? actionLabel,
-  }) => IRCMessage(
-    raw: '',
-    tags: {},
-    command: Command.notice,
-    message: message,
-    actionCallback: actionCallback,
-    actionLabel: actionLabel,
-  );
+  factory IRCMessage.createNotice({required String message, VoidCallback? actionCallback, String? actionLabel}) =>
+      IRCMessage(
+        raw: '',
+        tags: {},
+        command: Command.notice,
+        message: message,
+        actionCallback: actionCallback,
+        actionLabel: actionLabel,
+      );
 }
 
 /// The object representation of the IRC ROOMSTATE message.
@@ -1297,13 +1128,7 @@ class USERSTATE {
   final bool mod;
   final bool subscriber;
 
-  const USERSTATE({
-    this.raw,
-    this.color = '',
-    this.displayName = '',
-    this.mod = false,
-    this.subscriber = false,
-  });
+  const USERSTATE({this.raw, this.color = '', this.displayName = '', this.mod = false, this.subscriber = false});
 
   USERSTATE fromIRCMessage(IRCMessage ircMessage) => USERSTATE(
     raw: ircMessage.raw,
@@ -1353,12 +1178,7 @@ class _PaintedText extends StatefulWidget {
   final Color fallbackColor;
   final PaintSource source;
 
-  const _PaintedText({
-    required this.text,
-    required this.paint,
-    required this.fallbackColor,
-    required this.source,
-  });
+  const _PaintedText({required this.text, required this.paint, required this.fallbackColor, required this.source});
 
   @override
   State<_PaintedText> createState() => _PaintedTextState();
@@ -1370,10 +1190,7 @@ class _PaintedTextState extends State<_PaintedText> {
   bool _imageLoadFailed = false;
   bool _isAnimating = false;
 
-  ui.Image? get _currentImage =>
-      _frames != null && _frames!.isNotEmpty
-          ? _frames![_currentFrameIndex].image
-          : null;
+  ui.Image? get _currentImage => _frames != null && _frames!.isNotEmpty ? _frames![_currentFrameIndex].image : null;
 
   @override
   void initState() {
@@ -1517,9 +1334,7 @@ class _PaintedTextState extends State<_PaintedText> {
 
     // For 7TV, add CDN base URL if it's a relative path, then proxy if enabled
     if (widget.source == PaintSource.sevenTV) {
-      final fullUrl = imageUrl.startsWith('/')
-          ? 'https://cdn.7tv.app$imageUrl'
-          : imageUrl;
+      final fullUrl = imageUrl.startsWith('/') ? 'https://cdn.7tv.app$imageUrl' : imageUrl;
       return getProxiedEmoteUrl(context, fullUrl);
     }
 
@@ -1540,8 +1355,7 @@ class _PaintedTextState extends State<_PaintedText> {
   Gradient? _buildGradient() {
     if (widget.paint.stops.isEmpty) return null;
 
-    var colors =
-        widget.paint.stops.map((s) => _decimalToColor(s.color)).toList();
+    var colors = widget.paint.stops.map((s) => _decimalToColor(s.color)).toList();
     var stops = widget.paint.stops.map((s) => s.at).toList();
 
     // For repeating gradients, CSS repeating-linear-gradient repeats the pattern
@@ -1584,14 +1398,8 @@ class _PaintedTextState extends State<_PaintedText> {
           colors: colors,
           stops: stops,
           // CSS-style angle: measured from vertical, clockwise
-          begin: Alignment(
-            -math.sin(angle),
-            math.cos(angle),
-          ),
-          end: Alignment(
-            math.sin(angle),
-            -math.cos(angle),
-          ),
+          begin: Alignment(-math.sin(angle), math.cos(angle)),
+          end: Alignment(math.sin(angle), -math.cos(angle)),
           tileMode: TileMode.clamp, // We handle repeat manually above
         );
       case 'RADIAL_GRADIENT':
@@ -1626,19 +1434,11 @@ class _PaintedTextState extends State<_PaintedText> {
             matrix[0] = scaleX;
             matrix[5] = scaleY;
 
-            return ImageShader(
-              image,
-              TileMode.clamp,
-              TileMode.clamp,
-              matrix,
-            );
+            return ImageShader(image, TileMode.clamp, TileMode.clamp, matrix);
           },
           child: Text(
             widget.text,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
+            style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
           ),
         );
       }
@@ -1648,10 +1448,7 @@ class _PaintedTextState extends State<_PaintedText> {
         // Still loading - show text with fallback color while loading
         return Text(
           widget.text,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: widget.fallbackColor,
-          ),
+          style: TextStyle(fontWeight: FontWeight.bold, color: widget.fallbackColor),
         );
       }
     }
@@ -1662,9 +1459,7 @@ class _PaintedTextState extends State<_PaintedText> {
     if (gradient != null) {
       return ShaderMask(
         blendMode: BlendMode.srcIn,
-        shaderCallback: (bounds) => gradient.createShader(
-          Rect.fromLTWH(0, 0, bounds.width, bounds.height),
-        ),
+        shaderCallback: (bounds) => gradient.createShader(Rect.fromLTWH(0, 0, bounds.width, bounds.height)),
         child: Text(
           widget.text,
           style: const TextStyle(
@@ -1679,20 +1474,14 @@ class _PaintedTextState extends State<_PaintedText> {
     if (widget.paint.color != null) {
       return Text(
         widget.text,
-        style: TextStyle(
-          fontWeight: FontWeight.bold,
-          color: _decimalToColor(widget.paint.color!),
-        ),
+        style: TextStyle(fontWeight: FontWeight.bold, color: _decimalToColor(widget.paint.color!)),
       );
     }
 
     // Fallback to default color
     return Text(
       widget.text,
-      style: TextStyle(
-        fontWeight: FontWeight.bold,
-        color: widget.fallbackColor,
-      ),
+      style: TextStyle(fontWeight: FontWeight.bold, color: widget.fallbackColor),
     );
   }
 }

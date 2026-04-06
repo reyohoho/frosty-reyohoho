@@ -23,9 +23,7 @@ class AlertMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final defaultColor = Theme.of(
-      context,
-    ).colorScheme.onSurface.withValues(alpha: vertical ? 0.6 : 1);
+    final defaultColor = Theme.of(context).colorScheme.onSurface.withValues(alpha: vertical ? 0.6 : 1);
 
     final Widget widget;
 
@@ -45,17 +43,12 @@ class AlertMessage extends StatelessWidget {
       );
     } else {
       widget = Row(
-        mainAxisAlignment: centered
-            ? MainAxisAlignment.center
-            : MainAxisAlignment.start,
+        mainAxisAlignment: centered ? MainAxisAlignment.center : MainAxisAlignment.start,
         spacing: 8,
         children: [
           Icon(Icons.info_outline_rounded, color: color ?? defaultColor),
           Flexible(
-            child: Text(
-              message,
-              style: TextStyle(color: color ?? defaultColor),
-            ),
+            child: Text(message, style: TextStyle(color: color ?? defaultColor)),
           ),
           if (trailingIcon != null) ...[
             const SizedBox(width: 8),
@@ -71,12 +64,8 @@ class AlertMessage extends StatelessWidget {
       );
     }
 
-    final effectivePadding =
-        padding ??
-        (vertical ? const EdgeInsets.symmetric(horizontal: 24) : null);
+    final effectivePadding = padding ?? (vertical ? const EdgeInsets.symmetric(horizontal: 24) : null);
 
-    return effectivePadding != null
-        ? Padding(padding: effectivePadding, child: widget)
-        : widget;
+    return effectivePadding != null ? Padding(padding: effectivePadding, child: widget) : widget;
   }
 }

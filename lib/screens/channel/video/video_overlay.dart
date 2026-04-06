@@ -24,55 +24,35 @@ class VideoOverlay extends StatelessWidget {
   final VideoStore videoStore;
   final ChatStore chatStore;
   final SettingsStore settingsStore;
+  final VoidCallback? onOpenVodList;
 
   const VideoOverlay({
     super.key,
     required this.videoStore,
     required this.chatStore,
     required this.settingsStore,
+    this.onOpenVodList,
   });
 
-  static const _iconShadow = [
-    Shadow(
-      offset: Offset(0, 1),
-      blurRadius: 4,
-      color: Color.fromRGBO(0, 0, 0, 0.3),
-    ),
-  ];
+  static const _iconShadow = [Shadow(offset: Offset(0, 1), blurRadius: 4, color: Color.fromRGBO(0, 0, 0, 0.3))];
 
-  static const _textShadow = [
-    Shadow(
-      offset: Offset(0, 1),
-      blurRadius: 4,
-      color: Color.fromRGBO(0, 0, 0, 0.3),
-    ),
-  ];
+  static const _textShadow = [Shadow(offset: Offset(0, 1), blurRadius: 4, color: Color.fromRGBO(0, 0, 0, 0.3))];
 
   @override
   Widget build(BuildContext context) {
-    final surfaceColor = context
-        .watch<FrostyThemes>()
-        .dark
-        .colorScheme
-        .onSurface;
+    final surfaceColor = context.watch<FrostyThemes>().dark.colorScheme.onSurface;
 
     final backButton = IconButton(
       tooltip: 'Back',
-      icon: Icon(
-        Icons.adaptive.arrow_back_rounded,
-        color: surfaceColor,
-        shadows: _iconShadow,
-      ),
+      icon: Icon(Icons.adaptive.arrow_back_rounded, color: surfaceColor, shadows: _iconShadow),
       onPressed: Navigator.of(context).pop,
     );
 
     final chatOverlayButton = Observer(
       builder: (_) => IconButton(
-        tooltip: videoStore.settingsStore.fullScreenChatOverlay
-            ? 'Hide chat overlay'
-            : 'Show chat overlay',
-        onPressed: () => videoStore.settingsStore.fullScreenChatOverlay =
-            !videoStore.settingsStore.fullScreenChatOverlay,
+        tooltip: videoStore.settingsStore.fullScreenChatOverlay ? 'Hide chat overlay' : 'Show chat overlay',
+        onPressed: () =>
+            videoStore.settingsStore.fullScreenChatOverlay = !videoStore.settingsStore.fullScreenChatOverlay,
         icon: videoStore.settingsStore.fullScreenChatOverlay
             ? Icon(Icons.chat_rounded, shadows: _iconShadow)
             : Icon(Icons.chat_outlined, shadows: _iconShadow),
@@ -82,16 +62,12 @@ class VideoOverlay extends StatelessWidget {
 
     final audioCompressorButton = Observer(
       builder: (_) => Tooltip(
-        message: videoStore.audioCompressorActive
-            ? 'Disable audio compressor'
-            : 'Enable audio compressor',
+        message: videoStore.audioCompressorActive ? 'Disable audio compressor' : 'Enable audio compressor',
         preferBelow: false,
         child: IconButton(
           icon: Icon(
             Icons.graphic_eq_rounded,
-            color: videoStore.audioCompressorActive
-                ? Colors.greenAccent
-                : surfaceColor,
+            color: videoStore.audioCompressorActive ? Colors.greenAccent : surfaceColor,
             shadows: _iconShadow,
           ),
           onPressed: videoStore.toggleAudioCompressor,
@@ -101,16 +77,12 @@ class VideoOverlay extends StatelessWidget {
 
     final mirrorButton = Observer(
       builder: (_) => Tooltip(
-        message: videoStore.videoMirrored
-            ? 'Disable mirror'
-            : 'Enable mirror',
+        message: videoStore.videoMirrored ? 'Disable mirror' : 'Enable mirror',
         preferBelow: false,
         child: IconButton(
           icon: Icon(
             Icons.flip_rounded,
-            color: videoStore.videoMirrored
-                ? Colors.greenAccent
-                : surfaceColor,
+            color: videoStore.videoMirrored ? Colors.greenAccent : surfaceColor,
             shadows: _iconShadow,
           ),
           onPressed: videoStore.toggleMirror,
@@ -129,11 +101,7 @@ class VideoOverlay extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SectionHeader(
-                'Stream quality',
-                padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
-                isFirst: true,
-              ),
+              const SectionHeader('Stream quality', padding: EdgeInsets.fromLTRB(16, 0, 16, 8), isFirst: true),
               Flexible(
                 child: Observer(
                   builder: (context) => ListView(
@@ -142,17 +110,12 @@ class VideoOverlay extends StatelessWidget {
                     children: videoStore.availableStreamQualities
                         .map(
                           (quality) => ListTile(
-                            trailing: videoStore.streamQuality == quality
-                                ? const Icon(Icons.check_rounded)
-                                : null,
+                            trailing: videoStore.streamQuality == quality ? const Icon(Icons.check_rounded) : null,
                             title: Text(quality),
                             onTap: () {
                               videoStore.setStreamQuality(quality);
                               SharedPreferences.getInstance().then(
-                                (prefs) => prefs.setString(
-                                  'last_stream_quality',
-                                  quality,
-                                ),
+                                (prefs) => prefs.setString('last_stream_quality', quality),
                               );
                               Navigator.pop(context);
                             },
@@ -172,44 +135,29 @@ class VideoOverlay extends StatelessWidget {
       message: 'Refresh',
       preferBelow: false,
       child: IconButton(
-        icon: Icon(
-          Icons.refresh_rounded,
-          color: surfaceColor,
-          shadows: _iconShadow,
-        ),
+        icon: Icon(Icons.refresh_rounded, color: surfaceColor, shadows: _iconShadow),
         onPressed: videoStore.handleRefresh,
       ),
     );
 
     final fullScreenButton = Tooltip(
-      message: videoStore.settingsStore.fullScreen
-          ? 'Exit fullscreen mode'
-          : 'Enter fullscreen mode',
+      message: videoStore.settingsStore.fullScreen ? 'Exit fullscreen mode' : 'Enter fullscreen mode',
       preferBelow: false,
       child: IconButton(
         icon: Icon(
-          videoStore.settingsStore.fullScreen
-              ? Icons.fullscreen_exit_rounded
-              : Icons.fullscreen_rounded,
+          videoStore.settingsStore.fullScreen ? Icons.fullscreen_exit_rounded : Icons.fullscreen_rounded,
           color: surfaceColor,
           shadows: _iconShadow,
         ),
-        onPressed: () => videoStore.settingsStore.fullScreen =
-            !videoStore.settingsStore.fullScreen,
+        onPressed: () => videoStore.settingsStore.fullScreen = !videoStore.settingsStore.fullScreen,
       ),
     );
 
     final rotateButton = Tooltip(
-      message: context.isPortrait
-          ? 'Enter landscape mode'
-          : 'Exit landscape mode',
+      message: context.isPortrait ? 'Enter landscape mode' : 'Exit landscape mode',
       preferBelow: false,
       child: IconButton(
-        icon: Icon(
-          Icons.screen_rotation_rounded,
-          color: surfaceColor,
-          shadows: _iconShadow,
-        ),
+        icon: Icon(Icons.screen_rotation_rounded, color: surfaceColor, shadows: _iconShadow),
         onPressed: () async {
           if (context.isPortrait) {
             // Enter landscape mode - allow both orientations for flexibility
@@ -219,9 +167,7 @@ class VideoOverlay extends StatelessWidget {
             ]);
           } else {
             // Return to portrait
-            await SystemChrome.setPreferredOrientations([
-              DeviceOrientation.portraitUp,
-            ]);
+            await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
             // Then allow all orientations again after a short delay
             Future.delayed(const Duration(milliseconds: 500), () {
               SystemChrome.setPreferredOrientations([]);
@@ -345,17 +291,15 @@ class VideoOverlay extends StatelessWidget {
                                     showOfflineIndicator: false,
                                     textColor: surfaceColor,
                                     isOffline: true,
-                                    isInSharedChatMode:
-                                        chatStore.isInSharedChatMode,
+                                    isInSharedChatMode: chatStore.isInSharedChatMode,
+                                    onAvatarTap: onOpenVodList,
                                   ),
                                 ),
                             ],
                           ),
                         ),
                       ),
-                      if (videoStore.settingsStore.fullScreen &&
-                          context.isLandscape)
-                        chatOverlayButton,
+                      if (videoStore.settingsStore.fullScreen && context.isLandscape) chatOverlayButton,
                     ],
                   ),
                   Align(
@@ -415,8 +359,8 @@ class VideoOverlay extends StatelessWidget {
                                   showUptime: false,
                                   showViewerCount: false,
                                   textColor: surfaceColor,
-                                  isInSharedChatMode:
-                                      chatStore.isInSharedChatMode,
+                                  isInSharedChatMode: chatStore.isInSharedChatMode,
+                                  onAvatarTap: onOpenVodList,
                                 ),
                               ),
                             ),
@@ -424,9 +368,7 @@ class VideoOverlay extends StatelessWidget {
                         ),
                       ),
                     ),
-                    if (videoStore.settingsStore.fullScreen &&
-                        context.isLandscape)
-                      chatOverlayButton,
+                    if (videoStore.settingsStore.fullScreen && context.isLandscape) chatOverlayButton,
                     if (!Platform.isIOS || isIPad()) videoSettingsButton,
                   ],
                 ),
@@ -437,16 +379,10 @@ class VideoOverlay extends StatelessWidget {
                     child: IconButton(
                       iconSize: 56,
                       icon: Icon(
-                        videoStore.paused
-                            ? Icons.play_arrow_rounded
-                            : Icons.pause_rounded,
+                        videoStore.paused ? Icons.play_arrow_rounded : Icons.pause_rounded,
                         color: surfaceColor,
                         shadows: [
-                          Shadow(
-                            offset: const Offset(0, 3),
-                            blurRadius: 8,
-                            color: Colors.black.withValues(alpha: 0.6),
-                          ),
+                          Shadow(offset: const Offset(0, 3), blurRadius: 8, color: Colors.black.withValues(alpha: 0.6)),
                         ],
                       ),
                       onPressed: videoStore.handlePausePlay,
@@ -460,10 +396,7 @@ class VideoOverlay extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 10,
-                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                           child: Row(
                             spacing: 8,
                             children: [
@@ -490,39 +423,28 @@ class VideoOverlay extends StatelessWidget {
                                 message: 'Viewer count',
                                 preferBelow: false,
                                 child: GestureDetector(
-                                  onTap: () =>
-                                      showModalBottomSheetWithProperFocus(
-                                        isScrollControlled: true,
-                                        context: context,
-                                        builder: (context) => GestureDetector(
-                                          onTap: FocusScope.of(context).unfocus,
-                                          child: ChattersList(
-                                            chatDetailsStore:
-                                                chatStore.chatDetailsStore,
-                                            chatStore: chatStore,
-                                            userLogin: streamInfo.userLogin,
-                                          ),
-                                        ),
+                                  onTap: () => showModalBottomSheetWithProperFocus(
+                                    isScrollControlled: true,
+                                    context: context,
+                                    builder: (context) => GestureDetector(
+                                      onTap: FocusScope.of(context).unfocus,
+                                      child: ChattersList(
+                                        chatDetailsStore: chatStore.chatDetailsStore,
+                                        chatStore: chatStore,
+                                        userLogin: streamInfo.userLogin,
                                       ),
+                                    ),
+                                  ),
                                   child: Row(
                                     spacing: 4,
                                     children: [
-                                      Icon(
-                                        Icons.visibility,
-                                        size: 14,
-                                        shadows: _iconShadow,
-                                        color: surfaceColor,
-                                      ),
+                                      Icon(Icons.visibility, size: 14, shadows: _iconShadow, color: surfaceColor),
                                       Text(
-                                        NumberFormat().format(
-                                          videoStore.streamInfo?.viewerCount,
-                                        ),
+                                        NumberFormat().format(videoStore.streamInfo?.viewerCount),
                                         style: TextStyle(
                                           color: surfaceColor,
                                           fontWeight: FontWeight.w500,
-                                          fontFeatures: const [
-                                            FontFeature.tabularFigures(),
-                                          ],
+                                          fontFeatures: const [FontFeature.tabularFigures()],
                                           shadows: _textShadow,
                                         ),
                                       ),
@@ -538,21 +460,14 @@ class VideoOverlay extends StatelessWidget {
                                   child: Row(
                                     spacing: 4,
                                     children: [
-                                      Icon(
-                                        Icons.speed_rounded,
-                                        size: 14,
-                                        color: surfaceColor,
-                                        shadows: _iconShadow,
-                                      ),
+                                      Icon(Icons.speed_rounded, size: 14, color: surfaceColor, shadows: _iconShadow),
                                       Observer(
                                         builder: (context) => Text(
                                           videoStore.latency ?? '—',
                                           style: TextStyle(
                                             color: surfaceColor,
                                             fontWeight: FontWeight.w500,
-                                            fontFeatures: const [
-                                              FontFeature.tabularFigures(),
-                                            ],
+                                            fontFeatures: const [FontFeature.tabularFigures()],
                                             shadows: _textShadow,
                                           ),
                                         ),
@@ -573,9 +488,7 @@ class VideoOverlay extends StatelessWidget {
                           final showExitState = isIOS && videoStore.isInPipMode;
 
                           return Tooltip(
-                            message: showExitState
-                                ? 'Exit picture-in-picture'
-                                : 'Enter picture-in-picture',
+                            message: showExitState ? 'Exit picture-in-picture' : 'Enter picture-in-picture',
                             preferBelow: false,
                             child: IconButton(
                               icon: Icon(

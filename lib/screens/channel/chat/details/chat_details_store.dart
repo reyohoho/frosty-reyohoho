@@ -39,13 +39,11 @@ abstract class ChatDetailsStoreBase with Store {
   final chatUsers = SplayTreeSet<String>();
 
   @computed
-  Iterable<String> get filteredUsers =>
-      chatUsers.where((user) => user.contains(_filterText));
+  Iterable<String> get filteredUsers => chatUsers.where((user) => user.contains(_filterText));
 
   ChatDetailsStoreBase({required this.twitchApi, required this.channelName}) {
     scrollController.addListener(() {
-      if (scrollController.position.atEdge ||
-          scrollController.position.outOfRange) {
+      if (scrollController.position.atEdge || scrollController.position.outOfRange) {
         showJumpButton = false;
       } else {
         showJumpButton = true;

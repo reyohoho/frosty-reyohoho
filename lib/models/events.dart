@@ -12,8 +12,7 @@ class SevenTVEvent {
 
   const SevenTVEvent({required this.op, this.t, required this.d});
 
-  factory SevenTVEvent.fromJson(Map<String, dynamic> json) =>
-      _$SevenTVEventFromJson(json);
+  factory SevenTVEvent.fromJson(Map<String, dynamic> json) => _$SevenTVEventFromJson(json);
 
   Map<String, dynamic> toJson() => _$SevenTVEventToJson(this);
 }
@@ -27,8 +26,7 @@ class SevenTVEventData {
 
   const SevenTVEventData({required this.type, this.condition, this.body});
 
-  factory SevenTVEventData.fromJson(Map<String, dynamic> json) =>
-      _$SevenTVEventDataFromJson(json);
+  factory SevenTVEventData.fromJson(Map<String, dynamic> json) => _$SevenTVEventDataFromJson(json);
 
   Map<String, dynamic> toJson() => _$SevenTVEventDataToJson(this);
 }
@@ -40,8 +38,7 @@ class SevenTVEventUpdatedEmote {
 
   const SevenTVEventUpdatedEmote({this.value, this.oldValue});
 
-  factory SevenTVEventUpdatedEmote.fromJson(Map<String, dynamic> json) =>
-      _$SevenTVEventUpdatedEmoteFromJson(json);
+  factory SevenTVEventUpdatedEmote.fromJson(Map<String, dynamic> json) => _$SevenTVEventUpdatedEmoteFromJson(json);
 }
 
 @JsonSerializable(createToJson: false)
@@ -50,12 +47,7 @@ class SevenTVEventEmoteSetBody {
   final List<SevenTVEventUpdatedEmote>? pushed;
   final List<SevenTVEventUpdatedEmote>? pulled;
 
-  const SevenTVEventEmoteSetBody({
-    required this.actor,
-    this.pushed,
-    this.pulled,
-  });
+  const SevenTVEventEmoteSetBody({required this.actor, this.pushed, this.pulled});
 
-  factory SevenTVEventEmoteSetBody.fromJson(Map<String, dynamic> json) =>
-      _$SevenTVEventEmoteSetBodyFromJson(json);
+  factory SevenTVEventEmoteSetBody.fromJson(Map<String, dynamic> json) => _$SevenTVEventEmoteSetBodyFromJson(json);
 }

@@ -22,9 +22,7 @@ class SettingsListSelect extends StatelessWidget {
     return ListTile(
       title: title != null ? Text(title!) : null,
       subtitle: Padding(
-        padding: title != null
-            ? const EdgeInsets.symmetric(vertical: 8)
-            : EdgeInsets.zero,
+        padding: title != null ? const EdgeInsets.symmetric(vertical: 8) : EdgeInsets.zero,
         child: SegmentedButton(
           style: const ButtonStyle(visualDensity: VisualDensity.compact),
           segments: options

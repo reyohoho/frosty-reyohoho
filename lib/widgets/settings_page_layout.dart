@@ -40,7 +40,7 @@ class _SettingsPageLayoutState extends State<SettingsPageLayout> {
     // Get the original view padding (unaffected by MediaQuery.removePadding)
     final view = View.of(context);
     final topPadding = view.padding.top / view.devicePixelRatio;
-    
+
     // Calculate header height dynamically: status bar + toolbar
     final headerHeight = topPadding + kToolbarHeight;
 
@@ -48,7 +48,7 @@ class _SettingsPageLayoutState extends State<SettingsPageLayout> {
       top: headerHeight + 8,
       bottom: widget.hasBottomPadding ? context.safePaddingBottom + 8 : 0,
     );
-    
+
     final borderTop = headerHeight;
 
     final content = Stack(
@@ -58,9 +58,7 @@ class _SettingsPageLayoutState extends State<SettingsPageLayout> {
           padding: EdgeInsets.only(top: borderTop.toDouble()),
           child: ListView(
             controller: _scrollController,
-            padding: widget.additionalPadding != null
-                ? widget.additionalPadding!.add(listPadding)
-                : listPadding,
+            padding: widget.additionalPadding != null ? widget.additionalPadding!.add(listPadding) : listPadding,
             children: widget.children,
           ),
         ),
@@ -75,10 +73,7 @@ class _SettingsPageLayoutState extends State<SettingsPageLayout> {
 
     // Conditionally wrap with RefreshIndicator if onRefresh is provided
     if (widget.onRefresh != null) {
-      return RefreshIndicator.adaptive(
-        onRefresh: widget.onRefresh!,
-        child: content,
-      );
+      return RefreshIndicator.adaptive(onRefresh: widget.onRefresh!, child: content);
     }
 
     return content;

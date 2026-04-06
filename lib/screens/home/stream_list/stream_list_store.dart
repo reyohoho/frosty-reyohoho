@@ -48,10 +48,7 @@ abstract class ListStoreBase with Store {
 
   @computed
   bool get isLoading =>
-      _isAllStreamsLoading ||
-      _isPinnedStreamsLoading ||
-      _isCategoryDetailsLoading ||
-      _isOfflineChannelsLoading;
+      _isAllStreamsLoading || _isPinnedStreamsLoading || _isCategoryDetailsLoading || _isOfflineChannelsLoading;
 
   /// The loading status for pagination.
 
@@ -83,8 +80,7 @@ abstract class ListStoreBase with Store {
 
   /// Whether or not there are more offline channels for pagination.
   @computed
-  bool get hasMoreOfflineChannels =>
-      _isOfflineChannelsLoading == false && _offlineChannelsCursor != null;
+  bool get hasMoreOfflineChannels => _isOfflineChannelsLoading == false && _offlineChannelsCursor != null;
 
   /// Whether or not the scroll to top button is visible.
   @observable
@@ -98,9 +94,8 @@ abstract class ListStoreBase with Store {
   @computed
   ObservableList<StreamTwitch> get streams => _allStreams
       .where(
-        (streamInfo) => !authStore.user.blockedUsers
-            .map((blockedUser) => blockedUser.userId)
-            .contains(streamInfo.userId),
+        (streamInfo) =>
+            !authStore.user.blockedUsers.map((blockedUser) => blockedUser.userId).contains(streamInfo.userId),
       )
       .toList()
       .asObservable();
@@ -108,14 +103,10 @@ abstract class ListStoreBase with Store {
   /// All pinned channels (only live streams).
   @computed
   List<dynamic> get allPinnedChannels {
-    final blockedUserIds = authStore.user.blockedUsers
-        .map((blockedUser) => blockedUser.userId)
-        .toSet();
+    final blockedUserIds = authStore.user.blockedUsers.map((blockedUser) => blockedUser.userId).toSet();
 
     // Get live pinned streams only
-    return _pinnedStreams
-        .where((stream) => !blockedUserIds.contains(stream.userId))
-        .toList();
+    return _pinnedStreams.where((stream) => !blockedUserIds.contains(stream.userId)).toList();
   }
 
   /// The list of offline followed channels with blocked users filtered out
@@ -124,9 +115,7 @@ abstract class ListStoreBase with Store {
   ObservableList<FollowedChannel> get offlineChannels {
     final liveChannelIds = streams.map((stream) => stream.userId).toSet();
     final pinnedChannelIds = settingsStore.pinnedChannelIds.toSet();
-    final blockedUserIds = authStore.user.blockedUsers
-        .map((blockedUser) => blockedUser.userId)
-        .toSet();
+    final blockedUserIds = authStore.user.blockedUsers.map((blockedUser) => blockedUser.userId).toSet();
 
     return _allOfflineChannels
         .where(
@@ -156,8 +145,7 @@ abstract class ListStoreBase with Store {
   }) {
     if (scrollController != null) {
       scrollController!.addListener(() {
-        if (scrollController!.position.atEdge ||
-            scrollController!.position.outOfRange) {
+        if (scrollController!.position.atEdge || scrollController!.position.outOfRange) {
           showJumpButton = false;
         } else {
           showJumpButton = true;
@@ -166,29 +154,23 @@ abstract class ListStoreBase with Store {
     }
 
     if (listType == ListType.followed) {
-      _pinnedStreamsReactioniDisposer = reaction(
-        (_) => settingsStore.pinnedChannelIds,
-        (_) => getPinnedStreams(),
-      );
+      _pinnedStreamsReactioniDisposer = reaction((_) => settingsStore.pinnedChannelIds, (_) => getPinnedStreams());
 
       getPinnedStreams();
 
       // Fetch offline channels only when expanded
-      _offlineChannelsExpansionDisposer = reaction(
-        (_) => isOfflineChannelsExpanded,
-        (expanded) {
-          if (expanded) {
-            // Fetch offline channels when expanded (only if not already loaded)
-            if (_allOfflineChannels.isEmpty) {
-              getOfflineChannels();
-            }
-          } else {
-            // Clear offline channels when collapsed to save memory
-            _allOfflineChannels.clear();
-            _offlineChannelsCursor = null;
+      _offlineChannelsExpansionDisposer = reaction((_) => isOfflineChannelsExpanded, (expanded) {
+        if (expanded) {
+          // Fetch offline channels when expanded (only if not already loaded)
+          if (_allOfflineChannels.isEmpty) {
+            getOfflineChannels();
           }
-        },
-      );
+        } else {
+          // Clear offline channels when collapsed to save memory
+          _allOfflineChannels.clear();
+          _offlineChannelsCursor = null;
+        }
+      });
     }
 
     if (listType == ListType.category) {
@@ -207,19 +189,13 @@ abstract class ListStoreBase with Store {
       final StreamsTwitch newStreams;
       switch (listType) {
         case ListType.followed:
-          newStreams = await twitchApi.getFollowedStreams(
-            id: authStore.user.details!.id,
-            cursor: _streamsCursor,
-          );
+          newStreams = await twitchApi.getFollowedStreams(id: authStore.user.details!.id, cursor: _streamsCursor);
           break;
         case ListType.top:
           newStreams = await twitchApi.getTopStreams(cursor: _streamsCursor);
           break;
         case ListType.category:
-          newStreams = await twitchApi.getStreamsUnderCategory(
-            gameId: categoryId!,
-            cursor: _streamsCursor,
-          );
+          newStreams = await twitchApi.getStreamsUnderCategory(gameId: categoryId!, cursor: _streamsCursor);
           break;
       }
 
@@ -255,9 +231,7 @@ abstract class ListStoreBase with Store {
     _isPinnedStreamsLoading = true;
 
     try {
-      _pinnedStreams = (await twitchApi.getStreamsByIds(
-        userIds: settingsStore.pinnedChannelIds,
-      )).data.asObservable();
+      _pinnedStreams = (await twitchApi.getStreamsByIds(userIds: settingsStore.pinnedChannelIds)).data.asObservable();
 
       _error = null;
     } on SocketException {

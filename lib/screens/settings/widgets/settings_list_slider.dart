@@ -30,12 +30,7 @@ class SettingsListSlider extends StatelessWidget {
         children: [
           Text(title),
           const Spacer(),
-          Text(
-            trailing,
-            style: const TextStyle(
-              fontFeatures: [FontFeature.tabularFigures()],
-            ),
-          ),
+          Text(trailing, style: const TextStyle(fontFeatures: [FontFeature.tabularFigures()])),
         ],
       ),
       subtitle: Padding(
@@ -44,13 +39,7 @@ class SettingsListSlider extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Slider.adaptive(
-              value: value,
-              min: min,
-              max: max,
-              divisions: divisions,
-              onChanged: onChanged,
-            ),
+            Slider.adaptive(value: value, min: min, max: max, divisions: divisions, onChanged: onChanged),
             if (subtitle != null) Text(subtitle!),
           ],
         ),

@@ -20,12 +20,9 @@ class ChatTabs extends StatelessWidget {
 
   Future<void> _handleAddChat(BuildContext context) async {
     if (!chatTabsStore.canAddTab) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Maximum 10 chats open'),
-          duration: Duration(seconds: 2),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Maximum 10 chats open'), duration: Duration(seconds: 2)));
       return;
     }
 
@@ -41,10 +38,7 @@ class ChatTabs extends StatelessWidget {
       if (!added && context.mounted) {
         // If not added, it means the channel already exists (switched to it)
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Channel already open, switched to it'),
-            duration: Duration(seconds: 2),
-          ),
+          const SnackBar(content: Text('Channel already open, switched to it'), duration: Duration(seconds: 2)),
         );
       }
     }
@@ -129,18 +123,13 @@ class ChatTabs extends StatelessWidget {
                         chatTabsStore.reorderTab(oldIndex, newIndex);
                       },
                       proxyDecorator: (child, index, animation) {
-                        return Material(
-                          color: Colors.transparent,
-                          child: child,
-                        );
+                        return Material(color: Colors.transparent, child: child);
                       },
                       itemBuilder: (context, index) {
                         final tabInfo = chatTabsStore.tabs[index];
                         return Padding(
                           key: ValueKey(tabInfo.channelId),
-                          padding: EdgeInsets.only(
-                            right: index < tabs.length - 1 ? 4 : 0,
-                          ),
+                          padding: EdgeInsets.only(right: index < tabs.length - 1 ? 4 : 0),
                           child: _buildTab(context, index),
                         );
                       },
@@ -154,25 +143,15 @@ class ChatTabs extends StatelessWidget {
     );
   }
 
-  Future<void> _confirmRemoveTab(
-    BuildContext context,
-    int index,
-    String displayName,
-  ) async {
+  Future<void> _confirmRemoveTab(BuildContext context, int index, String displayName) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => FrostyDialog(
         title: 'Remove $displayName',
         message: "Are you sure you want to remove $displayName's chat tab?",
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Remove'),
-          ),
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Remove')),
         ],
       ),
     );
@@ -187,10 +166,7 @@ class ChatTabs extends StatelessWidget {
     final tabInfo = chatTabsStore.tabs[index];
     final isActive = index == chatTabsStore.activeTabIndex;
     final isActivated = tabInfo.isActivated;
-    final displayName = getReadableName(
-      tabInfo.displayName,
-      tabInfo.channelLogin,
-    );
+    final displayName = getReadableName(tabInfo.displayName, tabInfo.channelLogin);
 
     final avatar = ProfilePicture(userLogin: tabInfo.channelLogin, radius: 12);
 
@@ -200,11 +176,7 @@ class ChatTabs extends StatelessWidget {
         displayName,
         style: isActivated
             ? null
-            : TextStyle(
-                color: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.color?.withValues(alpha: 0.5),
-              ),
+            : TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.5)),
       ),
       selected: isActive,
       showCheckmark: false,
@@ -216,9 +188,7 @@ class ChatTabs extends StatelessWidget {
           chatTabsStore.setActiveTab(index);
         }
       },
-      onDeleted: tabInfo.isPrimary
-          ? null
-          : () => _confirmRemoveTab(context, index, displayName),
+      onDeleted: tabInfo.isPrimary ? null : () => _confirmRemoveTab(context, index, displayName),
       deleteButtonTooltipMessage: 'Close chat',
     );
   }

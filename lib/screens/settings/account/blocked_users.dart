@@ -21,9 +21,7 @@ class BlockedUsers extends StatelessWidget {
               HapticFeedback.lightImpact();
               await authStore.user.refreshBlockedUsers();
             },
-            child: const Center(
-              child: AlertMessage(message: 'No blocked users', vertical: true),
-            ),
+            child: const Center(child: AlertMessage(message: 'No blocked users', vertical: true)),
           );
         }
 
@@ -34,20 +32,14 @@ class BlockedUsers extends StatelessWidget {
             await authStore.user.refreshBlockedUsers();
           },
           children: authStore.user.blockedUsers.map((blockedUser) {
-            final displayName = getReadableName(
-              blockedUser.displayName,
-              blockedUser.userLogin,
-            );
+            final displayName = getReadableName(blockedUser.displayName, blockedUser.userLogin);
 
             return ListTile(
               title: Text(displayName),
               trailing: TextButton(
                 style: TextButton.styleFrom(foregroundColor: Colors.red),
-                onPressed: () => authStore.showBlockDialog(
-                  context,
-                  targetUser: displayName,
-                  targetUserId: blockedUser.userId,
-                ),
+                onPressed: () =>
+                    authStore.showBlockDialog(context, targetUser: displayName, targetUserId: blockedUser.userId),
                 child: const Text('Unblock'),
               ),
             );

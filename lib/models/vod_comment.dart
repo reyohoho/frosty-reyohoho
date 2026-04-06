@@ -31,11 +31,7 @@ class VodCommenter {
   final String login;
   final String displayName;
 
-  const VodCommenter({
-    required this.id,
-    required this.login,
-    required this.displayName,
-  });
+  const VodCommenter({required this.id, required this.login, required this.displayName});
 
   factory VodCommenter.fromJson(Map<String, dynamic> json) {
     return VodCommenter(
@@ -52,23 +48,15 @@ class VodCommentMessage {
   final List<VodUserBadge> userBadges;
   final String? userColor;
 
-  const VodCommentMessage({
-    required this.fragments,
-    required this.userBadges,
-    this.userColor,
-  });
+  const VodCommentMessage({required this.fragments, required this.userBadges, this.userColor});
 
   factory VodCommentMessage.fromJson(Map<String, dynamic> json) {
     final fragmentsList = json['fragments'] as List<dynamic>;
     final badgesList = json['userBadges'] as List<dynamic>;
 
     return VodCommentMessage(
-      fragments: fragmentsList
-          .map((f) => VodMessageFragment.fromJson(f as Map<String, dynamic>))
-          .toList(),
-      userBadges: badgesList
-          .map((b) => VodUserBadge.fromJson(b as Map<String, dynamic>))
-          .toList(),
+      fragments: fragmentsList.map((f) => VodMessageFragment.fromJson(f as Map<String, dynamic>)).toList(),
+      userBadges: badgesList.map((b) => VodUserBadge.fromJson(b as Map<String, dynamic>)).toList(),
       userColor: json['userColor'] as String?,
     );
   }
@@ -82,18 +70,13 @@ class VodMessageFragment {
   final String text;
   final VodEmote? emote;
 
-  const VodMessageFragment({
-    required this.text,
-    this.emote,
-  });
+  const VodMessageFragment({required this.text, this.emote});
 
   factory VodMessageFragment.fromJson(Map<String, dynamic> json) {
     final emoteData = json['emote'];
     return VodMessageFragment(
       text: json['text'] as String,
-      emote: emoteData != null
-          ? VodEmote.fromJson(emoteData as Map<String, dynamic>)
-          : null,
+      emote: emoteData != null ? VodEmote.fromJson(emoteData as Map<String, dynamic>) : null,
     );
   }
 }
@@ -103,16 +86,10 @@ class VodEmote {
   final String id;
   final String emoteID;
 
-  const VodEmote({
-    required this.id,
-    required this.emoteID,
-  });
+  const VodEmote({required this.id, required this.emoteID});
 
   factory VodEmote.fromJson(Map<String, dynamic> json) {
-    return VodEmote(
-      id: json['id'] as String,
-      emoteID: json['emoteID'] as String,
-    );
+    return VodEmote(id: json['id'] as String, emoteID: json['emoteID'] as String);
   }
 
   /// Returns URL for the emote image
@@ -127,18 +104,10 @@ class VodUserBadge {
   final String setID;
   final String version;
 
-  const VodUserBadge({
-    required this.id,
-    required this.setID,
-    required this.version,
-  });
+  const VodUserBadge({required this.id, required this.setID, required this.version});
 
   factory VodUserBadge.fromJson(Map<String, dynamic> json) {
-    return VodUserBadge(
-      id: json['id'] as String,
-      setID: json['setID'] as String,
-      version: json['version'] as String,
-    );
+    return VodUserBadge(id: json['id'] as String, setID: json['setID'] as String, version: json['version'] as String);
   }
 }
 
@@ -161,33 +130,22 @@ class VodCommentsResponse {
   factory VodCommentsResponse.fromJson(Map<String, dynamic> json) {
     final video = json['data']?['video'];
     if (video == null) {
-      return const VodCommentsResponse(
-        comments: [],
-        hasNextPage: false,
-        hasPreviousPage: false,
-      );
+      return const VodCommentsResponse(comments: [], hasNextPage: false, hasPreviousPage: false);
     }
 
     final commentsData = video['comments'];
     if (commentsData == null) {
-      return const VodCommentsResponse(
-        comments: [],
-        hasNextPage: false,
-        hasPreviousPage: false,
-      );
+      return const VodCommentsResponse(comments: [], hasNextPage: false, hasPreviousPage: false);
     }
 
     final edges = commentsData['edges'] as List<dynamic>;
     final pageInfo = commentsData['pageInfo'] as Map<String, dynamic>;
 
     return VodCommentsResponse(
-      comments: edges
-          .map((e) => VodComment.fromJson(e['node'] as Map<String, dynamic>))
-          .toList(),
+      comments: edges.map((e) => VodComment.fromJson(e['node'] as Map<String, dynamic>)).toList(),
       hasNextPage: pageInfo['hasNextPage'] as bool? ?? false,
       hasPreviousPage: pageInfo['hasPreviousPage'] as bool? ?? false,
       cursor: pageInfo['endCursor'] as String?,
     );
   }
 }
-

@@ -19,11 +19,7 @@ class AddChatResult {
   final String channelLogin;
   final String displayName;
 
-  const AddChatResult({
-    required this.channelId,
-    required this.channelLogin,
-    required this.displayName,
-  });
+  const AddChatResult({required this.channelId, required this.channelLogin, required this.displayName});
 }
 
 /// Bottom sheet for adding a new chat tab by searching for a Twitch channel.
@@ -33,10 +29,7 @@ class AddChatSheet extends StatefulWidget {
   const AddChatSheet({super.key, required this.twitchApi});
 
   /// Shows the bottom sheet and returns the selected channel info, or null if cancelled.
-  static Future<AddChatResult?> show(
-    BuildContext context,
-    TwitchApi twitchApi,
-  ) {
+  static Future<AddChatResult?> show(BuildContext context, TwitchApi twitchApi) {
     return showModalBottomSheetWithProperFocus<AddChatResult>(
       context: context,
       isScrollControlled: true,
@@ -117,11 +110,7 @@ class _AddChatSheetState extends State<AddChatSheet> {
 
   void _selectChannel(ChannelQuery channel) {
     Navigator.of(context).pop(
-      AddChatResult(
-        channelId: channel.id,
-        channelLogin: channel.broadcasterLogin,
-        displayName: channel.displayName,
-      ),
+      AddChatResult(channelId: channel.id, channelLogin: channel.broadcasterLogin, displayName: channel.displayName),
     );
   }
 
@@ -144,12 +133,9 @@ class _AddChatSheetState extends State<AddChatSheet> {
                 decoration: InputDecoration(
                   prefixIcon: const Icon(Icons.search_rounded),
                   hintText: 'Search for a channel',
-                  suffixIcon:
-                      _focusNode.hasFocus || _textController.text.isNotEmpty
+                  suffixIcon: _focusNode.hasFocus || _textController.text.isNotEmpty
                       ? IconButton(
-                          tooltip: _textController.text.isEmpty
-                              ? 'Cancel'
-                              : 'Clear',
+                          tooltip: _textController.text.isEmpty ? 'Cancel' : 'Clear',
                           onPressed: () {
                             if (_textController.text.isEmpty) {
                               _focusNode.unfocus();
@@ -180,9 +166,7 @@ class _AddChatSheetState extends State<AddChatSheet> {
           padding: const EdgeInsets.all(24),
           child: Text(
             'Search for a channel to add',
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
           ),
         ),
       );
@@ -209,12 +193,7 @@ class _AddChatSheetState extends State<AddChatSheet> {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: Text(
-            'No channels found',
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-          ),
+          child: Text('No channels found', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
         ),
       );
     }
@@ -225,16 +204,10 @@ class _AddChatSheetState extends State<AddChatSheet> {
       itemCount: _results.length,
       itemBuilder: (context, index) {
         final channel = _results[index];
-        final displayName = getReadableName(
-          channel.displayName,
-          channel.broadcasterLogin,
-        );
+        final displayName = getReadableName(channel.displayName, channel.broadcasterLogin);
 
         return ListTile(
-          leading: ProfilePicture(
-            userLogin: channel.broadcasterLogin,
-            radius: 16,
-          ),
+          leading: ProfilePicture(userLogin: channel.broadcasterLogin, radius: 16),
           title: Text(displayName),
           subtitle: channel.isLive
               ? Row(

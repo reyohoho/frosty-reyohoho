@@ -8,13 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// Determines the type of link preview to display.
-enum LinkPreviewType {
-  image,
-  video,
-  sevenTVEmote,
-  imgur,
-  kappaLol,
-}
+enum LinkPreviewType { image, video, sevenTVEmote, imgur, kappaLol }
 
 /// Information about a link that can be previewed.
 class LinkPreviewInfo {
@@ -23,12 +17,7 @@ class LinkPreviewInfo {
   final String displayUrl;
   final String? id;
 
-  const LinkPreviewInfo({
-    required this.type,
-    required this.originalUrl,
-    required this.displayUrl,
-    this.id,
-  });
+  const LinkPreviewInfo({required this.type, required this.originalUrl, required this.displayUrl, this.id});
 }
 
 /// Checks if a URL should be proxied for link previews.
@@ -83,20 +72,12 @@ LinkPreviewInfo? detectLinkPreview(String text) {
 
   // Check direct image URLs
   if (regexImageUrl.hasMatch(text)) {
-    return LinkPreviewInfo(
-      type: LinkPreviewType.image,
-      originalUrl: text,
-      displayUrl: text,
-    );
+    return LinkPreviewInfo(type: LinkPreviewType.image, originalUrl: text, displayUrl: text);
   }
 
   // Check direct video URLs
   if (regexVideoUrl.hasMatch(text)) {
-    return LinkPreviewInfo(
-      type: LinkPreviewType.video,
-      originalUrl: text,
-      displayUrl: text,
-    );
+    return LinkPreviewInfo(type: LinkPreviewType.video, originalUrl: text, displayUrl: text);
   }
 
   return null;
@@ -176,15 +157,10 @@ class _ImagePreview extends StatelessWidget {
       ),
       onLongPress: () => launchUrl(
         Uri.parse(originalUrl),
-        mode: launchExternal
-            ? LaunchMode.externalApplication
-            : LaunchMode.inAppBrowserView,
+        mode: launchExternal ? LaunchMode.externalApplication : LaunchMode.inAppBrowserView,
       ),
       child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxWidth: maxWidth,
-          maxHeight: maxHeight,
-        ),
+        constraints: BoxConstraints(maxWidth: maxWidth, maxHeight: maxHeight),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(8),
           child: CachedNetworkImage(
@@ -200,11 +176,7 @@ class _ImagePreview extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Center(
-                child: SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
+                child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2)),
               ),
             ),
             errorWidget: (context, url, error) => const SizedBox.shrink(),
@@ -234,15 +206,10 @@ class _VideoPreviewPlaceholder extends StatelessWidget {
     return GestureDetector(
       onTap: () => launchUrl(
         Uri.parse(videoUrl),
-        mode: launchExternal
-            ? LaunchMode.externalApplication
-            : LaunchMode.inAppBrowserView,
+        mode: launchExternal ? LaunchMode.externalApplication : LaunchMode.inAppBrowserView,
       ),
       child: Container(
-        constraints: BoxConstraints(
-          maxWidth: maxWidth,
-          maxHeight: 60,
-        ),
+        constraints: BoxConstraints(maxWidth: maxWidth, maxHeight: 60),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surfaceContainerHighest,
@@ -251,11 +218,7 @@ class _VideoPreviewPlaceholder extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.play_circle_outline,
-              color: Theme.of(context).colorScheme.primary,
-              size: 28,
-            ),
+            Icon(Icons.play_circle_outline, color: Theme.of(context).colorScheme.primary, size: 28),
             const SizedBox(width: 8),
             Flexible(
               child: Column(
@@ -264,19 +227,13 @@ class _VideoPreviewPlaceholder extends StatelessWidget {
                 children: [
                   Text(
                     'Video',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w500,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.w500, color: Theme.of(context).colorScheme.onSurface),
                   ),
                   Text(
                     'Tap to open',
                     style: TextStyle(
                       fontSize: 12,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.6),
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
                 ],

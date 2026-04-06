@@ -20,28 +20,23 @@ class ApiException implements Exception {
 }
 
 class NetworkException extends ApiException {
-  const NetworkException(String message)
-    : super(message, null, DioExceptionType.connectionError);
+  const NetworkException(String message) : super(message, null, DioExceptionType.connectionError);
 }
 
 class TimeoutException extends ApiException {
-  const TimeoutException(String message)
-    : super(message, null, DioExceptionType.connectionTimeout);
+  const TimeoutException(String message) : super(message, null, DioExceptionType.connectionTimeout);
 }
 
 class ServerException extends ApiException {
-  const ServerException(String message, int statusCode)
-    : super(message, statusCode, DioExceptionType.badResponse);
+  const ServerException(String message, int statusCode) : super(message, statusCode, DioExceptionType.badResponse);
 }
 
 class NotFoundException extends ApiException {
-  const NotFoundException(String message)
-    : super(message, 404, DioExceptionType.badResponse);
+  const NotFoundException(String message) : super(message, 404, DioExceptionType.badResponse);
 }
 
 class UnauthorizedException extends ApiException {
-  const UnauthorizedException(String message)
-    : super(message, 401, DioExceptionType.badResponse);
+  const UnauthorizedException(String message) : super(message, 401, DioExceptionType.badResponse);
 }
 
 /// Base API client to eliminate code duplication across API services
@@ -173,9 +168,7 @@ abstract class BaseApiClient {
 
   /// Check if response indicates success (useful for status-only operations)
   bool isSuccessResponse(Response response) {
-    return response.statusCode != null &&
-        response.statusCode! >= 200 &&
-        response.statusCode! < 300;
+    return response.statusCode != null && response.statusCode! >= 200 && response.statusCode! < 300;
   }
 
   /// Converts DioException to appropriate ApiException subtype
@@ -187,9 +180,7 @@ abstract class BaseApiClient {
         return TimeoutException(_getTimeoutMessage(error.type));
 
       case DioExceptionType.connectionError:
-        return NetworkException(
-          'No internet connection. Please check your network.',
-        );
+        return NetworkException('No internet connection. Please check your network.');
 
       case DioExceptionType.badResponse:
         return _handleHttpError(error);
@@ -247,25 +238,17 @@ abstract class BaseApiClient {
       case 422:
         return ApiException(serverMessage ?? 'Invalid data provided');
       case 429:
-        return ApiException(
-          'Rate limit exceeded. Please wait before trying again',
-        );
+        return ApiException('Rate limit exceeded. Please wait before trying again');
       case 500:
         return ServerException('Server error. Please try again later', 500);
       case 502:
         return ServerException('Service temporarily unavailable', 502);
       case 503:
-        return ServerException(
-          'Service maintenance. Please try again later',
-          503,
-        );
+        return ServerException('Service maintenance. Please try again later', 503);
       case 504:
         return ServerException('Server timeout. Please try again', 504);
       default:
-        return ServerException(
-          serverMessage ?? 'HTTP Error $statusCode occurred',
-          statusCode ?? 500,
-        );
+        return ServerException(serverMessage ?? 'HTTP Error $statusCode occurred', statusCode ?? 500);
     }
   }
 }

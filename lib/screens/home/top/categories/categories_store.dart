@@ -50,9 +50,7 @@ abstract class CategoriesStoreBase with Store {
     _isLoading = true;
 
     try {
-      final result = await twitchApi.getTopCategories(
-        cursor: _categoriesCursor,
-      );
+      final result = await twitchApi.getTopCategories(cursor: _categoriesCursor);
 
       if (_categoriesCursor == null) {
         _categories = result.data.asObservable();

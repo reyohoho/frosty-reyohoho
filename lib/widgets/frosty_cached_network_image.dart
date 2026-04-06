@@ -6,11 +6,7 @@ import 'package:provider/provider.dart';
 
 /// CDN domains that should be proxied when emote proxy is enabled.
 /// Includes emotes and badges from BTTV, FFZ, and 7TV.
-const emoteProxyCdnDomains = [
-  'cdn.betterttv.net',
-  'cdn.frankerfacez.com',
-  'cdn.7tv.app',
-];
+const emoteProxyCdnDomains = ['cdn.betterttv.net', 'cdn.frankerfacez.com', 'cdn.7tv.app'];
 
 /// Checks if the URL belongs to a third-party emote/badge CDN.
 bool isEmoteCdnUrl(String url) {
@@ -75,12 +71,8 @@ class FrostyCachedNetworkImage extends StatelessWidget {
       colorBlendMode: colorBlendMode,
       placeholder: placeholder,
       useOldImageOnUrlChange: useOldImageOnUrlChange,
-      fadeOutDuration: useFade
-          ? const Duration(milliseconds: 500)
-          : Duration.zero,
-      fadeInDuration: useFade
-          ? const Duration(milliseconds: 500)
-          : Duration.zero,
+      fadeOutDuration: useFade ? const Duration(milliseconds: 500) : Duration.zero,
+      fadeInDuration: useFade ? const Duration(milliseconds: 500) : Duration.zero,
       fadeInCurve: Curves.easeOut,
       fadeOutCurve: Curves.easeIn,
       fit: fit,

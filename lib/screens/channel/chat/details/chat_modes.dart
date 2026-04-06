@@ -154,25 +154,14 @@ class ChatModes extends StatelessWidget {
     String? duration,
   }) {
     return Chip(
-      avatar: Icon(
-        isActive ? activeIcon : icon,
-        size: 16,
-        color: isActive ? activeColor : null,
-      ),
+      avatar: Icon(isActive ? activeIcon : icon, size: 16, color: isActive ? activeColor : null),
       label: duration != null
           ? Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(isActive ? activeLabel : label),
                 const SizedBox(width: 4),
-                Text(
-                  duration,
-                  style: TextStyle(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.6),
-                  ),
-                ),
+                Text(duration, style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6))),
               ],
             )
           : Text(isActive ? activeLabel : label),

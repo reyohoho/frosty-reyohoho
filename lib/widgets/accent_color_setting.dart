@@ -18,23 +18,16 @@ class AccentColorSetting extends StatelessWidget {
             position: DecorationPosition.foreground,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(
-                color: Theme.of(context).colorScheme.onSurface,
-                width: 2,
-              ),
+              border: Border.all(color: Theme.of(context).colorScheme.onSurface, width: 2),
             ),
-            child: CircleAvatar(
-              backgroundColor: Color(settingsStore.accentColor),
-              radius: 16,
-            ),
+            child: CircleAvatar(backgroundColor: Color(settingsStore.accentColor), radius: 16),
           ),
           onPressed: () {
             showDialog(
               context: context,
               builder: (context) => AccentColorPickerDialog(
                 initialColor: Color(settingsStore.accentColor),
-                onColorChanged: (newColor) =>
-                    settingsStore.accentColor = newColor.toARGB32(),
+                onColorChanged: (newColor) => settingsStore.accentColor = newColor.toARGB32(),
               ),
             );
           },

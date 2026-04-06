@@ -50,9 +50,7 @@ class _ReleaseNotesState extends State<ReleaseNotes> {
         surfaceTintColor: Colors.transparent,
         systemOverlayStyle: SystemUiOverlayStyle(
           statusBarColor: Colors.transparent,
-          statusBarIconBrightness: theme.brightness == Brightness.dark
-              ? Brightness.light
-              : Brightness.dark,
+          statusBarIconBrightness: theme.brightness == Brightness.dark ? Brightness.light : Brightness.dark,
         ),
         leading: IconButton(
           tooltip: 'Back',
@@ -67,32 +65,20 @@ class _ReleaseNotesState extends State<ReleaseNotes> {
           Positioned.fill(
             child: FrostyScrollbar(
               controller: _scrollController,
-              padding: EdgeInsets.only(
-                top: MediaQuery.of(context).padding.top + kToolbarHeight,
-              ),
+              padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top + kToolbarHeight),
               child: Markdown(
-                padding: EdgeInsets.fromLTRB(
-                  16,
-                  MediaQuery.of(context).padding.top + kToolbarHeight,
-                  16,
-                  16,
-                ),
+                padding: EdgeInsets.fromLTRB(16, MediaQuery.of(context).padding.top + kToolbarHeight, 16, 16),
                 controller: _scrollController,
                 data: releaseNotes,
                 styleSheet: MarkdownStyleSheet(
                   h2: const TextStyle(fontSize: 20),
-                  h3: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  h3: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   h3Padding: const EdgeInsets.only(top: 16),
                   h4: const TextStyle(fontSize: 14),
                   h4Padding: const EdgeInsets.only(top: 16),
                   p: const TextStyle(fontSize: 14),
                   horizontalRuleDecoration: const BoxDecoration(
-                    border: Border(
-                      top: BorderSide(color: Colors.transparent, width: 32),
-                    ),
+                    border: Border(top: BorderSide(color: Colors.transparent, width: 32)),
                   ),
                 ),
                 onTapLink: (text, href, title) {

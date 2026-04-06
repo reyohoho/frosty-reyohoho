@@ -83,9 +83,7 @@ abstract class VodListStoreBase with Store {
       return _videos.toList();
     }
     final query = searchQuery.toLowerCase();
-    return _videos
-        .where((video) => video.title.toLowerCase().contains(query))
-        .toList();
+    return _videos.where((video) => video.title.toLowerCase().contains(query)).toList();
   }
 
   /// Fetches videos from the API
@@ -165,4 +163,3 @@ abstract class VodListStoreBase with Store {
     await fetchVideos(refresh: true);
   }
 }
-

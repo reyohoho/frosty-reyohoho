@@ -4,31 +4,18 @@ import 'package:frosty/models/emotes.dart';
 void main() {
   group('Emote.fromTwitch', () {
     test('creates emote with correct URL', () {
-      final twitchEmote = EmoteTwitch(
-        '25',
-        'Kappa',
-        'bitstier',
-        null,
-      );
+      final twitchEmote = EmoteTwitch('25', 'Kappa', 'bitstier', null);
 
       final emote = Emote.fromTwitch(twitchEmote, EmoteType.twitchGlobal);
 
-      expect(
-        emote.url,
-        'https://static-cdn.jtvnw.net/emoticons/v2/25/default/dark/3.0',
-      );
+      expect(emote.url, 'https://static-cdn.jtvnw.net/emoticons/v2/25/default/dark/3.0');
       expect(emote.name, 'Kappa');
       expect(emote.type, EmoteType.twitchGlobal);
       expect(emote.zeroWidth, isFalse);
     });
 
     test('preserves owner ID when provided', () {
-      final twitchEmote = EmoteTwitch(
-        '12345',
-        'SubEmote',
-        'subscriptions',
-        '67890',
-      );
+      final twitchEmote = EmoteTwitch('12345', 'SubEmote', 'subscriptions', '67890');
 
       final emote = Emote.fromTwitch(twitchEmote, EmoteType.twitchSub);
 
@@ -111,11 +98,7 @@ void main() {
         28,
         28,
         const OwnerFFZ(displayName: 'Owner', name: 'owner'),
-        const ImagesFFZ(
-          'https://cdn.ffz.net/1x.png',
-          'https://cdn.ffz.net/2x.png',
-          'https://cdn.ffz.net/4x.png',
-        ),
+        const ImagesFFZ('https://cdn.ffz.net/1x.png', 'https://cdn.ffz.net/2x.png', 'https://cdn.ffz.net/4x.png'),
         null, // No animation
       );
 
@@ -226,19 +209,16 @@ void main() {
           'TestEmote',
           0, // No flags
           const Owner7TV(username: 'owner', displayName: 'Owner'),
-          Emote7TVHost(
-            '//cdn.7tv.app/emote/7tvid123',
-            [
-              Emote7TVFile('1x.webp', 32, 32, 'WEBP'),
-              Emote7TVFile('2x.webp', 64, 64, 'WEBP'),
-              Emote7TVFile('3x.webp', 96, 96, 'WEBP'),
-              Emote7TVFile('4x.webp', 128, 128, 'WEBP'),
-              Emote7TVFile('1x.avif', 32, 32, 'AVIF'),
-              Emote7TVFile('2x.avif', 64, 64, 'AVIF'),
-              Emote7TVFile('3x.avif', 96, 96, 'AVIF'),
-              Emote7TVFile('4x.avif', 128, 128, 'AVIF'),
-            ],
-          ),
+          Emote7TVHost('//cdn.7tv.app/emote/7tvid123', [
+            Emote7TVFile('1x.webp', 32, 32, 'WEBP'),
+            Emote7TVFile('2x.webp', 64, 64, 'WEBP'),
+            Emote7TVFile('3x.webp', 96, 96, 'WEBP'),
+            Emote7TVFile('4x.webp', 128, 128, 'WEBP'),
+            Emote7TVFile('1x.avif', 32, 32, 'AVIF'),
+            Emote7TVFile('2x.avif', 64, 64, 'AVIF'),
+            Emote7TVFile('3x.avif', 96, 96, 'AVIF'),
+            Emote7TVFile('4x.avif', 128, 128, 'AVIF'),
+          ]),
         ),
       );
 
@@ -259,10 +239,7 @@ void main() {
           'ZeroWidth',
           256, // Bit 8 set = zero-width
           null,
-          Emote7TVHost(
-            '//cdn.7tv.app/emote/zw123',
-            [Emote7TVFile('1x.webp', 32, 32, 'WEBP')],
-          ),
+          Emote7TVHost('//cdn.7tv.app/emote/zw123', [Emote7TVFile('1x.webp', 32, 32, 'WEBP')]),
         ),
       );
 
@@ -280,10 +257,7 @@ void main() {
           'RegularEmote',
           128, // Different flag, not 256
           null,
-          Emote7TVHost(
-            '//cdn.7tv.app/emote/regular123',
-            [Emote7TVFile('1x.webp', 32, 32, 'WEBP')],
-          ),
+          Emote7TVHost('//cdn.7tv.app/emote/regular123', [Emote7TVFile('1x.webp', 32, 32, 'WEBP')]),
         ),
       );
 
@@ -301,10 +275,7 @@ void main() {
           'OriginalName', // The original name
           0,
           null,
-          Emote7TVHost(
-            '//cdn.7tv.app/emote/alias123',
-            [Emote7TVFile('1x.webp', 32, 32, 'WEBP')],
-          ),
+          Emote7TVHost('//cdn.7tv.app/emote/alias123', [Emote7TVFile('1x.webp', 32, 32, 'WEBP')]),
         ),
       );
 
@@ -323,10 +294,7 @@ void main() {
           'SameName', // Same as emote.name
           0,
           null,
-          Emote7TVHost(
-            '//cdn.7tv.app/emote/same123',
-            [Emote7TVFile('1x.webp', 32, 32, 'WEBP')],
-          ),
+          Emote7TVHost('//cdn.7tv.app/emote/same123', [Emote7TVFile('1x.webp', 32, 32, 'WEBP')]),
         ),
       );
 
@@ -345,10 +313,7 @@ void main() {
           'OwnedEmote',
           0,
           const Owner7TV(username: 'creator', displayName: 'EmoteCreator'),
-          Emote7TVHost(
-            '//cdn.7tv.app/emote/owned123',
-            [Emote7TVFile('1x.webp', 32, 32, 'WEBP')],
-          ),
+          Emote7TVHost('//cdn.7tv.app/emote/owned123', [Emote7TVFile('1x.webp', 32, 32, 'WEBP')]),
         ),
       );
 
@@ -367,10 +332,7 @@ void main() {
           'NoOwner',
           0,
           null, // No owner
-          Emote7TVHost(
-            '//cdn.7tv.app/emote/noowner123',
-            [Emote7TVFile('1x.webp', 32, 32, 'WEBP')],
-          ),
+          Emote7TVHost('//cdn.7tv.app/emote/noowner123', [Emote7TVFile('1x.webp', 32, 32, 'WEBP')]),
         ),
       );
 
@@ -389,13 +351,10 @@ void main() {
           'Dimensions',
           0,
           null,
-          Emote7TVHost(
-            '//cdn.7tv.app/emote/dim123',
-            [
-              Emote7TVFile('1x.webp', 28, 32, 'WEBP'),
-              Emote7TVFile('2x.webp', 56, 64, 'WEBP'),
-            ],
-          ),
+          Emote7TVHost('//cdn.7tv.app/emote/dim123', [
+            Emote7TVFile('1x.webp', 28, 32, 'WEBP'),
+            Emote7TVFile('2x.webp', 56, 64, 'WEBP'),
+          ]),
         ),
       );
 
@@ -438,13 +397,10 @@ void main() {
           'AvifOnly',
           0,
           null,
-          Emote7TVHost(
-            '//cdn.7tv.app/emote/avifonly123',
-            [
-              Emote7TVFile('1x.avif', 32, 32, 'AVIF'),
-              Emote7TVFile('2x.avif', 64, 64, 'AVIF'),
-            ],
-          ),
+          Emote7TVHost('//cdn.7tv.app/emote/avifonly123', [
+            Emote7TVFile('1x.avif', 32, 32, 'AVIF'),
+            Emote7TVFile('2x.avif', 64, 64, 'AVIF'),
+          ]),
         ),
       );
 

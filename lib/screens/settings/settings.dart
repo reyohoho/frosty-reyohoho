@@ -38,9 +38,7 @@ class Settings extends StatelessWidget {
         surfaceTintColor: Colors.transparent,
         systemOverlayStyle: SystemUiOverlayStyle(
           statusBarColor: Colors.transparent,
-          statusBarIconBrightness: theme.brightness == Brightness.dark
-              ? Brightness.light
-              : Brightness.dark,
+          statusBarIconBrightness: theme.brightness == Brightness.dark ? Brightness.light : Brightness.dark,
         ),
         leading: IconButton(
           tooltip: 'Back',
@@ -54,9 +52,7 @@ class Settings extends StatelessWidget {
               tooltip: 'Support Frosty',
               onPressed: () => launchUrl(
                 Uri.parse('https://www.buymeacoffee.com/tommychow'),
-                mode: settingsStore.launchUrlExternal
-                    ? LaunchMode.externalApplication
-                    : LaunchMode.inAppBrowserView,
+                mode: settingsStore.launchUrlExternal ? LaunchMode.externalApplication : LaunchMode.inAppBrowserView,
               ),
               icon: const Icon(SimpleIcons.buymeacoffee),
             ),
@@ -66,9 +62,7 @@ class Settings extends StatelessWidget {
               tooltip: 'View source on GitHub',
               onPressed: () => launchUrl(
                 Uri.parse('https://github.com/tommyxchow/frosty'),
-                mode: settingsStore.launchUrlExternal
-                    ? LaunchMode.externalApplication
-                    : LaunchMode.inAppBrowserView,
+                mode: settingsStore.launchUrlExternal ? LaunchMode.externalApplication : LaunchMode.inAppBrowserView,
               ),
               icon: const Icon(SimpleIcons.github),
             ),
@@ -79,25 +73,17 @@ class Settings extends StatelessWidget {
         children: [
           // Main scrollable content
           FrostyScrollbar(
-            padding: EdgeInsets.only(
-              top: MediaQuery.of(context).padding.top + kToolbarHeight,
-            ),
+            padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top + kToolbarHeight),
             child: ListView(
-              padding: EdgeInsets.only(
-                top: MediaQuery.of(context).padding.top + kToolbarHeight + 8,
-              ),
+              padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top + kToolbarHeight + 8),
               children: [
                 const SectionHeader('Account', isFirst: true),
                 ProfileCard(authStore: context.read<AuthStore>()),
                 ListTile(
                   leading: const Icon(Icons.bug_report_outlined),
                   title: const Text('Debug: check User-agent'),
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const UserAgentDebugScreen(),
-                    ),
-                  ),
+                  onTap: () =>
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => const UserAgentDebugScreen())),
                 ),
                 const SectionHeader('Customize'),
                 SettingsTileRoute(

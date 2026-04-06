@@ -16,14 +16,7 @@ class LoadingIndicator extends StatelessWidget {
       children: [
         const CircularProgressIndicator.adaptive(),
         SizedBox(height: spacing),
-        Text(
-          subtitle!,
-          style: TextStyle(
-            color: Theme.of(
-              context,
-            ).colorScheme.onSurface.withValues(alpha: 0.5),
-          ),
-        ),
+        Text(subtitle!, style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5))),
       ],
     );
   }

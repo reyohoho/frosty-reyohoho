@@ -8,8 +8,7 @@ part 'settings_store.g.dart';
 class SettingsStore extends _SettingsStoreBase with _$SettingsStore {
   SettingsStore();
 
-  factory SettingsStore.fromJson(Map<String, dynamic> json) =>
-      _$SettingsStoreFromJson(json);
+  factory SettingsStore.fromJson(Map<String, dynamic> json) => _$SettingsStoreFromJson(json);
   Map<String, dynamic> toJson() => _$SettingsStoreToJson(this);
 }
 
@@ -250,10 +249,7 @@ abstract class _SettingsStoreBase with Store {
   @observable
   var showChatMessageDividers = defaultShowChatMessageDividers;
 
-  @JsonKey(
-    defaultValue: defaultTimestampType,
-    unknownEnumValue: TimestampType.disabled,
-  )
+  @JsonKey(defaultValue: defaultTimestampType, unknownEnumValue: TimestampType.disabled)
   @observable
   var timestampType = defaultTimestampType;
 
@@ -530,4 +526,3 @@ enum TimestampType { disabled, twelve, twentyFour }
 const landscapeCutoutNames = ['None', 'Left', 'Right', 'Both'];
 
 enum LandscapeCutoutType { none, left, right, both }
-

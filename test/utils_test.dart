@@ -115,8 +115,7 @@ void main() {
       expect(adjustedLuminance, lessThan(originalLuminance));
     });
 
-    testWidgets('preserves colors that already meet contrast ratio',
-        (tester) async {
+    testWidgets('preserves colors that already meet contrast ratio', (tester) async {
       late Color adjustedColor;
       const darkBackground = Color(0xFF121212);
       const goodContrastColor = Color(0xFFFFFFFF); // White on dark = good contrast
@@ -148,15 +147,8 @@ void main() {
           scaffoldBackground: darkBackground,
           child: Builder(
             builder: (context) {
-              adjusted45 = adjustChatNameColor(
-                context,
-                greyColor,
-              );
-              adjusted30 = adjustChatNameColor(
-                context,
-                greyColor,
-                targetContrast: 3.0,
-              );
+              adjusted45 = adjustChatNameColor(context, greyColor);
+              adjusted30 = adjustChatNameColor(context, greyColor, targetContrast: 3.0);
               return const SizedBox();
             },
           ),
@@ -205,9 +197,7 @@ void main() {
           theme: ThemeData(
             brightness: Brightness.dark,
             scaffoldBackgroundColor: Colors.transparent,
-            colorScheme: const ColorScheme.dark(
-              surface: Color(0xFF1E1E1E),
-            ),
+            colorScheme: const ColorScheme.dark(surface: Color(0xFF1E1E1E)),
           ),
           home: Scaffold(
             body: Builder(
@@ -268,9 +258,7 @@ void main() {
         late Color adjusted;
         await tester.pumpWidget(
           MaterialApp(
-            theme: ThemeData.dark().copyWith(
-              scaffoldBackgroundColor: const Color(0xFF121212),
-            ),
+            theme: ThemeData.dark().copyWith(scaffoldBackgroundColor: const Color(0xFF121212)),
             home: Scaffold(
               body: Builder(
                 builder: (context) {
@@ -283,11 +271,7 @@ void main() {
         );
 
         // All adjusted colors should have reasonable luminance
-        expect(
-          adjusted.computeLuminance(),
-          greaterThan(0.05),
-          reason: 'Color $color should be readable',
-        );
+        expect(adjusted.computeLuminance(), greaterThan(0.05), reason: 'Color $color should be readable');
       }
     });
   });

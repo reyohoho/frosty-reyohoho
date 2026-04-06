@@ -42,11 +42,7 @@ class _CategoryStreamsState extends State<CategoryStreams> {
         children: [
           // Stream list content behind the pinned elements
           Positioned.fill(
-            child: StreamsList(
-              listType: ListType.category,
-              categoryId: widget.categoryId,
-              showJumpButton: true,
-            ),
+            child: StreamsList(listType: ListType.category, categoryId: widget.categoryId, showJumpButton: true),
           ),
           // Single blurred background spanning app bar and category card
           Positioned(
@@ -63,12 +59,7 @@ class _CategoryStreamsState extends State<CategoryStreams> {
               child: Container(
                 decoration: BoxDecoration(
                   border: Border(
-                    bottom: BorderSide(
-                      color: theme.colorScheme.outlineVariant.withValues(
-                        alpha: 0.3,
-                      ),
-                      width: 0.5,
-                    ),
+                    bottom: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3), width: 0.5),
                   ),
                 ),
                 child: Column(
@@ -91,17 +82,11 @@ class _CategoryStreamsState extends State<CategoryStreams> {
                     Observer(
                       builder: (_) {
                         if (_listStore.categoryDetails != null) {
-                          return _TransparentCategoryCard(
-                            category: _listStore.categoryDetails!,
-                          );
+                          return _TransparentCategoryCard(category: _listStore.categoryDetails!);
                         } else {
                           // Skeleton loader for category card
                           return Padding(
-                            padding: const EdgeInsets.only(
-                              bottom: 16,
-                              left: 16,
-                              right: 16,
-                            ),
+                            padding: const EdgeInsets.only(bottom: 16, left: 16, right: 16),
                             child: Row(
                               spacing: 12,
                               children: [
@@ -109,17 +94,12 @@ class _CategoryStreamsState extends State<CategoryStreams> {
                                   width: 80,
                                   child: AspectRatio(
                                     aspectRatio: 3 / 4,
-                                    child: SkeletonLoader(
-                                      borderRadius: BorderRadius.all(
-                                        Radius.circular(8),
-                                      ),
-                                    ),
+                                    child: SkeletonLoader(borderRadius: BorderRadius.all(Radius.circular(8))),
                                   ),
                                 ),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     spacing: 8,
                                     children: [
                                       SkeletonLoader(
@@ -127,11 +107,7 @@ class _CategoryStreamsState extends State<CategoryStreams> {
                                         width: double.infinity,
                                         borderRadius: BorderRadius.circular(4),
                                       ),
-                                      SkeletonLoader(
-                                        height: 16,
-                                        width: 120,
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
+                                      SkeletonLoader(height: 16, width: 120, borderRadius: BorderRadius.circular(4)),
                                     ],
                                   ),
                                 ),
@@ -189,9 +165,8 @@ class _TransparentCategoryCard extends StatelessWidget {
                     null,
                     '${artWidth}x$artHeight.jpg',
                   ),
-                  placeholder: (context, url) => const SkeletonLoader(
-                    borderRadius: BorderRadius.all(Radius.circular(8)),
-                  ),
+                  placeholder: (context, url) =>
+                      const SkeletonLoader(borderRadius: BorderRadius.all(Radius.circular(8))),
                   fit: BoxFit.cover,
                 ),
               ),

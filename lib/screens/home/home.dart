@@ -80,31 +80,21 @@ class _HomeState extends State<Home> {
           titleSpacing: 16,
           systemOverlayStyle: SystemUiOverlayStyle(
             statusBarColor: Colors.transparent,
-            statusBarIconBrightness: theme.brightness == Brightness.dark
-                ? Brightness.light
-                : Brightness.dark,
+            statusBarIconBrightness: theme.brightness == Brightness.dark ? Brightness.light : Brightness.dark,
           ),
           flexibleSpace: Observer(
             builder: (_) {
               // Only show flexible space on Following tab (when logged in)
-              final isOnFollowingTab =
-                  _authStore.isLoggedIn && _homeStore.selectedIndex == 0;
+              final isOnFollowingTab = _authStore.isLoggedIn && _homeStore.selectedIndex == 0;
 
               if (!isOnFollowingTab) return const SizedBox.shrink();
 
-              return BlurredContainer(
-                gradientDirection: GradientDirection.up,
-                child: const SizedBox.expand(),
-              );
+              return BlurredContainer(gradientDirection: GradientDirection.up, child: const SizedBox.expand());
             },
           ),
           title: Observer(
             builder: (_) {
-              final titles = [
-                if (_authStore.isLoggedIn) 'Following',
-                'Top',
-                'Search',
-              ];
+              final titles = [if (_authStore.isLoggedIn) 'Following', 'Top', 'Search'];
 
               return Text(titles[_homeStore.selectedIndex]);
             },
@@ -112,25 +102,17 @@ class _HomeState extends State<Home> {
           actions: [
             Observer(
               builder: (_) {
-                final isLoggedIn =
-                    _authStore.isLoggedIn && _authStore.user.details != null;
+                final isLoggedIn = _authStore.isLoggedIn && _authStore.user.details != null;
                 return Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: IconButton(
                     tooltip: 'Settings',
                     icon: isLoggedIn
-                        ? ProfilePicture(
-                            userLogin: _authStore.user.details!.login,
-                            radius: 16,
-                          )
+                        ? ProfilePicture(userLogin: _authStore.user.details!.login, radius: 16)
                         : const Icon(Icons.settings_rounded),
                     onPressed: () => Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (context) => Settings(
-                          settingsStore: context.read<SettingsStore>(),
-                        ),
-                      ),
+                      MaterialPageRoute(builder: (context) => Settings(settingsStore: context.read<SettingsStore>())),
                     ),
                   ),
                 );
@@ -143,10 +125,7 @@ class _HomeState extends State<Home> {
             index: _homeStore.selectedIndex,
             children: [
               if (_authStore.isLoggedIn)
-                StreamsList(
-                  listType: ListType.followed,
-                  scrollController: _homeStore.followedScrollController,
-                ),
+                StreamsList(listType: ListType.followed, scrollController: _homeStore.followedScrollController),
               TopSection(homeStore: _homeStore),
               Search(scrollController: _homeStore.searchScrollController),
             ],
@@ -156,9 +135,7 @@ class _HomeState extends State<Home> {
           gradientDirection: GradientDirection.down,
           child: Observer(
             builder: (_) => Theme(
-              data: Theme.of(
-                context,
-              ).copyWith(splashFactory: NoSplash.splashFactory),
+              data: Theme.of(context).copyWith(splashFactory: NoSplash.splashFactory),
               child: NavigationBar(
                 backgroundColor: Colors.transparent,
                 surfaceTintColor: Colors.transparent,
@@ -170,50 +147,31 @@ class _HomeState extends State<Home> {
                         Icons.favorite_border_rounded,
                         color: _homeStore.selectedIndex == 0
                             ? theme.colorScheme.onSurface
-                            : theme.colorScheme.onSurfaceVariant.withValues(
-                                alpha: 0.6,
-                              ),
+                            : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
                       ),
-                      selectedIcon: Icon(
-                        Icons.favorite_rounded,
-                        color: theme.colorScheme.onSurface,
-                      ),
+                      selectedIcon: Icon(Icons.favorite_rounded, color: theme.colorScheme.onSurface),
                       label: 'Following',
                       tooltip: 'Following',
                     ),
                   NavigationDestination(
                     icon: Icon(
                       Icons.arrow_upward_rounded,
-                      color:
-                          _homeStore.selectedIndex ==
-                              (_authStore.isLoggedIn ? 1 : 0)
+                      color: _homeStore.selectedIndex == (_authStore.isLoggedIn ? 1 : 0)
                           ? theme.colorScheme.onSurface
-                          : theme.colorScheme.onSurfaceVariant.withValues(
-                              alpha: 0.6,
-                            ),
+                          : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
                     ),
-                    selectedIcon: Icon(
-                      Icons.arrow_upward_rounded,
-                      color: theme.colorScheme.onSurface,
-                    ),
+                    selectedIcon: Icon(Icons.arrow_upward_rounded, color: theme.colorScheme.onSurface),
                     label: 'Top',
                     tooltip: 'Top',
                   ),
                   NavigationDestination(
                     icon: Icon(
                       Icons.search_rounded,
-                      color:
-                          _homeStore.selectedIndex ==
-                              (_authStore.isLoggedIn ? 2 : 1)
+                      color: _homeStore.selectedIndex == (_authStore.isLoggedIn ? 2 : 1)
                           ? theme.colorScheme.onSurface
-                          : theme.colorScheme.onSurfaceVariant.withValues(
-                              alpha: 0.6,
-                            ),
+                          : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
                     ),
-                    selectedIcon: Icon(
-                      Icons.search_rounded,
-                      color: theme.colorScheme.onSurface,
-                    ),
+                    selectedIcon: Icon(Icons.search_rounded, color: theme.colorScheme.onSurface),
                     label: 'Search',
                     tooltip: 'Search',
                   ),

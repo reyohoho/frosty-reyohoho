@@ -43,8 +43,7 @@ class ChatMessage extends StatelessWidget {
     if (isModal) return;
 
     // Ignore if long-pressing own username.
-    if (ircMessage.user == null ||
-        ircMessage.user == chatStore.auth.user.details?.login) {
+    if (ircMessage.user == null || ircMessage.user == chatStore.auth.user.details?.login) {
       return;
     }
 
@@ -70,12 +69,8 @@ class ChatMessage extends StatelessWidget {
         showModalBottomSheetWithProperFocus(
           isScrollControlled: true,
           context: context,
-          builder: (context) => ChatUserModal(
-            chatStore: chatStore,
-            username: user.login,
-            userId: user.id,
-            displayName: user.displayName,
-          ),
+          builder: (context) =>
+              ChatUserModal(chatStore: chatStore, username: user.login, userId: user.id, displayName: user.displayName),
         );
       }
     });
@@ -87,11 +82,7 @@ class ChatMessage extends StatelessWidget {
     chatStore.updateNotification('Message copied');
   }
 
-  void _showTimeoutOptions(
-    BuildContext context,
-    TwitchApi twitchApi,
-    String displayName,
-  ) {
+  void _showTimeoutOptions(BuildContext context, TwitchApi twitchApi, String displayName) {
     final moderatorId = chatStore.auth.user.details?.id;
     final targetUserId = ircMessage.tags['user-id'];
 
@@ -107,9 +98,7 @@ class ChatMessage extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             child: Text(
               'Timeout $displayName',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
           const Divider(indent: 12, endIndent: 12),
@@ -129,9 +118,7 @@ class ChatMessage extends StatelessWidget {
                 );
 
                 if (success) {
-                  chatStore.addModerationNotice(
-                    '$displayName has been timed out for ${preset.label}',
-                  );
+                  chatStore.addModerationNotice('$displayName has been timed out for ${preset.label}');
                 } else {
                   chatStore.updateNotification('Failed to timeout $displayName');
                 }
@@ -142,11 +129,7 @@ class ChatMessage extends StatelessWidget {
     );
   }
 
-  void _showBanConfirmation(
-    BuildContext context,
-    TwitchApi twitchApi,
-    String displayName,
-  ) {
+  void _showBanConfirmation(BuildContext context, TwitchApi twitchApi, String displayName) {
     final moderatorId = chatStore.auth.user.details?.id;
     final targetUserId = ircMessage.tags['user-id'];
 
@@ -156,13 +139,9 @@ class ChatMessage extends StatelessWidget {
       context: context,
       builder: (dialogContext) => FrostyDialog(
         title: 'Ban $displayName',
-        message:
-            'Are you sure you want to permanently ban $displayName from the channel?',
+        message: 'Are you sure you want to permanently ban $displayName from the channel?',
         actions: [
-          TextButton(
-            onPressed: Navigator.of(dialogContext).pop,
-            child: const Text('Cancel'),
-          ),
+          TextButton(onPressed: Navigator.of(dialogContext).pop, child: const Text('Cancel')),
           FilledButton(
             onPressed: () async {
               Navigator.pop(dialogContext); // Close dialog
@@ -175,9 +154,7 @@ class ChatMessage extends StatelessWidget {
               );
 
               if (success) {
-                chatStore.addModerationNotice(
-                  '$displayName has been permanently banned',
-                );
+                chatStore.addModerationNotice('$displayName has been permanently banned');
               } else {
                 chatStore.updateNotification('Failed to ban $displayName');
               }
@@ -192,16 +169,14 @@ class ChatMessage extends StatelessWidget {
   void onLongPressMessage(BuildContext context, TextStyle defaultTextStyle) {
     HapticFeedback.lightImpact();
 
-    if (ircMessage.command != Command.privateMessage &&
-        ircMessage.command != Command.userState) {
+    if (ircMessage.command != Command.privateMessage && ircMessage.command != Command.userState) {
       copyMessage();
       return;
     }
 
     final twitchApi = context.read<TwitchApi>();
     final canModerate = chatStore.canModerate;
-    final isOwnMessage =
-        ircMessage.user == chatStore.auth.user.details?.login;
+    final isOwnMessage = ircMessage.user == chatStore.auth.user.details?.login;
     final messageId = ircMessage.tags['id'];
     final targetUserId = ircMessage.tags['user-id'];
     final displayName = ircMessage.tags['display-name'] ?? ircMessage.user ?? '';
@@ -225,8 +200,7 @@ class ChatMessage extends StatelessWidget {
                   badgeScale: chatStore.settings.badgeScale,
                   launchExternal: chatStore.settings.launchUrlExternal,
                   timestamp: chatStore.settings.timestampType,
-                  channelIdToUserTwitch:
-                      chatStore.assetsStore.channelIdToUserTwitch,
+                  channelIdToUserTwitch: chatStore.assetsStore.channelIdToUserTwitch,
                   currentChannelId: chatStore.channelId,
                   showReyohohoBadges: chatStore.settings.showReyohohoBadges,
                   showPaints: chatStore.settings.showPaints,
@@ -248,9 +222,7 @@ class ChatMessage extends StatelessWidget {
             onTap: () async {
               await copyMessage();
 
-              final hasChatDelay =
-                  chatStore.settings.showVideo &&
-                  chatStore.settings.chatDelay > 0;
+              final hasChatDelay = chatStore.settings.showVideo && chatStore.settings.chatDelay > 0;
 
               if (hasChatDelay) {
                 chatStore.updateNotification(
@@ -292,9 +264,7 @@ class ChatMessage extends StatelessWidget {
                   messageId: messageId,
                 );
                 if (success) {
-                  chatStore.addModerationNotice(
-                    'Message from $displayName deleted',
-                  );
+                  chatStore.addModerationNotice('Message from $displayName deleted');
                 } else {
                   chatStore.updateNotification('Failed to delete message');
                 }
@@ -322,11 +292,8 @@ class ChatMessage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final defaultTextStyle = DefaultTextStyle.of(context).style;
-    final messageHeaderIconSize =
-        defaultBadgeSize * chatStore.settings.badgeScale;
-    final messageHeaderTextColor = defaultTextStyle.color?.withValues(
-      alpha: 0.5,
-    );
+    final messageHeaderIconSize = defaultBadgeSize * chatStore.settings.badgeScale;
+    final messageHeaderTextColor = defaultTextStyle.color?.withValues(alpha: 0.5);
     const messageHeaderFontWeight = FontWeight.w600;
 
     return Observer(
@@ -338,11 +305,9 @@ class ChatMessage extends StatelessWidget {
           case Command.privateMessage:
           case Command.userState:
             final shouldHighlightFirstMessage =
-                chatStore.settings.highlightFirstTimeChatter &&
-                ircMessage.tags['first-msg'] == '1';
+                chatStore.settings.highlightFirstTimeChatter && ircMessage.tags['first-msg'] == '1';
             final shouldHighlightMessage =
-                chatStore.settings.showUserNotices &&
-                ircMessage.tags['msg-id'] == 'highlighted-message';
+                chatStore.settings.showUserNotices && ircMessage.tags['msg-id'] == 'highlighted-message';
 
             // Collect link previews during span generation
             final collectedLinkPreviews = <LinkPreviewInfo>[];
@@ -351,16 +316,14 @@ class ChatMessage extends StatelessWidget {
                 children: ircMessage.generateSpan(
                   context,
                   onTapName: () => onTapName(context),
-                  onTapPingedUser: (nickname) =>
-                      onTapPingedUser(context, nickname: nickname),
+                  onTapPingedUser: (nickname) => onTapPingedUser(context, nickname: nickname),
                   style: defaultTextStyle,
                   assetsStore: chatStore.assetsStore,
                   emoteScale: chatStore.settings.emoteScale,
                   badgeScale: chatStore.settings.badgeScale,
                   launchExternal: chatStore.settings.launchUrlExternal,
                   timestamp: chatStore.settings.timestampType,
-                  channelIdToUserTwitch:
-                      chatStore.assetsStore.channelIdToUserTwitch,
+                  channelIdToUserTwitch: chatStore.assetsStore.channelIdToUserTwitch,
                   currentChannelId: chatStore.channelId,
                   showLinkPreviews: chatStore.settings.showLinkPreviews,
                   hideLinkPreviewLinks: chatStore.settings.hideLinkPreviewLinks,
@@ -390,8 +353,7 @@ class ChatMessage extends StatelessWidget {
                             previewInfo: preview,
                             maxWidth: chatStore.settings.linkPreviewMaxWidth,
                             maxHeight: chatStore.settings.linkPreviewMaxHeight,
-                            launchExternal:
-                                chatStore.settings.launchUrlExternal,
+                            launchExternal: chatStore.settings.launchUrlExternal,
                           ),
                         )
                         .toList(),
@@ -409,21 +371,14 @@ class ChatMessage extends StatelessWidget {
             Widget? messageHeaderIcon;
             Widget? messageHeader;
             if (replyUser != null && replyBody != null && showReplyHeader) {
-              messageHeaderIcon = Icon(
-                Icons.chat_rounded,
-                size: messageHeaderIconSize,
-                color: messageHeaderTextColor,
-              );
+              messageHeaderIcon = Icon(Icons.chat_rounded, size: messageHeaderIconSize, color: messageHeaderTextColor);
               messageHeader = GestureDetector(
                 onTap: isModal
                     ? null
                     : () => showModalBottomSheetWithProperFocus(
                         context: context,
                         builder: (context) {
-                          return ReplyThread(
-                            selectedMessage: ircMessage,
-                            chatStore: chatStore,
-                          );
+                          return ReplyThread(selectedMessage: ircMessage, chatStore: chatStore);
                         },
                       ),
                 child: Text.rich(
@@ -433,10 +388,7 @@ class ChatMessage extends StatelessWidget {
                     children: [
                       TextSpan(
                         text: replyUser,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          color: messageHeaderTextColor,
-                        ),
+                        style: TextStyle(fontWeight: FontWeight.w600, color: messageHeaderTextColor),
                       ),
                       TextSpan(
                         text: ': $replyBody',
@@ -455,19 +407,13 @@ class ChatMessage extends StatelessWidget {
               );
               messageHeader = Text(
                 'First message',
-                style: TextStyle(
-                  fontWeight: messageHeaderFontWeight,
-                  color: messageHeaderTextColor,
-                ),
+                style: TextStyle(fontWeight: messageHeaderFontWeight, color: messageHeaderTextColor),
               );
             } else if (shouldHighlightMessage) {
               highlightColor = const Color(0xff9146ff);
               messageHeader = Text(
                 'Highlighted message',
-                style: TextStyle(
-                  fontWeight: messageHeaderFontWeight,
-                  color: messageHeaderTextColor,
-                ),
+                style: TextStyle(fontWeight: messageHeaderFontWeight, color: messageHeaderTextColor),
               );
             }
 
@@ -510,21 +456,13 @@ class ChatMessage extends StatelessWidget {
                 children: [
                   if (banDuration == null)
                     if (ircMessage.command == Command.clearMessage)
-                      const Text(
-                        'Message deleted',
-                        style: TextStyle(fontWeight: messageHeaderFontWeight),
-                      )
+                      const Text('Message deleted', style: TextStyle(fontWeight: messageHeaderFontWeight))
                     else
-                      const Text(
-                        'Permanently banned',
-                        style: TextStyle(fontWeight: messageHeaderFontWeight),
-                      )
+                      const Text('Permanently banned', style: TextStyle(fontWeight: messageHeaderFontWeight))
                   else
                     Text(
                       'Timed out for $banDuration ${int.parse(banDuration) > 1 ? 'seconds' : 'second'}',
-                      style: const TextStyle(
-                        fontWeight: messageHeaderFontWeight,
-                      ),
+                      style: const TextStyle(fontWeight: messageHeaderFontWeight),
                     ),
                   Text.rich(
                     TextSpan(
@@ -537,9 +475,7 @@ class ChatMessage extends StatelessWidget {
                         badgeScale: chatStore.settings.badgeScale,
                         showMessage:
                             chatStore.settings.showDeletedMessages ||
-                            chatStore.revealedMessageIds.contains(
-                              ircMessage.tags['id'],
-                            ),
+                            chatStore.revealedMessageIds.contains(ircMessage.tags['id']),
                         onTapDeletedMessage: () {
                           if (ircMessage.tags['id'] != null) {
                             chatStore.revealMessage(ircMessage.tags['id']!);
@@ -547,8 +483,7 @@ class ChatMessage extends StatelessWidget {
                         },
                         launchExternal: chatStore.settings.launchUrlExternal,
                         timestamp: chatStore.settings.timestampType,
-                        channelIdToUserTwitch:
-                            chatStore.assetsStore.channelIdToUserTwitch,
+                        channelIdToUserTwitch: chatStore.assetsStore.channelIdToUserTwitch,
                         currentChannelId: chatStore.channelId,
                         showReyohohoBadges: chatStore.settings.showReyohohoBadges,
                         showPaints: chatStore.settings.showPaints,
@@ -565,15 +500,11 @@ class ChatMessage extends StatelessWidget {
               color: messageHeaderTextColor,
               fontFeatures: const [FontFeature.tabularFigures()],
             );
-            if (ircMessage.actionCallback != null &&
-                ircMessage.actionLabel != null) {
+            if (ircMessage.actionCallback != null && ircMessage.actionLabel != null) {
               renderMessage = Text.rich(
                 TextSpan(
                   children: [
-                    TextSpan(
-                      text: ircMessage.message ?? '',
-                      style: noticeStyle,
-                    ),
+                    TextSpan(text: ircMessage.message ?? '', style: noticeStyle),
                     TextSpan(text: ' '),
                     TextSpan(
                       text: ircMessage.actionLabel!,
@@ -583,17 +514,13 @@ class ChatMessage extends StatelessWidget {
                         decoration: TextDecoration.underline,
                         decorationColor: Theme.of(context).colorScheme.primary,
                       ),
-                      recognizer: TapGestureRecognizer()
-                        ..onTap = ircMessage.actionCallback,
+                      recognizer: TapGestureRecognizer()..onTap = ircMessage.actionCallback,
                     ),
                   ],
                 ),
               );
             } else {
-              renderMessage = Text.rich(
-                TextSpan(text: ircMessage.message),
-                style: noticeStyle,
-              );
+              renderMessage = Text.rich(TextSpan(text: ircMessage.message), style: noticeStyle);
             }
             break;
           case Command.userNotice:
@@ -607,8 +534,7 @@ class ChatMessage extends StatelessWidget {
                 final isGift = messageId?.contains('gift') == true;
                 final isSub = messageId?.contains('sub') == true;
                 final isRaid = messageId?.contains('raid') == true;
-                final isPrime =
-                    ircMessage.tags['msg-param-sub-plan'] == 'Prime';
+                final isPrime = ircMessage.tags['msg-param-sub-plan'] == 'Prime';
 
                 IconData? icon;
                 if (isGift) {
@@ -622,29 +548,16 @@ class ChatMessage extends StatelessWidget {
                 }
 
                 if (icon != null) {
-                  messageHeaderIcon = Icon(
-                    icon,
-                    size: messageHeaderIconSize,
-                    color: messageHeaderTextColor,
-                  );
+                  messageHeaderIcon = Icon(icon, size: messageHeaderIconSize, color: messageHeaderTextColor);
                 }
 
                 messageHeader = Text(
                   ircMessage.tags['system-msg']!,
-                  style: TextStyle(
-                    fontWeight: messageHeaderFontWeight,
-                    color: messageHeaderTextColor,
-                  ),
+                  style: TextStyle(fontWeight: messageHeaderFontWeight, color: messageHeaderTextColor),
                 );
               } else if (ircMessage.tags['msg-id'] == 'announcement') {
-                messageHeaderIcon = Icon(
-                  Icons.campaign_rounded,
-                  size: messageHeaderIconSize,
-                );
-                messageHeader = const Text(
-                  'Announcement',
-                  style: TextStyle(fontWeight: messageHeaderFontWeight),
-                );
+                messageHeaderIcon = Icon(Icons.campaign_rounded, size: messageHeaderIconSize);
+                messageHeader = const Text('Announcement', style: TextStyle(fontWeight: messageHeaderFontWeight));
               }
 
               renderMessage = Column(
@@ -672,8 +585,7 @@ class ChatMessage extends StatelessWidget {
                           badgeScale: chatStore.settings.badgeScale,
                           launchExternal: chatStore.settings.launchUrlExternal,
                           timestamp: chatStore.settings.timestampType,
-                          channelIdToUserTwitch:
-                              chatStore.assetsStore.channelIdToUserTwitch,
+                          channelIdToUserTwitch: chatStore.assetsStore.channelIdToUserTwitch,
                           currentChannelId: chatStore.channelId,
                           showReyohohoBadges: chatStore.settings.showReyohohoBadges,
                           showPaints: chatStore.settings.showPaints,
@@ -704,11 +616,7 @@ class ChatMessage extends StatelessWidget {
                 children: [
                   Padding(
                     padding: const EdgeInsets.only(right: 8.0, top: 2.0),
-                    child: Icon(
-                      Icons.subdirectory_arrow_right_rounded,
-                      size: 16,
-                      color: messageHeaderTextColor,
-                    ),
+                    child: Icon(Icons.subdirectory_arrow_right_rounded, size: 16, color: messageHeaderTextColor),
                   ),
                   Expanded(child: renderMessage),
                 ],
@@ -727,10 +635,7 @@ class ChatMessage extends StatelessWidget {
 
         // Add a divider above the message if dividers are enabled.
         final dividedMessage = chatStore.settings.showChatMessageDividers
-            ? Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [paddedMessage, const Divider()],
-              )
+            ? Column(crossAxisAlignment: CrossAxisAlignment.start, children: [paddedMessage, const Divider()])
             : paddedMessage;
 
         // Color the message if the color has been set.
@@ -740,9 +645,7 @@ class ChatMessage extends StatelessWidget {
                 padding: const EdgeInsets.only(left: 8, right: 12),
                 decoration: BoxDecoration(
                   color: highlightColor.withValues(alpha: 0.4),
-                  border: Border(
-                    left: BorderSide(color: highlightColor, width: 4),
-                  ),
+                  border: Border(left: BorderSide(color: highlightColor, width: 4)),
                 ),
                 child: dividedMessage,
               );

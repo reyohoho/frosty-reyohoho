@@ -27,8 +27,7 @@ class StreamTwitch {
     this.thumbnailUrl,
   );
 
-  factory StreamTwitch.fromJson(Map<String, dynamic> json) =>
-      _$StreamTwitchFromJson(json);
+  factory StreamTwitch.fromJson(Map<String, dynamic> json) => _$StreamTwitchFromJson(json);
 }
 
 @JsonSerializable(createToJson: false, fieldRename: FieldRename.snake)
@@ -38,6 +37,5 @@ class StreamsTwitch {
 
   const StreamsTwitch(this.data, this.pagination);
 
-  factory StreamsTwitch.fromJson(Map<String, dynamic> json) =>
-      _$StreamsTwitchFromJson(json);
+  factory StreamsTwitch.fromJson(Map<String, dynamic> json) => _$StreamsTwitchFromJson(json);
 }

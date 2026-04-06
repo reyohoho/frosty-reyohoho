@@ -7,13 +7,7 @@ class FrostyDialog extends StatelessWidget {
   final Widget? content;
   final List<Widget>? actions;
 
-  const FrostyDialog({
-    super.key,
-    this.actions,
-    required this.title,
-    this.message,
-    this.content,
-  });
+  const FrostyDialog({super.key, this.actions, required this.title, this.message, this.content});
 
   @override
   Widget build(BuildContext context) {

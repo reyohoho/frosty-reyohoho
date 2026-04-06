@@ -7,21 +7,10 @@ class SettingsListSwitch extends StatelessWidget {
   final bool value;
   final ValueChanged<bool>? onChanged;
 
-  const SettingsListSwitch({
-    super.key,
-    required this.title,
-    this.subtitle,
-    this.onChanged,
-    required this.value,
-  });
+  const SettingsListSwitch({super.key, required this.title, this.subtitle, this.onChanged, required this.value});
 
   @override
   Widget build(BuildContext context) {
-    return SwitchListTile.adaptive(
-      title: Text(title),
-      subtitle: subtitle,
-      value: value,
-      onChanged: onChanged,
-    );
+    return SwitchListTile.adaptive(title: Text(title), subtitle: subtitle, value: value, onChanged: onChanged);
   }
 }
