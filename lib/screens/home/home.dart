@@ -10,13 +10,11 @@ import 'package:frosty/screens/home/top/top.dart';
 import 'package:frosty/screens/settings/settings.dart';
 import 'package:frosty/screens/settings/stores/auth_store.dart';
 import 'package:frosty/screens/settings/stores/settings_store.dart';
-import 'package:frosty/screens/settings/widgets/release_notes.dart';
 import 'package:frosty/utils/display_cutout.dart';
 import 'package:frosty/widgets/blurred_container.dart';
 import 'package:frosty/widgets/profile_picture.dart';
-import 'package:package_info_plus/package_info_plus.dart';
+import 'package:frosty/widgets/update_dialog.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -30,35 +28,22 @@ class _HomeState extends State<Home> {
 
   late final _homeStore = HomeStore(authStore: _authStore);
 
-  Future<void> checkAndShowReleaseNotes() async {
-    final packageInfo = await PackageInfo.fromPlatform();
-    final prefs = await SharedPreferences.getInstance();
-
-    final currentVersion = packageInfo.version;
-    final storedVersion = prefs.getString('last_shown_version');
-
-    // Extract major.minor version (ignore patch)
-    final currentMajorMinor = currentVersion.split('.').take(2).join('.');
-    final storedMajorMinor = storedVersion?.split('.').take(2).join('.');
-
-    if (storedMajorMinor == null || storedMajorMinor != currentMajorMinor) {
-      if (!mounted) return;
-
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const ReleaseNotes()),
-      ).then((_) => prefs.setString('last_shown_version', currentVersion));
-    }
-  }
+  bool _updateCheckDone = false;
 
   @override
   void initState() {
     super.initState();
-    checkAndShowReleaseNotes();
+    _runUpdateCheck();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final settingsStore = context.read<SettingsStore>();
       applyDisplayUnderCutout(settingsStore.landscapeDisplayUnderCutout);
     });
+  }
+
+  Future<void> _runUpdateCheck() async {
+    if (_updateCheckDone) return;
+    _updateCheckDone = true;
+    await checkForUpdate(context);
   }
 
   @override

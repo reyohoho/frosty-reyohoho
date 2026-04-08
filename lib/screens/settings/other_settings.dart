@@ -12,6 +12,7 @@ import 'package:frosty/screens/settings/widgets/release_notes.dart';
 import 'package:frosty/screens/settings/widgets/settings_list_switch.dart';
 import 'package:frosty/widgets/alert_message.dart';
 import 'package:frosty/widgets/frosty_dialog.dart';
+import 'package:frosty/widgets/update_dialog.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -77,6 +78,11 @@ class _OtherSettingsState extends State<OtherSettings> {
           leading: const Icon(Icons.notes_rounded),
           title: const Text('Release notes'),
           onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => const ReleaseNotes())),
+        ),
+        ListTile(
+          leading: const Icon(Icons.system_update_rounded),
+          title: const Text('Check for updates'),
+          onTap: () => checkForUpdate(context, ignoreSkipped: true),
         ),
         ListTile(
           leading: const Icon(Icons.launch_rounded),

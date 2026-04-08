@@ -16,6 +16,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:frosty/apis/bttv_api.dart';
 import 'package:frosty/apis/dio_client.dart';
 import 'package:frosty/apis/ffz_api.dart';
+import 'package:frosty/apis/github_api.dart';
 import 'package:frosty/apis/reyohoho_api.dart';
 import 'package:frosty/apis/seventv_api.dart';
 import 'package:frosty/apis/twitch_api.dart';
@@ -107,6 +108,7 @@ void main() async {
   final ffzApiService = FFZApi(dioClient);
   final sevenTVApiService = SevenTVApi(dioClient);
   final reyohohoApiService = ReyohohoApi(dioClient);
+  final githubApiService = GitHubApi(dioClient);
   if (settingsStore.useEmoteProxy) {
     final workingDomain = await reyohohoApiService.initializeDomain();
     if (workingDomain != null) {
@@ -165,6 +167,7 @@ void main() async {
         Provider<FFZApi>.value(value: ffzApiService),
         Provider<SevenTVApi>.value(value: sevenTVApiService),
         Provider<ReyohohoApi>.value(value: reyohohoApiService),
+        Provider<GitHubApi>.value(value: githubApiService),
         Provider<GlobalAssetsStore>.value(value: globalAssetsStore),
       ],
       child: MyApp(firstRun: firstRun),
