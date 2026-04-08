@@ -51,54 +51,33 @@ jobs:
           flutter build apk --dart-define CLIENT_ID=$CLIENT_ID --dart-define SECRET=$SECRET
           mv build/app/outputs/flutter-apk/app-release.apk frosty-${{ github.ref_name }}.apk
 
-      # Extract release notes from assets/release-notes.md for the current version.
-      - name: Extract release notes
-        id: release_notes
+      - name: Generate changelog from commits
+        id: changelog
         run: |
-          VERSION="${{ github.ref_name }}"
-          RELEASE_NOTES_FILE="assets/release-notes.md"
+          TAG="${{ github.ref_name }}"
+          git fetch --tags --unshallow 2>/dev/null || true
+          PREV_TAG=$(git describe --tags --abbrev=0 "$TAG^" 2>/dev/null || echo "")
 
-          # Extract the section for this version using awk
-          # Starts at "## vX.X.X", skips date line, stops at next "---" or "## v" header
-          NOTES=$(awk -v version="$VERSION" '
-            BEGIN { found=0; output="" }
-            $0 ~ "^## " version "$" { found=1; next }
-            found && /^[A-Z][a-z]+ [0-9]+, [0-9]+$/ { next }
-            found && /^---$/ { exit }
-            found && /^## v[0-9]+\.[0-9]+\.[0-9]+$/ { exit }
-            found { output = output $0 "\n" }
-            END { print output }
-          ' "$RELEASE_NOTES_FILE")
-
-          # Clean up "on GitHub" suffix (redundant since we're on GitHub)
-          NOTES=$(echo "$NOTES" | sed 's/ on GitHub)/)/')
-
-          # Trim leading/trailing whitespace
-          NOTES=$(echo "$NOTES" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
-
-          if [ -n "$NOTES" ]; then
-            # Get the previous tag for the Full Changelog link
-            PREV_TAG=$(git describe --tags --abbrev=0 "$VERSION^" 2>/dev/null || echo "")
-
-            echo "found=true" >> $GITHUB_OUTPUT
-            echo "body<<EOF" >> $GITHUB_OUTPUT
-            echo "$NOTES" >> $GITHUB_OUTPUT
-            if [ -n "$PREV_TAG" ]; then
-              echo "" >> $GITHUB_OUTPUT
-              echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/${PREV_TAG}...${VERSION}" >> $GITHUB_OUTPUT
-            fi
-            echo "EOF" >> $GITHUB_OUTPUT
+          if [ -n "$PREV_TAG" ]; then
+            COMMITS=$(git log --pretty=format:"- %s (%h)" "$PREV_TAG..$TAG")
           else
-            echo "found=false" >> $GITHUB_OUTPUT
-            echo "::warning::No release notes found for $VERSION in $RELEASE_NOTES_FILE"
+            COMMITS=$(git log --pretty=format:"- %s (%h)" "$TAG")
           fi
 
-      # Create a draft release on GitHub.
-      - name: Release
+          echo "body<<EOF" >> $GITHUB_OUTPUT
+          echo "## What's Changed" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "$COMMITS" >> $GITHUB_OUTPUT
+          if [ -n "$PREV_TAG" ]; then
+            echo "" >> $GITHUB_OUTPUT
+            echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/${PREV_TAG}...${TAG}" >> $GITHUB_OUTPUT
+          fi
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create draft pre-release
         uses: softprops/action-gh-release@v2
         with:
           draft: true
           prerelease: true
-          generate_release_notes: ${{ steps.release_notes.outputs.found != 'true' }}
-          body: ${{ steps.release_notes.outputs.found == 'true' && steps.release_notes.outputs.body || '' }}
+          body: ${{ steps.changelog.outputs.body }}
           files: frosty-${{ github.ref_name }}.apk

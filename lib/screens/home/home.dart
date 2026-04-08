@@ -8,15 +8,16 @@ import 'package:frosty/screens/home/stream_list/stream_list_store.dart';
 import 'package:frosty/screens/home/stream_list/streams_list.dart';
 import 'package:frosty/screens/home/top/top.dart';
 import 'package:frosty/screens/settings/settings.dart';
+import 'package:frosty/apis/github_api.dart';
 import 'package:frosty/screens/settings/stores/auth_store.dart';
 import 'package:frosty/screens/settings/stores/settings_store.dart';
-import 'package:frosty/screens/settings/widgets/release_notes.dart';
 import 'package:frosty/utils/display_cutout.dart';
 import 'package:frosty/widgets/blurred_container.dart';
+import 'package:frosty/widgets/frosty_dialog.dart';
 import 'package:frosty/widgets/profile_picture.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -30,31 +31,98 @@ class _HomeState extends State<Home> {
 
   late final _homeStore = HomeStore(authStore: _authStore);
 
-  Future<void> checkAndShowReleaseNotes() async {
-    final packageInfo = await PackageInfo.fromPlatform();
-    final prefs = await SharedPreferences.getInstance();
+  Future<void> _checkForUpdate() async {
+    try {
+      final githubApi = context.read<GitHubApi>();
+      final packageInfo = await PackageInfo.fromPlatform();
+      final currentVersion = packageInfo.version;
 
-    final currentVersion = packageInfo.version;
-    final storedVersion = prefs.getString('last_shown_version');
+      final release = await githubApi.getLatestRelease();
+      if (release == null || !mounted) return;
 
-    // Extract major.minor version (ignore patch)
-    final currentMajorMinor = currentVersion.split('.').take(2).join('.');
-    final storedMajorMinor = storedVersion?.split('.').take(2).join('.');
+      final remoteVersion = release.tagName.replaceFirst(RegExp('^v'), '');
+      if (_isNewerVersion(remoteVersion, currentVersion)) {
+        _showUpdateDialog(release, currentVersion);
+      }
+    } catch (_) {}
+  }
 
-    if (storedMajorMinor == null || storedMajorMinor != currentMajorMinor) {
-      if (!mounted) return;
+  bool _isNewerVersion(String remote, String current) {
+    final remoteParts = remote.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+    final currentParts = current.split('.').map((e) => int.tryParse(e) ?? 0).toList();
 
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const ReleaseNotes()),
-      ).then((_) => prefs.setString('last_shown_version', currentVersion));
+    final maxLen = remoteParts.length > currentParts.length ? remoteParts.length : currentParts.length;
+    for (var i = 0; i < maxLen; i++) {
+      final r = i < remoteParts.length ? remoteParts[i] : 0;
+      final c = i < currentParts.length ? currentParts[i] : 0;
+      if (r > c) return true;
+      if (r < c) return false;
     }
+    return false;
+  }
+
+  void _showUpdateDialog(GitHubRelease release, String currentVersion) {
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (context) => FrostyDialog(
+        title: 'Update available',
+        content: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('$currentVersion \u2192 ${release.tagName}'),
+            if (release.body.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 300),
+                child: SingleChildScrollView(
+                  child: Text(
+                    release.body,
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: Navigator.of(context).pop,
+            child: const Text('Later'),
+          ),
+          if (release.apkDownloadUrl != null)
+            FilledButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                launchUrl(
+                  Uri.parse(release.apkDownloadUrl!),
+                  mode: LaunchMode.externalApplication,
+                );
+              },
+              child: const Text('Download'),
+            )
+          else
+            FilledButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                launchUrl(
+                  Uri.parse(release.htmlUrl),
+                  mode: LaunchMode.externalApplication,
+                );
+              },
+              child: const Text('Open'),
+            ),
+        ],
+      ),
+    );
   }
 
   @override
   void initState() {
     super.initState();
-    checkAndShowReleaseNotes();
+    _checkForUpdate();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final settingsStore = context.read<SettingsStore>();
       applyDisplayUnderCutout(settingsStore.landscapeDisplayUnderCutout);
