@@ -8,6 +8,7 @@ import 'package:frosty/models/badges.dart';
 import 'package:frosty/models/emotes.dart';
 import 'package:frosty/models/events.dart';
 import 'package:frosty/models/irc.dart';
+import 'package:frosty/models/pinned_chat.dart';
 import 'package:frosty/screens/channel/chat/details/chat_details_store.dart';
 import 'package:frosty/screens/channel/chat/stores/chat_assets_store.dart';
 import 'package:frosty/screens/settings/stores/auth_store.dart';
@@ -269,6 +270,17 @@ abstract class ChatStoreBase with Store {
 
   @observable
   var expandChat = false;
+
+  @observable
+  PinnedChatMessage? pinnedMessage;
+
+  @readonly
+  var _pinnedMessageHidden = false;
+
+  @readonly
+  var _pinnedMessageCollapsed = false;
+
+  Timer? _pinnedMessageTimer;
 
   @observable
   IRCMessage? replyingToMessage;
@@ -850,6 +862,8 @@ abstract class ChatStoreBase with Store {
     // Fetch assets first so they're available for all messages
     getAssets();
 
+    _startPinnedMessagePolling();
+
     // Register user with Reyohoho API when emote proxy is enabled
     if (settings.useEmoteProxy && auth.isLoggedIn) {
       final userId = auth.user.details?.id;
@@ -1303,6 +1317,35 @@ abstract class ChatStoreBase with Store {
     }
   }
 
+  @action
+  void hidePinnedMessage() => _pinnedMessageHidden = true;
+
+  @action
+  void togglePinnedCollapsed() => _pinnedMessageCollapsed = !_pinnedMessageCollapsed;
+
+  @action
+  Future<void> _fetchPinnedMessage() async {
+    final msg = await twitchApi.getPinnedChat(
+      channelId: channelId,
+      token: auth.token,
+    );
+    final prev = pinnedMessage;
+    pinnedMessage = msg;
+    if (msg != null && (prev == null || prev.id != msg.id || prev.updatedAt != msg.updatedAt)) {
+      _pinnedMessageHidden = false;
+      _pinnedMessageCollapsed = false;
+    }
+  }
+
+  void _startPinnedMessagePolling() {
+    _pinnedMessageTimer?.cancel();
+    _fetchPinnedMessage();
+    _pinnedMessageTimer = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) => _fetchPinnedMessage(),
+    );
+  }
+
   /// Closes and disposes all the channels and controllers used by the store.
   void dispose() {
     _shouldDisconnect = true;
@@ -1311,6 +1354,7 @@ abstract class ChatStoreBase with Store {
     _notificationTimer?.cancel();
     _sendingTimeoutTimer?.cancel();
     _cancelChatDelayCountdown();
+    _pinnedMessageTimer?.cancel();
     sleepTimer?.cancel();
 
     // Cancel WebSocket subscriptions

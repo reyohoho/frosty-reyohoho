@@ -325,6 +325,72 @@ mixin _$ChatStore on ChatStoreBase, Store {
     });
   }
 
+  late final _$pinnedMessageAtom = Atom(
+    name: 'ChatStoreBase.pinnedMessage',
+    context: context,
+  );
+
+  @override
+  PinnedChatMessage? get pinnedMessage {
+    _$pinnedMessageAtom.reportRead();
+    return super.pinnedMessage;
+  }
+
+  @override
+  set pinnedMessage(PinnedChatMessage? value) {
+    _$pinnedMessageAtom.reportWrite(value, super.pinnedMessage, () {
+      super.pinnedMessage = value;
+    });
+  }
+
+  late final _$_pinnedMessageHiddenAtom = Atom(
+    name: 'ChatStoreBase._pinnedMessageHidden',
+    context: context,
+  );
+
+  bool get pinnedMessageHidden {
+    _$_pinnedMessageHiddenAtom.reportRead();
+    return super._pinnedMessageHidden;
+  }
+
+  @override
+  bool get _pinnedMessageHidden => pinnedMessageHidden;
+
+  @override
+  set _pinnedMessageHidden(bool value) {
+    _$_pinnedMessageHiddenAtom.reportWrite(
+      value,
+      super._pinnedMessageHidden,
+      () {
+        super._pinnedMessageHidden = value;
+      },
+    );
+  }
+
+  late final _$_pinnedMessageCollapsedAtom = Atom(
+    name: 'ChatStoreBase._pinnedMessageCollapsed',
+    context: context,
+  );
+
+  bool get pinnedMessageCollapsed {
+    _$_pinnedMessageCollapsedAtom.reportRead();
+    return super._pinnedMessageCollapsed;
+  }
+
+  @override
+  bool get _pinnedMessageCollapsed => pinnedMessageCollapsed;
+
+  @override
+  set _pinnedMessageCollapsed(bool value) {
+    _$_pinnedMessageCollapsedAtom.reportWrite(
+      value,
+      super._pinnedMessageCollapsed,
+      () {
+        super._pinnedMessageCollapsed = value;
+      },
+    );
+  }
+
   late final _$replyingToMessageAtom = Atom(
     name: 'ChatStoreBase.replyingToMessage',
     context: context,
@@ -373,6 +439,18 @@ mixin _$ChatStore on ChatStoreBase, Store {
   @override
   Future<void> getRecentMessage() {
     return _$getRecentMessageAsyncAction.run(() => super.getRecentMessage());
+  }
+
+  late final _$_fetchPinnedMessageAsyncAction = AsyncAction(
+    'ChatStoreBase._fetchPinnedMessage',
+    context: context,
+  );
+
+  @override
+  Future<void> _fetchPinnedMessage() {
+    return _$_fetchPinnedMessageAsyncAction.run(
+      () => super._fetchPinnedMessage(),
+    );
   }
 
   late final _$ChatStoreBaseActionController = ActionController(
@@ -555,6 +633,30 @@ mixin _$ChatStore on ChatStoreBase, Store {
   }
 
   @override
+  void hidePinnedMessage() {
+    final _$actionInfo = _$ChatStoreBaseActionController.startAction(
+      name: 'ChatStoreBase.hidePinnedMessage',
+    );
+    try {
+      return super.hidePinnedMessage();
+    } finally {
+      _$ChatStoreBaseActionController.endAction(_$actionInfo);
+    }
+  }
+
+  @override
+  void togglePinnedCollapsed() {
+    final _$actionInfo = _$ChatStoreBaseActionController.startAction(
+      name: 'ChatStoreBase.togglePinnedCollapsed',
+    );
+    try {
+      return super.togglePinnedCollapsed();
+    } finally {
+      _$ChatStoreBaseActionController.endAction(_$actionInfo);
+    }
+  }
+
+  @override
   void unfocusInput() {
     final _$actionInfo = _$ChatStoreBaseActionController.startAction(
       name: 'ChatStoreBase.unfocusInput',
@@ -583,6 +685,7 @@ mixin _$ChatStore on ChatStoreBase, Store {
     return '''
 timeRemaining: ${timeRemaining},
 expandChat: ${expandChat},
+pinnedMessage: ${pinnedMessage},
 replyingToMessage: ${replyingToMessage},
 renderMessages: ${renderMessages},
 matchingEmotes: ${matchingEmotes},

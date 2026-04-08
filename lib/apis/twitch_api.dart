@@ -9,6 +9,7 @@ import 'package:frosty/models/category.dart';
 import 'package:frosty/models/channel.dart';
 import 'package:frosty/models/emotes.dart';
 import 'package:frosty/models/followed_channel.dart';
+import 'package:frosty/models/pinned_chat.dart';
 import 'package:frosty/models/shared_chat_session.dart';
 import 'package:frosty/models/stream.dart';
 import 'package:frosty/models/user.dart';
@@ -599,6 +600,50 @@ class TwitchApi extends BaseApiClient {
     } catch (e) {
       debugPrint('Error fetching VOD comments: $e');
       return const VodCommentsResponse(comments: [], hasNextPage: false, hasPreviousPage: false);
+    }
+  }
+
+  /// Fetches the currently pinned chat message for a channel via GQL.
+  /// Returns null if no message is pinned.
+  Future<PinnedChatMessage?> getPinnedChat({
+    required String channelId,
+    String? token,
+  }) async {
+    final body = [
+      {
+        'operationName': 'GetPinnedChat',
+        'variables': {'channelID': channelId, 'count': 1},
+        'extensions': {
+          'persistedQuery': {
+            'version': 1,
+            'sha256Hash': '2d099d4c9b6af80a07d8440140c4f3dbb04d516b35c401aab7ce8f60765308d5',
+          },
+        },
+      },
+    ];
+
+    try {
+      final headers = <String, String>{
+        'Client-ID': 'kimne78kx3ncx6brgo4mv6wki5h1ko',
+        'Content-Type': 'application/json',
+      };
+      if (token != null) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
+      final response = await dio.post<List<dynamic>>(
+        _gqlBaseUrl,
+        data: body,
+        options: Options(headers: headers),
+      );
+
+      if (response.data != null && response.data!.isNotEmpty) {
+        return PinnedChatMessage.fromGqlResponse(response.data!);
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error fetching pinned chat: $e');
+      return null;
     }
   }
 
