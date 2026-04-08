@@ -2,6 +2,9 @@ name: CI
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - '.github/**'
+      - '**.md'
 jobs:
   test:
     name: Check and test on ${{ matrix.os }}
