@@ -10,7 +10,11 @@ class UpdateDialog extends StatefulWidget {
   final GitHubRelease release;
   final String currentVersion;
 
-  const UpdateDialog({super.key, required this.release, required this.currentVersion});
+  const UpdateDialog({
+    super.key,
+    required this.release,
+    required this.currentVersion,
+  });
 
   @override
   State<UpdateDialog> createState() => _UpdateDialogState();
@@ -49,7 +53,10 @@ class _UpdateDialogState extends State<UpdateDialog> {
               : () async {
                   setState(() => _tapped = true);
                   final prefs = await SharedPreferences.getInstance();
-                  await prefs.setString('skipped_release_tag', widget.release.tagName);
+                  await prefs.setString(
+                    'skipped_release_tag',
+                    widget.release.tagName,
+                  );
                   if (context.mounted) Navigator.of(context).pop();
                 },
           child: const Text('Skip'),
@@ -60,10 +67,16 @@ class _UpdateDialogState extends State<UpdateDialog> {
               : () {
                   setState(() => _tapped = true);
                   Navigator.of(context).pop();
-                  final url = widget.release.apkDownloadUrl ?? widget.release.htmlUrl;
-                  launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+                  final url =
+                      widget.release.apkDownloadUrl ?? widget.release.htmlUrl;
+                  launchUrl(
+                    Uri.parse(url),
+                    mode: LaunchMode.externalApplication,
+                  );
                 },
-          child: Text(widget.release.apkDownloadUrl != null ? 'Download' : 'Open'),
+          child: Text(
+            widget.release.apkDownloadUrl != null ? 'Download' : 'Open',
+          ),
         ),
       ],
     );
@@ -71,10 +84,18 @@ class _UpdateDialogState extends State<UpdateDialog> {
 }
 
 bool isNewerVersion(String remote, String current) {
-  final remoteParts = remote.split('.').map((e) => int.tryParse(e) ?? 0).toList();
-  final currentParts = current.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+  final remoteParts = remote
+      .split('.')
+      .map((e) => int.tryParse(e) ?? 0)
+      .toList();
+  final currentParts = current
+      .split('.')
+      .map((e) => int.tryParse(e) ?? 0)
+      .toList();
 
-  final maxLen = remoteParts.length > currentParts.length ? remoteParts.length : currentParts.length;
+  final maxLen = remoteParts.length > currentParts.length
+      ? remoteParts.length
+      : currentParts.length;
   for (var i = 0; i < maxLen; i++) {
     final r = i < remoteParts.length ? remoteParts[i] : 0;
     final c = i < currentParts.length ? currentParts[i] : 0;
@@ -86,7 +107,10 @@ bool isNewerVersion(String remote, String current) {
 
 /// Shows the update dialog if a newer release is available.
 /// When [ignoreSkipped] is true, shows even if the user previously skipped this version.
-Future<void> checkForUpdate(BuildContext context, {bool ignoreSkipped = false}) async {
+Future<void> checkForUpdate(
+  BuildContext context, {
+  bool ignoreSkipped = false,
+}) async {
   try {
     final githubApi = context.read<GitHubApi>();
     final packageInfo = await PackageInfo.fromPlatform();
@@ -112,23 +136,34 @@ Future<void> checkForUpdate(BuildContext context, {bool ignoreSkipped = false}) 
         _showDialog(context, release, currentVersion);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('You are on the latest version')),
+          const SnackBar(
+            backgroundColor: Colors.white,
+            content: Text('You are on the latest version'),
+          ),
         );
       }
     }
   } catch (_) {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to check for updates')),
+        const SnackBar(
+          backgroundColor: Colors.white,
+          content: Text('Failed to check for updates'),
+        ),
       );
     }
   }
 }
 
-void _showDialog(BuildContext context, GitHubRelease release, String currentVersion) {
+void _showDialog(
+  BuildContext context,
+  GitHubRelease release,
+  String currentVersion,
+) {
   showDialog(
     context: context,
     barrierDismissible: false,
-    builder: (_) => UpdateDialog(release: release, currentVersion: currentVersion),
+    builder: (_) =>
+        UpdateDialog(release: release, currentVersion: currentVersion),
   );
 }
