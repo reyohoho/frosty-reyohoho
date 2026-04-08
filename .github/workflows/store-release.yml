@@ -1,12 +1,7 @@
 # Builds and releases frosty on the Google Play Store and Apple App Store through fastlane.
 name: Build and release Frosty
 on:
-  # Enable the option to manually run the workflow in the Actions tab.
   workflow_dispatch:
-  # Only run if a semver tag was pushed.
-  push:
-    tags:
-      - v*.*.*
 # Setup environment variables for use in all jobs.
 env:
   # Gemfile path used for caching dependencies.
