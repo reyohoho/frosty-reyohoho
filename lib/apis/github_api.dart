@@ -10,7 +10,7 @@ class GitHubRelease {
   final bool prerelease;
   final bool draft;
   final String? apkDownloadUrl;
-  final DateTime publishedAt;
+  final DateTime? publishedAt;
 
   const GitHubRelease({
     required this.tagName,
@@ -19,7 +19,7 @@ class GitHubRelease {
     required this.htmlUrl,
     required this.prerelease,
     required this.draft,
-    required this.publishedAt,
+    this.publishedAt,
     this.apkDownloadUrl,
   });
 
@@ -34,6 +34,8 @@ class GitHubRelease {
       }
     }
 
+    final publishedAtStr = json['published_at'] as String?;
+
     return GitHubRelease(
       tagName: json['tag_name'] as String,
       name: (json['name'] as String?) ?? json['tag_name'] as String,
@@ -41,7 +43,7 @@ class GitHubRelease {
       htmlUrl: json['html_url'] as String,
       prerelease: json['prerelease'] as bool? ?? false,
       draft: json['draft'] as bool? ?? false,
-      publishedAt: DateTime.parse(json['published_at'] as String),
+      publishedAt: publishedAtStr != null ? DateTime.tryParse(publishedAtStr) : null,
       apkDownloadUrl: apkUrl,
     );
   }

@@ -17,6 +17,7 @@ import 'package:frosty/widgets/frosty_dialog.dart';
 import 'package:frosty/widgets/profile_picture.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class Home extends StatefulWidget {
@@ -31,14 +32,23 @@ class _HomeState extends State<Home> {
 
   late final _homeStore = HomeStore(authStore: _authStore);
 
+  bool _updateCheckDone = false;
+
   Future<void> _checkForUpdate() async {
+    if (_updateCheckDone) return;
+    _updateCheckDone = true;
+
     try {
       final githubApi = context.read<GitHubApi>();
       final packageInfo = await PackageInfo.fromPlatform();
       final currentVersion = packageInfo.version;
+      final prefs = await SharedPreferences.getInstance();
+      final skippedTag = prefs.getString('skipped_release_tag');
 
       final release = await githubApi.getLatestRelease();
       if (release == null || !mounted) return;
+
+      if (release.tagName == skippedTag) return;
 
       final remoteVersion = release.tagName.replaceFirst(RegExp('^v'), '');
       if (_isNewerVersion(remoteVersion, currentVersion)) {
@@ -66,55 +76,10 @@ class _HomeState extends State<Home> {
 
     showDialog(
       context: context,
-      builder: (context) => FrostyDialog(
-        title: 'Update available',
-        content: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('$currentVersion \u2192 ${release.tagName}'),
-            if (release.body.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 300),
-                child: SingleChildScrollView(
-                  child: Text(
-                    release.body,
-                    style: const TextStyle(fontSize: 13),
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: Navigator.of(context).pop,
-            child: const Text('Later'),
-          ),
-          if (release.apkDownloadUrl != null)
-            FilledButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                launchUrl(
-                  Uri.parse(release.apkDownloadUrl!),
-                  mode: LaunchMode.externalApplication,
-                );
-              },
-              child: const Text('Download'),
-            )
-          else
-            FilledButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                launchUrl(
-                  Uri.parse(release.htmlUrl),
-                  mode: LaunchMode.externalApplication,
-                );
-              },
-              child: const Text('Open'),
-            ),
-        ],
+      barrierDismissible: false,
+      builder: (dialogContext) => _UpdateDialog(
+        release: release,
+        currentVersion: currentVersion,
       ),
     );
   }
@@ -279,5 +244,69 @@ class _HomeState extends State<Home> {
   void dispose() {
     _homeStore.dispose();
     super.dispose();
+  }
+}
+
+class _UpdateDialog extends StatefulWidget {
+  final GitHubRelease release;
+  final String currentVersion;
+
+  const _UpdateDialog({required this.release, required this.currentVersion});
+
+  @override
+  State<_UpdateDialog> createState() => _UpdateDialogState();
+}
+
+class _UpdateDialogState extends State<_UpdateDialog> {
+  bool _tapped = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return FrostyDialog(
+      title: 'Update available',
+      content: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('${widget.currentVersion} \u2192 ${widget.release.tagName}'),
+          if (widget.release.body.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 300),
+              child: SingleChildScrollView(
+                child: Text(
+                  widget.release.body,
+                  style: const TextStyle(fontSize: 13),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: _tapped
+              ? null
+              : () async {
+                  setState(() => _tapped = true);
+                  final prefs = await SharedPreferences.getInstance();
+                  await prefs.setString('skipped_release_tag', widget.release.tagName);
+                  if (context.mounted) Navigator.of(context).pop();
+                },
+          child: const Text('Skip'),
+        ),
+        FilledButton(
+          onPressed: _tapped
+              ? null
+              : () {
+                  setState(() => _tapped = true);
+                  Navigator.of(context).pop();
+                  final url = widget.release.apkDownloadUrl ?? widget.release.htmlUrl;
+                  launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+                },
+          child: Text(widget.release.apkDownloadUrl != null ? 'Download' : 'Open'),
+        ),
+      ],
+    );
   }
 }
