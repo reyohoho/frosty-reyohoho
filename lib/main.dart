@@ -107,21 +107,34 @@ void main() async {
   final ffzApiService = FFZApi(dioClient);
   final sevenTVApiService = SevenTVApi(dioClient);
   final reyohohoApiService = ReyohohoApi(dioClient);
-  if (false) {
-    final workingStaregeDomain = await reyohohoApiService.findStaregeDomain();
-    if (workingStaregeDomain != null) {
-      bttvApiService.proxyUrlPrefix = workingStaregeDomain;
-      ffzApiService.proxyUrlPrefix = workingStaregeDomain;
-      sevenTVApiService.proxyUrlPrefix = workingStaregeDomain;
+  if (settingsStore.useEmoteProxy) {
+    final workingDomain = await reyohohoApiService.initializeDomain();
+    if (workingDomain != null) {
+      bttvApiService.proxyUrlPrefix = workingDomain;
+      ffzApiService.proxyUrlPrefix = workingDomain;
+      sevenTVApiService.proxyUrlPrefix = workingDomain;
     }
   }
 
-  // React to proxy setting changes
-  autorun((_) {
-    // Access observables to trigger reaction
-    settingsStore.useEmoteProxy;
-    settingsStore.selectedEmoteProxyUrl;
-  });
+  // React to proxy setting changes: clear caches and reset proxy prefixes.
+  // The actual domain lookup happens in _initChannelStores on each channel
+  // open, avoiding race conditions with concurrent initializeDomain calls.
+  reaction(
+    (_) => settingsStore.useEmoteProxy,
+    (bool useEmoteProxy) {
+      CustomCacheManager.cancelPendingDownloads();
+      CustomCacheManager.needsCacheFlush = true;
+      PaintingBinding.instance.imageCache.clear();
+      PaintingBinding.instance.imageCache.clearLiveImages();
+
+      if (!useEmoteProxy) {
+        reyohohoApiService.resetDomain();
+        bttvApiService.proxyUrlPrefix = null;
+        ffzApiService.proxyUrlPrefix = null;
+        sevenTVApiService.proxyUrlPrefix = null;
+      }
+    },
+  );
 
   // Create global assets store (shared cache for global emotes/badges)
   final globalAssetsStore = GlobalAssetsStore(

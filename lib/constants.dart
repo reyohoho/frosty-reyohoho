@@ -41,7 +41,6 @@ const linkPreviewProxyDomains = [
 
 /// Domains that should NOT be proxied (our own proxy servers).
 const linkPreviewNoProxyDomains = [
-  'cdn.rte.net.ru',
   'starege.rte.net.ru',
   'starege3.rte.net.ru',
   'starege4.rte.net.ru',

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
+import 'package:frosty/screens/home/friends/friends.dart';
 import 'package:frosty/screens/home/home_store.dart';
 import 'package:frosty/screens/home/search/search.dart';
 import 'package:frosty/screens/home/stream_list/stream_list_store.dart';
@@ -84,17 +85,23 @@ class _HomeState extends State<Home> {
           ),
           flexibleSpace: Observer(
             builder: (_) {
-              // Only show flexible space on Following tab (when logged in)
-              final isOnFollowingTab = _authStore.isLoggedIn && _homeStore.selectedIndex == 0;
+              // Blur under transparent app bar on Following and Friends (content scrolls behind it).
+              final idx = _homeStore.selectedIndex;
+              final useBlur = _authStore.isLoggedIn && (idx == 0 || idx == 2);
 
-              if (!isOnFollowingTab) return const SizedBox.shrink();
+              if (!useBlur) return const SizedBox.shrink();
 
               return BlurredContainer(gradientDirection: GradientDirection.up, child: const SizedBox.expand());
             },
           ),
           title: Observer(
             builder: (_) {
-              final titles = [if (_authStore.isLoggedIn) 'Following', 'Top', 'Search'];
+              final titles = [
+                if (_authStore.isLoggedIn) 'Following',
+                'Top',
+                if (_authStore.isLoggedIn) 'Friends',
+                'Search',
+              ];
 
               return Text(titles[_homeStore.selectedIndex]);
             },
@@ -127,6 +134,8 @@ class _HomeState extends State<Home> {
               if (_authStore.isLoggedIn)
                 StreamsList(listType: ListType.followed, scrollController: _homeStore.followedScrollController),
               TopSection(homeStore: _homeStore),
+              if (_authStore.isLoggedIn)
+                Friends(scrollController: _homeStore.friendsScrollController),
               Search(scrollController: _homeStore.searchScrollController),
             ],
           ),
@@ -164,10 +173,22 @@ class _HomeState extends State<Home> {
                     label: 'Top',
                     tooltip: 'Top',
                   ),
+                  if (_authStore.isLoggedIn)
+                    NavigationDestination(
+                      icon: Icon(
+                        Icons.people_outline_rounded,
+                        color: _homeStore.selectedIndex == 2
+                            ? theme.colorScheme.onSurface
+                            : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                      ),
+                      selectedIcon: Icon(Icons.people_rounded, color: theme.colorScheme.onSurface),
+                      label: 'Friends',
+                      tooltip: 'Friends',
+                    ),
                   NavigationDestination(
                     icon: Icon(
                       Icons.search_rounded,
-                      color: _homeStore.selectedIndex == (_authStore.isLoggedIn ? 2 : 1)
+                      color: _homeStore.selectedIndex == (_authStore.isLoggedIn ? 3 : 1)
                           ? theme.colorScheme.onSurface
                           : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
                     ),

@@ -18,6 +18,9 @@ abstract class HomeStoreBase with Store {
   /// One controller is for the top streams tab and the other is for the top categories tab.
   final topSectionScrollControllers = [ScrollController(), ScrollController()];
 
+  /// The scroll controller for controlling the scroll to top on the friends section.
+  final friendsScrollController = ScrollController();
+
   /// The scroll controller for controlling the scroll to top on the search section.
   final searchScrollController = ScrollController();
 
@@ -52,7 +55,9 @@ abstract class HomeStoreBase with Store {
         } else if (index == 1 && topSectionScrollControllers[topSectionCurrentIndex].hasClients) {
           // If on the top section, scroll to the top of the tab based on the current top tab.
           topSectionScrollControllers[topSectionCurrentIndex].animateTo(0.0, duration: duration, curve: Curves.easeOut);
-        } else if (searchScrollController.hasClients) {
+        } else if (index == 2 && friendsScrollController.hasClients) {
+          friendsScrollController.animateTo(0.0, duration: duration, curve: Curves.easeOut);
+        } else if (index == 3 && searchScrollController.hasClients) {
           // If on the search tab and tapping the search tab, scroll to the top.
           searchScrollController.animateTo(0.0, duration: duration, curve: Curves.easeOut);
         }
@@ -72,6 +77,7 @@ abstract class HomeStoreBase with Store {
     _disposeReaction();
 
     followedScrollController.dispose();
+    friendsScrollController.dispose();
     searchScrollController.dispose();
 
     for (final controller in topSectionScrollControllers) {

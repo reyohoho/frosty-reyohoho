@@ -79,7 +79,6 @@ SettingsStore _$SettingsStoreFromJson(
   ..showReyohohoBadges = json['showReyohohoBadges'] as bool? ?? true
   ..showPaints = json['showPaints'] as bool? ?? true
   ..useEmoteProxy = json['useEmoteProxy'] as bool? ?? false
-  ..selectedEmoteProxyUrl = json['selectedEmoteProxyUrl'] as String? ?? ''
   ..showRecentMessages = json['showRecentMessages'] as bool? ?? false
   ..showLinkPreviews = json['showLinkPreviews'] as bool? ?? true
   ..hideLinkPreviewLinks = json['hideLinkPreviewLinks'] as bool? ?? false
@@ -161,7 +160,6 @@ Map<String, dynamic> _$SettingsStoreToJson(
   'showReyohohoBadges': instance.showReyohohoBadges,
   'showPaints': instance.showPaints,
   'useEmoteProxy': instance.useEmoteProxy,
-  'selectedEmoteProxyUrl': instance.selectedEmoteProxyUrl,
   'showRecentMessages': instance.showRecentMessages,
   'showLinkPreviews': instance.showLinkPreviews,
   'hideLinkPreviewLinks': instance.hideLinkPreviewLinks,
@@ -1125,28 +1123,6 @@ mixin _$SettingsStore on _SettingsStoreBase, Store {
     });
   }
 
-  late final _$selectedEmoteProxyUrlAtom = Atom(
-    name: '_SettingsStoreBase.selectedEmoteProxyUrl',
-    context: context,
-  );
-
-  @override
-  String get selectedEmoteProxyUrl {
-    _$selectedEmoteProxyUrlAtom.reportRead();
-    return super.selectedEmoteProxyUrl;
-  }
-
-  @override
-  set selectedEmoteProxyUrl(String value) {
-    _$selectedEmoteProxyUrlAtom.reportWrite(
-      value,
-      super.selectedEmoteProxyUrl,
-      () {
-        super.selectedEmoteProxyUrl = value;
-      },
-    );
-  }
-
   late final _$showRecentMessagesAtom = Atom(
     name: '_SettingsStoreBase.showRecentMessages',
     context: context,
@@ -1526,7 +1502,6 @@ showFFZBadges: ${showFFZBadges},
 showReyohohoBadges: ${showReyohohoBadges},
 showPaints: ${showPaints},
 useEmoteProxy: ${useEmoteProxy},
-selectedEmoteProxyUrl: ${selectedEmoteProxyUrl},
 showRecentMessages: ${showRecentMessages},
 showLinkPreviews: ${showLinkPreviews},
 hideLinkPreviewLinks: ${hideLinkPreviewLinks},

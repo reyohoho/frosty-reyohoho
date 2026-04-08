@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
+import 'package:frosty/cache_manager.dart';
 import 'package:frosty/screens/channel/chat/stores/chat_store.dart';
 import 'package:frosty/screens/channel/chat/stores/chat_tabs_store.dart';
 import 'package:frosty/screens/channel/chat/widgets/chat_tabs.dart';
@@ -67,20 +68,33 @@ class _VideoChatState extends State<VideoChat>
   late VideoStore _videoStore;
 
   Future<void> _initChannelStores() async {
-    final emoteProxyAndQuality = await Future.wait<String?>([
-      context.reyohohoApi.findStaregeDomain(),
-      context.reyohohoApi.findQualityDomain(),
-    ]);
+    final settings = context.settingsStore;
+
+    // Always verify a working starege domain on channel open.
+    // This makes reyohohoApi.workingDomain available for image widgets
+    // and, when emote proxy is enabled, sets API proxy prefixes.
+    final domain = await context.reyohohoApi.initializeDomain(force: true);
     if (!mounted) return;
-    final emoteProxy = emoteProxyAndQuality[0];
-    final qualityProxy = emoteProxyAndQuality[1];
-    if (emoteProxy != null) {
-      context.bttvApi.proxyUrlPrefix = emoteProxy;
-      context.ffzApi.proxyUrlPrefix = emoteProxy;
-      context.sevenTVApi.proxyUrlPrefix = emoteProxy;
-      context.globalAssetsStore.refresh();
+    if (settings.useEmoteProxy && domain != null) {
+      context.bttvApi.proxyUrlPrefix = domain;
+      context.ffzApi.proxyUrlPrefix = domain;
+      context.sevenTVApi.proxyUrlPrefix = domain;
     }
+
+    if (CustomCacheManager.needsCacheFlush) {
+      CustomCacheManager.needsCacheFlush = false;
+      PaintingBinding.instance.imageCache.clear();
+      PaintingBinding.instance.imageCache.clearLiveImages();
+      await CustomCacheManager.instance.emptyCache();
+      if (!mounted) return;
+    }
+
     if (!mounted) return;
+    final qualityProxy = settings.usePlaylistProxy
+        ? (await context.reyohohoApi.findQualityDomain()) ?? ''
+        : '';
+    if (!mounted) return;
+
     _chatTabsStore = ChatTabsStore(
       twitchApi: context.twitchApi,
       bttvApi: context.bttvApi,
@@ -94,10 +108,13 @@ class _VideoChatState extends State<VideoChat>
       primaryChannelLogin: widget.userLogin,
       primaryDisplayName: widget.userName,
     );
+
+    if (!mounted) return;
     _videoStore = VideoStore(
       userLogin: widget.userLogin,
       userId: widget.userId,
       twitchApi: context.twitchApi,
+      reyohohoApi: context.reyohohoApi,
       authStore: context.authStore,
       settingsStore: context.settingsStore,
       usherProxyBaseUrl: qualityProxy,
@@ -763,7 +780,6 @@ class _VideoChatState extends State<VideoChat>
 
   @override
   void dispose() {
-    // Remove observer for app lifecycle events
     WidgetsBinding.instance.removeObserver(this);
 
     if (_channelStoresReady) {

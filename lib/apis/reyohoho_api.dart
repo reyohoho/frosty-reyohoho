@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:frosty/apis/base_api_client.dart';
 import 'package:frosty/models/badges.dart';
+import 'package:frosty/models/reyohoho_friend.dart';
 
 /// Starege API domains in priority order.
 const _staregeDomains = [
@@ -27,7 +28,19 @@ class ReyohohoApi extends BaseApiClient {
   Future<String?>? _initFuture;
   bool _isInitialized = false;
 
+  /// The last successfully resolved starege domain, or null if not yet found.
+  /// Used by image widgets to proxy CDN URLs through a verified working domain.
+  String? get workingDomain => _workingDomain;
+
   ReyohohoApi(Dio dio) : super(dio, '');
+
+  /// Clears the cached domain so the next [initializeDomain] call
+  /// will perform a fresh lookup.
+  void resetDomain() {
+    _workingDomain = null;
+    _isInitialized = false;
+    _initFuture = null;
+  }
 
   /// Initializes and finds a working starege domain.
   Future<String?> initializeDomain({bool force = false}) async {
@@ -52,94 +65,69 @@ class ReyohohoApi extends BaseApiClient {
     return _workingDomain;
   }
 
-  Future<String?> _findWorkingDomain() async {
-    for (final domain in _staregeDomains) {
-      try {
-        final testUrl = '$domain/https://google.com';
-        final response = await Dio().head(
-          testUrl,
-          options: Options(
-            receiveTimeout: const Duration(seconds: 3),
-            sendTimeout: const Duration(seconds: 3),
-          ),
-        );
-
-        if (response.statusCode != null &&
-            response.statusCode! >= 200 &&
-            response.statusCode! < 400) {
-          debugPrint('ReyohohoApi: Using Starege domain: $domain');
-          return domain;
-        }
-      } catch (e) {
-        // Try next domain
-      }
-    }
-
-    debugPrint('ReyohohoApi: All Starege domains are unavailable');
-    return null;
-  }
-
-  Future<String?> findStaregeDomain() async {
-    for (final domain in _staregeDomains) {
-      try {
-        final testUrl = '$domain/https://google.com';
-        final response = await Dio().head(
-          testUrl,
-          options: Options(
-            receiveTimeout: const Duration(seconds: 3),
-            sendTimeout: const Duration(seconds: 3),
-          ),
-        );
-
-        if (response.statusCode != null &&
-            response.statusCode! >= 200 &&
-            response.statusCode! < 400) {
-          debugPrint(
-            'ReyohohoApi: findStaregeDomain :Using Starege domain: $domain',
-          );
-          return domain;
-        }
-      } catch (e) {
-        // Try next domain
-      }
-    }
-
-    debugPrint(
-      'ReyohohoApi: findStaregeDomain :All Starege domains are unavailable',
+  /// Checks all [domains] in parallel, returns the first one that responds
+  /// with a 2xx/3xx status code, or null if none are reachable.
+  Future<String?> _findFirstWorkingDomain(
+    List<String> domains, {
+    required String label,
+  }) async {
+    final cancelToken = CancelToken();
+    final dio = Dio(
+      BaseOptions(
+        connectTimeout: const Duration(seconds: 3),
+        receiveTimeout: const Duration(seconds: 3),
+        sendTimeout: const Duration(seconds: 3),
+      ),
     );
-    return null;
-  }
 
-  Future<String?> findQualityDomain() async {
-    for (final domain in _qualityDomains) {
+    final completer = Completer<String?>();
+    var failCount = 0;
+    final totalCount = domains.length;
+
+    final futures = domains.map((domain) async {
       try {
-        final testUrl = '$domain/https://google.com';
-        final response = await Dio().head(
-          testUrl,
-          options: Options(
-            receiveTimeout: const Duration(seconds: 3),
-            sendTimeout: const Duration(seconds: 3),
-          ),
+        final response = await dio.head(
+          '$domain/https://google.com',
+          cancelToken: cancelToken,
         );
-
         if (response.statusCode != null &&
             response.statusCode! >= 200 &&
             response.statusCode! < 400) {
-          debugPrint(
-            'ReyohohoApi: findQualityDomain :Using Quality domain: $domain',
-          );
           return domain;
         }
-      } catch (e) {
-        // Try next domain
-      }
+      } catch (_) {}
+      return null;
+    }).toList();
+
+    for (final future in futures) {
+      future.then((domain) {
+        if (completer.isCompleted) return;
+        if (domain != null) {
+          cancelToken.cancel();
+          completer.complete(domain);
+        } else {
+          failCount++;
+          if (failCount >= totalCount) {
+            completer.complete(null);
+          }
+        }
+      });
     }
 
-    debugPrint(
-      'ReyohohoApi: findQualityDomain :All Quality domains are unavailable',
-    );
-    return null;
+    final result = await completer.future;
+    if (result != null) {
+      debugPrint('ReyohohoApi: $label: Using domain: $result');
+    } else {
+      debugPrint('ReyohohoApi: $label: All domains are unavailable');
+    }
+    return result;
   }
+
+  Future<String?> _findWorkingDomain() =>
+      _findFirstWorkingDomain(_staregeDomains, label: 'Starege');
+
+  Future<String?> findQualityDomain() =>
+      _findFirstWorkingDomain(_qualityDomains, label: 'Quality');
 
   /// Gets the API URL for a given path.
   Future<String?> _getApiUrl(String path) async {
@@ -310,6 +298,68 @@ class ReyohohoApi extends BaseApiClient {
     } catch (e) {
       debugPrint('ReyohohoApi: Failed to fetch 7TV paint for user $userId: $e');
       return null;
+    }
+  }
+
+  /// Friends list with watched channels (RTE extension API).
+  Future<List<ReyohohoFriend>> getExtFriends(String twitchUserId) async {
+    final apiUrl = await _getApiUrl('/api/ext/friends/$twitchUserId');
+    if (apiUrl == null) {
+      throw const NetworkException('Reyohoho service unavailable');
+    }
+
+    try {
+      final raw = await get<dynamic>(apiUrl);
+      final List<dynamic> list = switch (raw) {
+        final List<dynamic> l => l,
+        final String s => () {
+          try {
+            return jsonDecode(s) as List<dynamic>;
+          } catch (_) {
+            return <dynamic>[];
+          }
+        }(),
+        _ => <dynamic>[],
+      };
+      return list
+          .map(
+            (e) => ReyohohoFriend.fromJson(Map<String, dynamic>.from(e as Map)),
+          )
+          .toList();
+    } on ApiException {
+      rethrow;
+    } catch (e) {
+      debugPrint('ReyohohoApi: getExtFriends failed: $e');
+      throw NetworkException('Failed to load friends list');
+    }
+  }
+
+  /// Reports that the viewer has been watching this live channel (RTE friends extension).
+  /// Failures are logged only; callers should not depend on success.
+  Future<void> postExtFriendsActivity({
+    required String twitchId,
+    required String channelLogin,
+    required String channelDisplayName,
+    required String streamCategory,
+  }) async {
+    final apiUrl = await _getApiUrl('/api/ext/friends/activity');
+    if (apiUrl == null) {
+      return;
+    }
+
+    try {
+      await post<dynamic>(
+        apiUrl,
+        data: <String, dynamic>{
+          'twitch_id': twitchId,
+          'channel_login': channelLogin,
+          'channel_display_name': channelDisplayName,
+          'stream_category': streamCategory,
+        },
+      );
+      debugPrint('ReyohohoApi: friends activity posted for $channelLogin');
+    } catch (e) {
+      debugPrint('ReyohohoApi: friends activity failed: $e');
     }
   }
 }

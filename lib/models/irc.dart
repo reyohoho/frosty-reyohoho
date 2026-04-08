@@ -22,6 +22,7 @@ import 'package:frosty/widgets/frosty_cached_network_image.dart';
 import 'package:frosty/widgets/frosty_photo_view_dialog.dart';
 import 'package:frosty/widgets/link_preview.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 // Constants for IRC message rendering
@@ -1324,10 +1325,12 @@ class _PaintedTextState extends State<_PaintedText> {
 
   /// Gets the effective image URL, applying proxy for 7TV sources if enabled.
   String _getEffectiveImageUrl(String imageUrl) {
-    // For reyohoho, add the CDN base URL if it's a relative path
+    // For reyohoho, resolve relative paths against the working starege domain
     if (widget.source == PaintSource.reyohoho) {
       if (imageUrl.startsWith('/')) {
-        return 'https://cdn.rte.net.ru$imageUrl';
+        final reyohohoApi = context.read<ReyohohoApi>();
+        final domain = reyohohoApi.workingDomain;
+        if (domain != null) return '$domain$imageUrl';
       }
       return imageUrl;
     }

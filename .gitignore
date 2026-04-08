@@ -1,4 +1,5 @@
 run.sh
+build.sh
 # Miscellaneous
 *.class
 *.log

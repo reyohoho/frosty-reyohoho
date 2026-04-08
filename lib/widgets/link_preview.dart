@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:frosty/apis/reyohoho_api.dart';
 import 'package:frosty/cache_manager.dart';
 import 'package:frosty/constants.dart';
 import 'package:frosty/screens/settings/stores/settings_store.dart';
@@ -17,7 +18,12 @@ class LinkPreviewInfo {
   final String displayUrl;
   final String? id;
 
-  const LinkPreviewInfo({required this.type, required this.originalUrl, required this.displayUrl, this.id});
+  const LinkPreviewInfo({
+    required this.type,
+    required this.originalUrl,
+    required this.displayUrl,
+    this.id,
+  });
 }
 
 /// Checks if a URL should be proxied for link previews.
@@ -72,12 +78,20 @@ LinkPreviewInfo? detectLinkPreview(String text) {
 
   // Check direct image URLs
   if (regexImageUrl.hasMatch(text)) {
-    return LinkPreviewInfo(type: LinkPreviewType.image, originalUrl: text, displayUrl: text);
+    return LinkPreviewInfo(
+      type: LinkPreviewType.image,
+      originalUrl: text,
+      displayUrl: text,
+    );
   }
 
   // Check direct video URLs
   if (regexVideoUrl.hasMatch(text)) {
-    return LinkPreviewInfo(type: LinkPreviewType.video, originalUrl: text, displayUrl: text);
+    return LinkPreviewInfo(
+      type: LinkPreviewType.video,
+      originalUrl: text,
+      displayUrl: text,
+    );
   }
 
   return null;
@@ -105,7 +119,10 @@ class LinkPreviewWidget extends StatelessWidget {
     if (!settingsStore.useEmoteProxy) return url;
     if (!shouldProxyLinkPreview(url)) return url;
 
-    return settingsStore.getProxiedEmoteUrl(url);
+    final reyohohoApi = context.read<ReyohohoApi>();
+    final proxyBase = reyohohoApi.workingDomain;
+    if (proxyBase == null) return url;
+    return '$proxyBase/$url';
   }
 
   @override
@@ -157,7 +174,9 @@ class _ImagePreview extends StatelessWidget {
       ),
       onLongPress: () => launchUrl(
         Uri.parse(originalUrl),
-        mode: launchExternal ? LaunchMode.externalApplication : LaunchMode.inAppBrowserView,
+        mode: launchExternal
+            ? LaunchMode.externalApplication
+            : LaunchMode.inAppBrowserView,
       ),
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: maxWidth, maxHeight: maxHeight),
@@ -176,7 +195,11 @@ class _ImagePreview extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Center(
-                child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2)),
+                child: SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
               ),
             ),
             errorWidget: (context, url, error) => const SizedBox.shrink(),
@@ -206,7 +229,9 @@ class _VideoPreviewPlaceholder extends StatelessWidget {
     return GestureDetector(
       onTap: () => launchUrl(
         Uri.parse(videoUrl),
-        mode: launchExternal ? LaunchMode.externalApplication : LaunchMode.inAppBrowserView,
+        mode: launchExternal
+            ? LaunchMode.externalApplication
+            : LaunchMode.inAppBrowserView,
       ),
       child: Container(
         constraints: BoxConstraints(maxWidth: maxWidth, maxHeight: 60),
@@ -218,7 +243,11 @@ class _VideoPreviewPlaceholder extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.play_circle_outline, color: Theme.of(context).colorScheme.primary, size: 28),
+            Icon(
+              Icons.play_circle_outline,
+              color: Theme.of(context).colorScheme.primary,
+              size: 28,
+            ),
             const SizedBox(width: 8),
             Flexible(
               child: Column(
@@ -227,13 +256,18 @@ class _VideoPreviewPlaceholder extends StatelessWidget {
                 children: [
                   Text(
                     'Video',
-                    style: TextStyle(fontWeight: FontWeight.w500, color: Theme.of(context).colorScheme.onSurface),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w500,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
                   ),
                   Text(
                     'Tap to open',
                     style: TextStyle(
                       fontSize: 12,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
                 ],

@@ -70,7 +70,13 @@ class _VideoState extends State<Video> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    widget.videoStore.webViewController?.loadUrl(urlRequest: URLRequest(url: WebUri('about:blank')));
+    try {
+      widget.videoStore.webViewController
+          ?.loadUrl(urlRequest: URLRequest(url: WebUri('about:blank')))
+          .catchError((_) {});
+    } catch (_) {
+      // WebView controller may already be disposed by platform
+    }
 
     super.dispose();
   }

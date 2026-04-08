@@ -40,13 +40,16 @@ abstract class ChatAssetsStoreBase with Store {
   final channelIdToUserTwitch = ObservableMap<String, UserTwitch>();
 
   @computed
-  List<Emote> get bttvEmotes => emoteToObject.values.where((emote) => isBTTV(emote)).toList();
+  List<Emote> get bttvEmotes =>
+      emoteToObject.values.where((emote) => isBTTV(emote)).toList();
 
   @computed
-  List<Emote> get ffzEmotes => emoteToObject.values.where((emote) => isFFZ(emote)).toList();
+  List<Emote> get ffzEmotes =>
+      emoteToObject.values.where((emote) => isFFZ(emote)).toList();
 
   @computed
-  List<Emote> get sevenTVEmotes => emoteToObject.values.where((emote) => is7TV(emote)).toList();
+  List<Emote> get sevenTVEmotes =>
+      emoteToObject.values.where((emote) => is7TV(emote)).toList();
 
   @readonly
   var _recentEmotes = ObservableList<Emote>();
@@ -70,7 +73,9 @@ abstract class ChatAssetsStoreBase with Store {
   /// Combined Twitch badges: global + channel. Channel badges take precedence.
   @computed
   Map<String, ChatBadge> get twitchBadgesToObject {
-    final combined = Map<String, ChatBadge>.from(globalAssetsStore.twitchGlobalBadges);
+    final combined = Map<String, ChatBadge>.from(
+      globalAssetsStore.twitchGlobalBadges,
+    );
     combined.addAll(_channelTwitchBadges);
     return combined;
   }
@@ -86,7 +91,8 @@ abstract class ChatAssetsStoreBase with Store {
   var _userEmoteSectionToEmotes = <String, List<Emote>>{};
 
   /// The map of user IDs to their FFZ badges (from global store).
-  Map<String, List<ChatBadge>> get userToFFZBadges => globalAssetsStore.ffzBadges;
+  Map<String, List<ChatBadge>> get userToFFZBadges =>
+      globalAssetsStore.ffzBadges;
 
   /// The map of user IDs to their 7TV badges.
   @readonly
@@ -217,11 +223,13 @@ abstract class ChatAssetsStoreBase with Store {
   }
 
   bool isFFZ(Emote emote) {
-    return emote.type == EmoteType.ffzChannel || emote.type == EmoteType.ffzGlobal;
+    return emote.type == EmoteType.ffzChannel ||
+        emote.type == EmoteType.ffzGlobal;
   }
 
   bool is7TV(Emote emote) {
-    return emote.type == EmoteType.sevenTVChannel || emote.type == EmoteType.sevenTVGlobal;
+    return emote.type == EmoteType.sevenTVChannel ||
+        emote.type == EmoteType.sevenTVGlobal;
   }
 
   late final ReactionDisposer _disposeReaction;
@@ -250,7 +258,10 @@ abstract class ChatAssetsStoreBase with Store {
 
     _disposeReaction = autorun((_) {
       if (_recentEmotes.length > 48) _recentEmotes.removeLast();
-      prefs.setStringList('recent_emotes', _recentEmotes.map((emote) => jsonEncode(emote)).toList());
+      prefs.setStringList(
+        'recent_emotes',
+        _recentEmotes.map((emote) => jsonEncode(emote)).toList(),
+      );
     });
   }
 
@@ -270,19 +281,18 @@ abstract class ChatAssetsStoreBase with Store {
     bool showFFZEmotes = true,
     bool showFFZBadges = true,
   }) async {
-    // Fetch global (cached) and channel-specific assets in parallel
+    // Reload globals first so proxy/CDN state matches before channel fetches.
+    await globalAssetsStore.refresh(
+      showTwitchEmotes: showTwitchEmotes,
+      showTwitchBadges: showTwitchBadges,
+      show7TVEmotes: show7TVEmotes,
+      showBTTVEmotes: showBTTVEmotes,
+      showBTTVBadges: showBTTVBadges,
+      showFFZEmotes: showFFZEmotes,
+      showFFZBadges: showFFZBadges,
+    );
+
     await Future.wait([
-      // Global assets (cached across all tabs - only fetches once)
-      globalAssetsStore.ensureLoaded(
-        showTwitchEmotes: showTwitchEmotes,
-        showTwitchBadges: showTwitchBadges,
-        show7TVEmotes: show7TVEmotes,
-        showBTTVEmotes: showBTTVEmotes,
-        showBTTVBadges: showBTTVBadges,
-        showFFZEmotes: showFFZEmotes,
-        showFFZBadges: showFFZBadges,
-      ),
-      // Channel-specific emotes
       Future.wait([
             if (showTwitchEmotes)
               twitchApi
@@ -305,7 +315,8 @@ abstract class ChatAssetsStoreBase with Store {
                     return emotes;
                   })
                   .catchError(onEmoteError),
-            if (showBTTVEmotes) bttvApi.getEmotesChannel(id: channelId).catchError(onEmoteError),
+            if (showBTTVEmotes)
+              bttvApi.getEmotesChannel(id: channelId).catchError(onEmoteError),
             if (showFFZEmotes)
               ffzApi
                   .getRoomInfo(id: channelId)
@@ -318,10 +329,10 @@ abstract class ChatAssetsStoreBase with Store {
           ])
           .then((assets) => assets.expand((list) => list))
           .then(
-            (emotes) =>
-                _channelEmoteToObject = <String, Emote>{for (final emote in emotes) emote.name: emote}.asObservable(),
+            (emotes) => _channelEmoteToObject = <String, Emote>{
+              for (final emote in emotes) emote.name: emote,
+            }.asObservable(),
           ),
-      // Channel badges (Twitch only - FFZ/BTTV badges are global)
       if (showTwitchBadges)
         twitchApi
             .getBadgesChannel(id: channelId)
@@ -351,7 +362,10 @@ abstract class ChatAssetsStoreBase with Store {
       sharedSevenTvSetIds.clear();
     }
 
-    final newParticipantIds = await populateSharedChatParticipants(channelId: channelId, onBadgeError: onBadgeError);
+    final newParticipantIds = await populateSharedChatParticipants(
+      channelId: channelId,
+      onBadgeError: onBadgeError,
+    );
 
     if (newParticipantIds.isEmpty) return;
 
@@ -379,7 +393,11 @@ abstract class ChatAssetsStoreBase with Store {
 
     // Add badge futures for each participant.
     if (showTwitchBadges) {
-      futures.addAll(newParticipantIds.map((id) => _fetchBadgesForChannel(id, onBadgeError: onBadgeError)));
+      futures.addAll(
+        newParticipantIds.map(
+          (id) => _fetchBadgesForChannel(id, onBadgeError: onBadgeError),
+        ),
+      );
     }
 
     await Future.wait(futures);
@@ -394,7 +412,9 @@ abstract class ChatAssetsStoreBase with Store {
   }) async {
     SharedChatSession? sharedSession;
     try {
-      sharedSession = await twitchApi.getSharedChatSession(broadcasterId: channelId);
+      sharedSession = await twitchApi.getSharedChatSession(
+        broadcasterId: channelId,
+      );
     } catch (e) {
       onBadgeError(e);
       return <String>[];
@@ -471,7 +491,10 @@ abstract class ChatAssetsStoreBase with Store {
     return lists.expand((e) => e).toList();
   }
 
-  Future<void> _fetchBadgesForChannel(String id, {required Function onBadgeError}) async {
+  Future<void> _fetchBadgesForChannel(
+    String id, {
+    required Function onBadgeError,
+  }) async {
     try {
       final badges = await twitchApi.getBadgesChannel(id: id);
       _channelTwitchBadges = {..._channelTwitchBadges, ...badges};
@@ -487,7 +510,9 @@ abstract class ChatAssetsStoreBase with Store {
     required Function onError,
   }) async {
     final userEmotes = await Future.wait(
-      emoteSets.map((setId) => twitchApi.getEmotesSets(setId: setId).catchError(onError)),
+      emoteSets.map(
+        (setId) => twitchApi.getEmotesSets(setId: setId).catchError(onError),
+      ),
     );
 
     for (final emoteSet in userEmotes) {

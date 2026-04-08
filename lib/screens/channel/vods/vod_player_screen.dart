@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -13,11 +14,14 @@ import 'package:frosty/theme.dart';
 import 'package:frosty/utils.dart';
 import 'package:frosty/utils/background_playback_callback.dart';
 import 'package:frosty/utils/context_extensions.dart';
+import 'package:frosty/utils/modal_bottom_sheet.dart';
 import 'package:frosty/utils/pip_callback.dart';
 import 'package:frosty/widgets/draggable_divider.dart';
 import 'package:frosty/widgets/profile_picture.dart';
+import 'package:frosty/widgets/section_header.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:simple_pip_mode/actions/pip_actions_layout.dart';
 import 'package:simple_pip_mode/pip_widget.dart';
 import 'package:simple_pip_mode/simple_pip.dart';
@@ -52,6 +56,13 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
   bool _isSeeking = false;
   Timer? _overlayTimer;
   Timer? _progressTimer;
+
+  // Quality selection
+  List<String> _availableQualities = [];
+  int _qualityIndex = 0;
+  bool _firstTimeSettingQuality = true;
+  String get _currentQuality =>
+      _availableQualities.elementAtOrNull(_qualityIndex) ?? 'Auto';
 
   // Value notifiers for VOD chat
   late final ValueNotifier<double> _currentTimeNotifier;
@@ -304,6 +315,31 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
               _startProgressTimer();
               if (Platform.isAndroid) _pip.setIsPlaying(true);
               _updateBackgroundAudioState();
+            }
+          },
+        );
+
+        controller.addJavaScriptHandler(
+          handlerName: 'VodQualities',
+          callback: (args) async {
+            if (args.isEmpty) return;
+            final data = jsonDecode(args[0].toString()) as List;
+            if (mounted) {
+              setState(() {
+                _availableQualities =
+                    data.map((item) => item as String).toList();
+              });
+            }
+            if (_firstTimeSettingQuality) {
+              _firstTimeSettingQuality = false;
+              if (_settingsStore.defaultToHighestQuality) {
+                await _setQualityIndex(1);
+                return;
+              }
+              final prefs = await SharedPreferences.getInstance();
+              final lastQuality = prefs.getString('last_vod_quality');
+              if (lastQuality == null) return;
+              _setQuality(lastQuality);
             }
           },
         );
@@ -658,42 +694,73 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
 
   Future<void> _initVideo() async {
     try {
+      // Inject JS helpers (_asyncQuerySelector, _queuePromise) and video event listeners
       await _webViewController?.evaluateJavascript(
-        source: '''
-        (async function() {
-          const video = await new Promise((resolve) => {
-            const checkVideo = () => {
-              const v = document.querySelector("video");
-              if (v) {
-                resolve(v);
-              } else {
-                setTimeout(checkVideo, 100);
-              }
+        source: r'''
+        {
+          if (!window._queuePromise) {
+            let _PROMISE_QUEUE = Promise.resolve();
+            window._queuePromise = (fn) => {
+              _PROMISE_QUEUE = _PROMISE_QUEUE.then(fn, fn).catch(() => {});
+              return _PROMISE_QUEUE;
             };
-            checkVideo();
-          });
-
-          video.addEventListener("pause", () => {
-            window.flutter_inappwebview.callHandler('VideoPause');
-          });
-          video.addEventListener("playing", () => {
-            window.flutter_inappwebview.callHandler('VideoPlaying');
-            video.muted = false;
-            video.volume = 1.0;
-          });
-          video.addEventListener("enterpictureinpicture", () => {
-            window.flutter_inappwebview.callHandler('PipEntered');
-          });
-          video.addEventListener("leavepictureinpicture", () => {
-            window.flutter_inappwebview.callHandler('PipExited');
-          });
-
-          if (!video.paused) {
-            window.flutter_inappwebview.callHandler('VideoPlaying');
-            video.muted = false;
-            video.volume = 1.0;
           }
-        })();
+
+          if (!window._asyncQuerySelector) {
+            window._asyncQuerySelector = (selector, timeout = 30000) => new Promise((resolve) => {
+              let element = document.querySelector(selector);
+              if (element) return resolve(element);
+
+              const observer = new MutationObserver(() => {
+                element = document.querySelector(selector);
+                if (element) {
+                  observer.disconnect();
+                  clearTimeout(timer);
+                  resolve(element);
+                }
+              });
+              observer.observe(document.body, { childList: true, subtree: true });
+
+              const timer = setTimeout(() => {
+                observer.disconnect();
+                resolve(undefined);
+              }, timeout);
+            });
+          }
+
+          _queuePromise(async () => {
+            const video = await _asyncQuerySelector("video");
+            if (!video) return;
+
+            video.addEventListener("pause", () => {
+              window.flutter_inappwebview.callHandler('VideoPause');
+            });
+            video.addEventListener("playing", () => {
+              window.flutter_inappwebview.callHandler('VideoPlaying');
+              video.muted = false;
+              video.volume = 1.0;
+            });
+            video.addEventListener("enterpictureinpicture", () => {
+              window.flutter_inappwebview.callHandler('PipEntered');
+            });
+            video.addEventListener("leavepictureinpicture", () => {
+              window.flutter_inappwebview.callHandler('PipExited');
+            });
+
+            if (!video.paused) {
+              window.flutter_inappwebview.callHandler('VideoPlaying');
+              video.muted = false;
+              video.volume = 1.0;
+            }
+
+            // Force autoplay if the video hasn't started
+            if (video.paused) {
+              try { await video.play(); } catch(e) {}
+              video.muted = false;
+              video.volume = 1.0;
+            }
+          });
+        }
       ''',
       );
 
@@ -720,6 +787,63 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
         }
       ''',
       );
+
+      // Fetch initial quality list
+      _updateQualities();
+    } catch (e) {
+      debugPrint(e.toString());
+    }
+  }
+
+  Future<void> _updateQualities() async {
+    try {
+      await _webViewController?.evaluateJavascript(
+        source: r'''
+        _queuePromise(async () => {
+          (await _asyncQuerySelector('[data-a-target="player-settings-button"]')).click();
+          (await _asyncQuerySelector('[data-a-target="player-settings-menu-item-quality"]')).click();
+
+          await _asyncQuerySelector(
+            '[data-a-target="player-settings-menu"] input[name="player-settings-submenu-quality-option"] + label'
+          );
+
+          const qualities = Array.from(
+            document.querySelectorAll(
+              '[data-a-target="player-settings-menu"] input[name="player-settings-submenu-quality-option"] + label'
+            )
+          ).map(l => l.textContent.replace(/\s+/g, ' ').trim());
+
+          window.flutter_inappwebview.callHandler('VodQualities', JSON.stringify(qualities));
+
+          (await _asyncQuerySelector('[data-a-target="player-settings-button"]')).click();
+        });
+      ''',
+      );
+    } catch (e) {
+      debugPrint(e.toString());
+    }
+  }
+
+  Future<void> _setQuality(String quality) async {
+    final index = _availableQualities.indexOf(quality);
+    if (index == -1) return;
+    await _setQualityIndex(index);
+  }
+
+  Future<void> _setQualityIndex(int index) async {
+    try {
+      await _webViewController?.evaluateJavascript(
+        source: '''
+        _queuePromise(async () => {
+          (await _asyncQuerySelector('[data-a-target="player-settings-button"]')).click();
+          (await _asyncQuerySelector('[data-a-target="player-settings-menu-item-quality"]')).click();
+          await _asyncQuerySelector('[data-a-target="player-settings-submenu-quality-option"] input');
+          [...document.querySelectorAll('[data-a-target="player-settings-submenu-quality-option"] input')][$index].click();
+          (await _asyncQuerySelector('[data-a-target="player-settings-button"]')).click();
+        });
+      ''',
+      );
+      setState(() => _qualityIndex = index);
     } catch (e) {
       debugPrint(e.toString());
     }
@@ -955,7 +1079,7 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
                   bottom: 0,
                   left: 0,
                   right: 0,
-                  height: 140,
+                  height: 80,
                   child: Container(decoration: bottomGradient),
                 ),
                 // Top bar
@@ -1019,10 +1143,9 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
                     ),
                   ),
                 ),
-                // Center controls - with bottom padding to avoid seek bar overlap
+                // Center controls
                 Positioned.fill(
-                  // Add bottom padding to account for seek bar and bottom controls (~120px)
-                  bottom: 120,
+                  bottom: 60,
                   child: Center(
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -1088,114 +1211,60 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
                   bottom: 0,
                   left: 0,
                   right: 0,
-                  child: SafeArea(
-                    top: false,
-                    left:
-                        !(_settingsStore.landscapeDisplayUnderCutout &&
-                            MediaQuery.orientationOf(context) ==
-                                Orientation.landscape),
-                    right:
-                        !(_settingsStore.landscapeDisplayUnderCutout &&
-                            MediaQuery.orientationOf(context) ==
-                                Orientation.landscape),
+                  child: Padding(
+                    padding: isLandscape
+                        ? EdgeInsets.only(
+                            left: _settingsStore.landscapeDisplayUnderCutout
+                                ? 0
+                                : MediaQuery.of(context).padding.left,
+                            right: _settingsStore.landscapeDisplayUnderCutout
+                                ? 0
+                                : MediaQuery.of(context).padding.right,
+                          )
+                        : EdgeInsets.zero,
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Seek bar
                         buildSeekBar(),
-                        // Bottom controls row
                         Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
+                          padding: const EdgeInsets.only(
+                            left: 4,
+                            right: 4,
+                            bottom: 2,
                           ),
                           child: Row(
                             children: [
-                              // Video info
-                              Expanded(
-                                child: Row(
-                                  spacing: 8,
-                                  children: [
-                                    // VOD type badge
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 6,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .primary
-                                            .withValues(alpha: 0.8),
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                      child: Text(
-                                        video.videoType == VideoType.archive
-                                            ? 'VOD'
-                                            : video.videoType ==
-                                                  VideoType.highlight
-                                            ? 'Highlight'
-                                            : 'Upload',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ),
-                                    // View count
-                                    Row(
-                                      spacing: 4,
-                                      children: [
-                                        Icon(
-                                          Icons.visibility,
-                                          size: 14,
-                                          shadows: iconShadow,
-                                          color: surfaceColor,
-                                        ),
-                                        Text(
-                                          NumberFormat.compact().format(
-                                            video.viewCount,
-                                          ),
-                                          style: TextStyle(
-                                            color: surfaceColor,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w500,
-                                            shadows: textShadow,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    // Date
-                                    Row(
-                                      spacing: 4,
-                                      children: [
-                                        Icon(
-                                          Icons.calendar_today,
-                                          size: 12,
-                                          shadows: iconShadow,
-                                          color: surfaceColor,
-                                        ),
-                                        Text(
-                                          DateFormat('dd.MM.yy').format(
-                                            DateTime.parse(
-                                              video.createdAt,
-                                            ).toLocal(),
-                                          ),
-                                          style: TextStyle(
-                                            color: surfaceColor,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w500,
-                                            shadows: textShadow,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
+                              const Spacer(),
+                              IconButton(
+                                icon: Icon(
+                                  Icons.settings,
+                                  color: surfaceColor,
+                                  shadows: iconShadow,
                                 ),
+                                onPressed: () {
+                                  _updateQualities();
+                                  showModalBottomSheetWithProperFocus(
+                                    context: context,
+                                    builder: (context) =>
+                                        _VodQualitySheet(
+                                          availableQualities:
+                                              _availableQualities,
+                                          currentQuality: _currentQuality,
+                                          onQualitySelected: (quality) {
+                                            _setQuality(quality);
+                                            SharedPreferences.getInstance()
+                                                .then(
+                                                  (prefs) => prefs.setString(
+                                                    'last_vod_quality',
+                                                    quality,
+                                                  ),
+                                                );
+                                            Navigator.pop(context);
+                                          },
+                                        ),
+                                  );
+                                },
                               ),
-                              // Right controls
-                              // Chat toggle button
                               Tooltip(
                                 message: _showChat ? 'Hide chat' : 'Show chat',
                                 preferBelow: false,
@@ -1476,5 +1545,49 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
       urlRequest: URLRequest(url: WebUri('about:blank')),
     );
     super.dispose();
+  }
+}
+
+class _VodQualitySheet extends StatelessWidget {
+  final List<String> availableQualities;
+  final String currentQuality;
+  final ValueChanged<String> onQualitySelected;
+
+  const _VodQualitySheet({
+    required this.availableQualities,
+    required this.currentQuality,
+    required this.onQualitySelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SectionHeader(
+          'Video quality',
+          padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+          isFirst: true,
+        ),
+        Flexible(
+          child: ListView(
+            shrinkWrap: true,
+            primary: false,
+            children: availableQualities
+                .map(
+                  (quality) => ListTile(
+                    trailing: currentQuality == quality
+                        ? const Icon(Icons.check_rounded)
+                        : null,
+                    title: Text(quality),
+                    onTap: () => onQualitySelected(quality),
+                  ),
+                )
+                .toList(),
+          ),
+        ),
+      ],
+    );
   }
 }

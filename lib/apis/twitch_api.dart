@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:frosty/apis/base_api_client.dart';
@@ -53,25 +55,60 @@ class TwitchApi extends BaseApiClient {
   }
 
   Future<String?> _findWorkingProxyDomain() async {
-    for (final domain in _recentMessagesProxyDomains) {
-      try {
-        final testUrl = '$domain/https://google.com';
-        final response = await Dio().head(
-          testUrl,
-          options: Options(receiveTimeout: const Duration(seconds: 3), sendTimeout: const Duration(seconds: 3)),
-        );
+    final cancelToken = CancelToken();
+    final dio = Dio(
+      BaseOptions(
+        connectTimeout: const Duration(seconds: 3),
+        receiveTimeout: const Duration(seconds: 3),
+        sendTimeout: const Duration(seconds: 3),
+      ),
+    );
 
-        if (response.statusCode != null && response.statusCode! >= 200 && response.statusCode! < 400) {
-          debugPrint('TwitchApi: Using proxy domain for recent messages: $domain');
+    final completer = Completer<String?>();
+    var failCount = 0;
+    final totalCount = _recentMessagesProxyDomains.length;
+
+    final futures = _recentMessagesProxyDomains.map((domain) async {
+      try {
+        final response = await dio.head(
+          '$domain/https://google.com',
+          cancelToken: cancelToken,
+        );
+        if (response.statusCode != null &&
+            response.statusCode! >= 200 &&
+            response.statusCode! < 400) {
           return domain;
         }
-      } catch (e) {
-        // Try next domain
-      }
+      } catch (_) {}
+      return null;
+    }).toList();
+
+    for (final future in futures) {
+      future.then((domain) {
+        if (completer.isCompleted) return;
+        if (domain != null) {
+          cancelToken.cancel();
+          completer.complete(domain);
+        } else {
+          failCount++;
+          if (failCount >= totalCount) {
+            completer.complete(null);
+          }
+        }
+      });
     }
 
-    debugPrint('TwitchApi: All proxy domains unavailable, using direct connection');
-    return null;
+    final result = await completer.future;
+    if (result != null) {
+      debugPrint(
+        'TwitchApi: Using proxy domain for recent messages: $result',
+      );
+    } else {
+      debugPrint(
+        'TwitchApi: All proxy domains unavailable, using direct connection',
+      );
+    }
+    return result;
   }
 
   /// Returns a list of all Twitch global emotes.

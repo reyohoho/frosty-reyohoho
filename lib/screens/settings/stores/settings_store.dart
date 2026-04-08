@@ -1,14 +1,14 @@
 import 'package:frosty/screens/channel/chat/stores/chat_tabs_store.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:mobx/mobx.dart';
-
 part 'settings_store.g.dart';
 
 @JsonSerializable()
 class SettingsStore extends _SettingsStoreBase with _$SettingsStore {
   SettingsStore();
 
-  factory SettingsStore.fromJson(Map<String, dynamic> json) => _$SettingsStoreFromJson(json);
+  factory SettingsStore.fromJson(Map<String, dynamic> json) =>
+      _$SettingsStoreFromJson(json);
   Map<String, dynamic> toJson() => _$SettingsStoreToJson(this);
 }
 
@@ -203,8 +203,6 @@ abstract class _SettingsStoreBase with Store {
 
   // Emote proxy defaults
   static const defaultUseEmoteProxy = false;
-  static const defaultSelectedEmoteProxyUrl = '';
-  static const emoteCdnProxyUrl = 'https://cdn.rte.net.ru';
 
   // Recent messages defaults
   static const defaultShowRecentMessages = false;
@@ -249,7 +247,10 @@ abstract class _SettingsStoreBase with Store {
   @observable
   var showChatMessageDividers = defaultShowChatMessageDividers;
 
-  @JsonKey(defaultValue: defaultTimestampType, unknownEnumValue: TimestampType.disabled)
+  @JsonKey(
+    defaultValue: defaultTimestampType,
+    unknownEnumValue: TimestampType.disabled,
+  )
   @observable
   var timestampType = defaultTimestampType;
 
@@ -361,17 +362,6 @@ abstract class _SettingsStoreBase with Store {
   @observable
   var useEmoteProxy = defaultUseEmoteProxy;
 
-  @JsonKey(defaultValue: defaultSelectedEmoteProxyUrl)
-  @observable
-  var selectedEmoteProxyUrl = defaultSelectedEmoteProxyUrl;
-
-  /// Returns the proxied emote URL if proxy is enabled, otherwise the original URL.
-  /// CDN URLs don't need cache busting since images don't change frequently.
-  String getProxiedEmoteUrl(String originalUrl) {
-    if (!useEmoteProxy || originalUrl.isEmpty) return originalUrl;
-    return '$emoteCdnProxyUrl/$originalUrl';
-  }
-
   // Recent messages
   @JsonKey(defaultValue: defaultShowRecentMessages)
   @observable
@@ -456,7 +446,6 @@ abstract class _SettingsStoreBase with Store {
     showPaints = defaultShowPaints;
 
     useEmoteProxy = defaultUseEmoteProxy;
-    selectedEmoteProxyUrl = defaultSelectedEmoteProxyUrl;
 
     showRecentMessages = defaultShowRecentMessages;
 

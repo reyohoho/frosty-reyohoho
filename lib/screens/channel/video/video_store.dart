@@ -5,7 +5,9 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:frosty/apis/reyohoho_api.dart';
 import 'package:frosty/apis/twitch_api.dart';
 import 'package:frosty/models/channel.dart';
 import 'package:frosty/models/stream.dart';
@@ -17,7 +19,6 @@ import 'package:mobx/mobx.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:simple_pip_mode/simple_pip.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
-import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 
 part 'video_store.g.dart';
 
@@ -25,6 +26,8 @@ class VideoStore = VideoStoreBase with _$VideoStore;
 
 abstract class VideoStoreBase with Store {
   final TwitchApi twitchApi;
+
+  final ReyohohoApi reyohohoApi;
 
   /// The userlogin of the current channel.
   final String userLogin;
@@ -66,7 +69,13 @@ abstract class VideoStoreBase with Store {
   InAppWebViewController? get webViewController => _webViewController;
 
   /// Dio instance for proxy requests
-  final _dio = Dio();
+  final _dio = Dio(
+    BaseOptions(
+      connectTimeout: const Duration(seconds: 8),
+      receiveTimeout: const Duration(seconds: 15),
+      sendTimeout: const Duration(seconds: 10),
+    ),
+  );
 
   /// The timer that handles hiding the overlay automatically
   Timer? _overlayTimer;
@@ -82,6 +91,27 @@ abstract class VideoStoreBase with Store {
 
   /// Tracks the last time stream info was updated to prevent double refresh
   DateTime? _lastStreamInfoUpdate;
+
+  /// RTE friends: accumulated time the player was actually playing (not paused).
+  var _friendsActivityAccumulated = Duration.zero;
+
+  /// Start of the current uninterrupted playing segment (null while paused).
+  DateTime? _friendsActivityPlayingSince;
+
+  /// Fires when [friendsActivityThreshold] of playing time is reached.
+  Timer? _friendsActivityTimer;
+
+  /// Whether we already sent activity for this channel session.
+  var _friendsActivitySent = false;
+
+  /// Retries when the 5m threshold hits before live stream metadata is available.
+  var _friendsActivityWaitingForStreamAttempts = 0;
+
+  static const friendsActivityThreshold = Duration(minutes: 5);
+
+  static const _friendsActivityMaxStreamWaitAttempts = 6;
+
+  static const _friendsActivityStreamWaitDelay = Duration(seconds: 15);
 
   /// Disposes the overlay reactions.
   late final ReactionDisposer _disposeOverlayReaction;
@@ -167,6 +197,7 @@ abstract class VideoStoreBase with Store {
     required this.userLogin,
     required this.userId,
     required this.twitchApi,
+    required this.reyohohoApi,
     required this.authStore,
     required this.settingsStore,
     this.usherProxyBaseUrl,
@@ -283,9 +314,11 @@ abstract class VideoStoreBase with Store {
         } else {
           // Stop tracker if both settings are now disabled
           try {
-            _webViewController?.evaluateJavascript(
-              source: 'window._latencyTracker?.stop()',
-            );
+            _webViewController
+                ?.evaluateJavascript(
+                  source: 'window._latencyTracker?.stop()',
+                )
+                .catchError((_) {});
           } catch (e) {
             debugPrint(e.toString());
           }
@@ -343,6 +376,7 @@ abstract class VideoStoreBase with Store {
       callback: (args) {
         _paused = true;
         if (Platform.isAndroid) pip.setIsPlaying(false);
+        _onFriendsActivityPlaybackPaused();
       },
     );
 
@@ -351,6 +385,7 @@ abstract class VideoStoreBase with Store {
       callback: (args) {
         _paused = false;
         if (Platform.isAndroid) pip.setIsPlaying(true);
+        _onFriendsActivityPlaybackPlaying();
       },
     );
 
@@ -388,6 +423,83 @@ abstract class VideoStoreBase with Store {
         _audioCompressorActive = isActive;
         settingsStore.audioCompressorEnabled = isActive;
       },
+    );
+  }
+
+  void _onFriendsActivityPlaybackPaused() {
+    if (_friendsActivityPlayingSince != null) {
+      _friendsActivityAccumulated += DateTime.now().difference(_friendsActivityPlayingSince!);
+      _friendsActivityPlayingSince = null;
+    }
+    _friendsActivityTimer?.cancel();
+    _friendsActivityTimer = null;
+  }
+
+  void _onFriendsActivityPlaybackPlaying() {
+    if (_friendsActivitySent) return;
+    if (!authStore.isLoggedIn) return;
+    _friendsActivityPlayingSince = DateTime.now();
+    _scheduleFriendsActivityTimer();
+  }
+
+  void _scheduleFriendsActivityTimer() {
+    _friendsActivityTimer?.cancel();
+    if (_friendsActivitySent || !authStore.isLoggedIn) return;
+    if (_friendsActivityPlayingSince == null) return;
+
+    final remaining = friendsActivityThreshold - _friendsActivityAccumulated;
+    if (remaining <= Duration.zero) {
+      unawaited(_tryPostFriendsActivityAfterThreshold());
+      return;
+    }
+
+    _friendsActivityTimer = Timer(remaining, () {
+      if (_friendsActivitySent || _paused) return;
+      if (_friendsActivityPlayingSince == null) return;
+      _friendsActivityAccumulated += DateTime.now().difference(_friendsActivityPlayingSince!);
+      _friendsActivityPlayingSince = DateTime.now();
+      if (_friendsActivityAccumulated >= friendsActivityThreshold) {
+        unawaited(_tryPostFriendsActivityAfterThreshold());
+      } else {
+        _scheduleFriendsActivityTimer();
+      }
+    });
+  }
+
+  Future<void> _tryPostFriendsActivityAfterThreshold() async {
+    if (_friendsActivitySent) return;
+    if (!authStore.isLoggedIn) return;
+    if (_paused) return;
+    final viewerId = authStore.user.details?.id;
+    if (viewerId == null) return;
+    final stream = _streamInfo;
+    if (stream == null) {
+      if (_offlineChannelInfo != null) {
+        _friendsActivitySent = true;
+        return;
+      }
+      if (_friendsActivityWaitingForStreamAttempts >= _friendsActivityMaxStreamWaitAttempts) {
+        _friendsActivitySent = true;
+        return;
+      }
+      _friendsActivityWaitingForStreamAttempts++;
+      _friendsActivityTimer?.cancel();
+      _friendsActivityTimer = Timer(_friendsActivityStreamWaitDelay, () {
+        unawaited(_tryPostFriendsActivityAfterThreshold());
+      });
+      return;
+    }
+
+    _friendsActivityWaitingForStreamAttempts = 0;
+    _friendsActivitySent = true;
+    _friendsActivityTimer?.cancel();
+    _friendsActivityTimer = null;
+
+    await reyohohoApi.postExtFriendsActivity(
+      twitchId: viewerId,
+      channelLogin: userLogin,
+      channelDisplayName: stream.userName,
+      streamCategory: stream.gameName.isNotEmpty ? stream.gameName : '',
     );
   }
 
@@ -1319,13 +1431,16 @@ abstract class VideoStoreBase with Store {
   Future<void> handleRefresh() async {
     HapticFeedback.lightImpact();
     _paused = true;
+    _onFriendsActivityPlaybackPaused();
     _firstTimeSettingQuality = true;
     _isInPipMode = false;
 
     try {
-      _webViewController?.evaluateJavascript(
-        source: 'window._latencyTracker?.stop()',
-      );
+      _webViewController
+          ?.evaluateJavascript(
+            source: 'window._latencyTracker?.stop()',
+          )
+          .catchError((_) {});
     } catch (e) {
       // Ignore
     }
@@ -1492,6 +1607,7 @@ abstract class VideoStoreBase with Store {
     _overlayTimer?.cancel();
     _streamInfoTimer?.cancel();
     _jsCleanupTimer?.cancel();
+    _friendsActivityTimer?.cancel();
 
     _disposeOverlayReaction();
     _disposeVideoModeReaction();
@@ -1508,11 +1624,13 @@ abstract class VideoStoreBase with Store {
     }
 
     try {
-      _webViewController?.evaluateJavascript(
-        source: 'window._latencyTracker?.stop()',
-      );
+      _webViewController
+          ?.evaluateJavascript(
+            source: 'window._latencyTracker?.stop()',
+          )
+          .catchError((_) {});
     } catch (e) {
-      // Ignore
+      // WebView controller may already be disposed by platform
     }
 
     _dio.close();

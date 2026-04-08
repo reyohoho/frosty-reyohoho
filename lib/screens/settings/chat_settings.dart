@@ -314,8 +314,8 @@ class _ChatSettingsState extends State<ChatSettings> {
           SettingsListSwitch(
             title: 'Use emote proxy',
             subtitle: Text(
-              settingsStore.useEmoteProxy && settingsStore.selectedEmoteProxyUrl.isNotEmpty
-                  ? 'Active: ${Uri.parse(settingsStore.selectedEmoteProxyUrl).host}'
+              settingsStore.useEmoteProxy
+                  ? 'Active'
                   : 'Routes emote requests through a proxy server for regions with blocked access.',
             ),
             value: settingsStore.useEmoteProxy,
