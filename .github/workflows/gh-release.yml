@@ -53,22 +53,27 @@ jobs:
 
       - name: Generate changelog from commits
         id: changelog
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           TAG="${{ github.ref_name }}"
           git fetch --tags --unshallow 2>/dev/null || true
-          PREV_TAG=$(git describe --tags --abbrev=0 "$TAG^" 2>/dev/null || echo "")
 
-          if [ -n "$PREV_TAG" ]; then
+          # Find the tag of the last published GitHub release (not just the previous git tag).
+          # This ensures full changelog even when there are intermediate tags without releases.
+          PREV_TAG=$(gh release list --limit 1 --json tagName --jq '.[0].tagName' 2>/dev/null || echo "")
+
+          if [ -n "$PREV_TAG" ] && [ "$PREV_TAG" != "$TAG" ]; then
             COMMITS=$(git log --pretty=format:"- %s (%h)" "$PREV_TAG..$TAG")
           else
-            COMMITS=$(git log --pretty=format:"- %s (%h)" "$TAG")
+            COMMITS=$(git log --pretty=format:"- %s (%h)" -20 "$TAG")
           fi
 
           echo "body<<EOF" >> $GITHUB_OUTPUT
           echo "## What's Changed" >> $GITHUB_OUTPUT
           echo "" >> $GITHUB_OUTPUT
           echo "$COMMITS" >> $GITHUB_OUTPUT
-          if [ -n "$PREV_TAG" ]; then
+          if [ -n "$PREV_TAG" ] && [ "$PREV_TAG" != "$TAG" ]; then
             echo "" >> $GITHUB_OUTPUT
             echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/${PREV_TAG}...${TAG}" >> $GITHUB_OUTPUT
           fi

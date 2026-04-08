@@ -52,10 +52,16 @@ class GitHubApi extends BaseApiClient {
 
   GitHubApi(Dio dio) : super(dio, 'https://api.github.com');
 
+  /// Returns the latest non-draft release (including prereleases).
+  /// `/releases/latest` only returns published non-prerelease, so we fetch
+  /// the list and pick the first non-draft entry ourselves.
   Future<GitHubRelease?> getLatestRelease() async {
     try {
-      final data = await get<JsonMap>('/repos/$_repo/releases/latest');
-      return GitHubRelease.fromJson(data);
+      final releases = await getReleases(perPage: 5);
+      for (final release in releases) {
+        if (!release.draft) return release;
+      }
+      return null;
     } catch (e) {
       debugPrint('GitHubApi: Failed to fetch latest release: $e');
       return null;
