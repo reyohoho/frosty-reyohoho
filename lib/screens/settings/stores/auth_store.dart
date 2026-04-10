@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -60,47 +59,30 @@ abstract class AuthBase with Store {
   @readonly
   String? _error;
 
-  /// User-Agent used by the auth WebView (platform-specific, works around Google OAuth WebView blocking).
-  static String get webViewUserAgent => Platform.isIOS
-      ? 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1'
-      : 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Mobile Safari/537.36';
-
   /// Navigation handler for the login webview. Fires on every navigation request (whenever the URL changes).
   FutureOr<NavigationDecision> handleNavigation({required NavigationRequest request, Widget? routeAfter}) {
-    // Check if the URL is the redirect URI.
-    if (request.url.startsWith('https://twitch.tv/login')) {
-      // Extract the token from the query parameters.
+    if (request.url.startsWith('https://localhost')) {
       final uri = Uri.parse(request.url.replaceFirst('#', '?'));
       final token = uri.queryParameters['access_token'];
 
-      // Login with the provided token.
-      if (token != null) login(token: token);
-    }
-
-    // Check if the the URL has been redirected to "https://www.twitch.tv/?no-reload=true".
-    // When redirected to the redirect_uri, there will be another redirect to "https://www.twitch.tv/?no-reload=true".
-    // Checking for this will ensure that the user has automatically logged in to Twitch on the WebView itself.
-    if (request.url == 'https://www.twitch.tv/?no-reload=true') {
-      if (routeAfter != null) {
-        navigatorKey.currentState?.pop();
-        navigatorKey.currentState?.push(MaterialPageRoute(builder: (context) => routeAfter));
-      } else {
-        // Pop the WebView to return to the previous screen
-        navigatorKey.currentState?.pop();
+      if (token != null) {
+        login(token: token);
+        if (routeAfter != null) {
+          navigatorKey.currentState?.pop();
+          navigatorKey.currentState?.push(MaterialPageRoute(builder: (context) => routeAfter));
+        } else {
+          navigatorKey.currentState?.pop();
+        }
+        return NavigationDecision.prevent;
       }
     }
 
-    // Always allow navigation to the next URL.
     return NavigationDecision.navigate;
   }
 
   WebViewController createAuthWebViewController({Widget? routeAfter}) {
     final webViewController = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      // Use platform-specific user agents to allow Google OAuth sign-in.
-      // Google blocks OAuth in embedded WebViews (error 403: disallowed_useragent)
-      // by detecting WebView markers. These standard browser UAs work around that.
-      ..setUserAgent(webViewUserAgent);
+      ..setJavaScriptMode(JavaScriptMode.unrestricted);
 
     return webViewController
       ..setNavigationDelegate(
@@ -150,7 +132,7 @@ abstract class AuthBase with Store {
           path: '/oauth2/authorize',
           queryParameters: {
             'client_id': clientId,
-            'redirect_uri': 'https://twitch.tv/login',
+            'redirect_uri': 'https://localhost',
             'response_type': 'token',
             'scope':
                 'chat:read chat:edit user:read:follows user:read:blocked_users user:manage:blocked_users user:manage:chat_color moderator:manage:banned_users moderator:manage:chat_messages',
