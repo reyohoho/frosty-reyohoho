@@ -65,6 +65,24 @@ abstract class AuthBase with Store {
       ? 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1'
       : 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Mobile Safari/537.36';
 
+  /// JavaScript injected on page start to prevent WebView detection by integrity
+  /// checks (Arkose Labs). Without this, tablets and Huawei devices get
+  /// "browser not supported" because the WebView exposes `navigator.webdriver`
+  /// and lacks `window.chrome`.
+  static const _antiDetectionJs = '''
+    Object.defineProperty(navigator, 'webdriver', {
+      get: () => undefined,
+    });
+    if (!window.chrome) {
+      window.chrome = { runtime: {} };
+    }
+    if (navigator.plugins.length === 0) {
+      Object.defineProperty(navigator, 'plugins', {
+        get: () => [1, 2, 3],
+      });
+    }
+  ''';
+
   /// Navigation handler for the login webview. Fires on every navigation request (whenever the URL changes).
   FutureOr<NavigationDecision> handleNavigation({required NavigationRequest request, Widget? routeAfter}) {
     // Check if the URL is the redirect URI.
@@ -108,6 +126,13 @@ abstract class AuthBase with Store {
           onNavigationRequest: (request) => handleNavigation(request: request, routeAfter: routeAfter),
           onWebResourceError: (error) {
             debugPrint('Auth WebView error: ${error.description}');
+          },
+          onPageStarted: (_) async {
+            try {
+              await webViewController.runJavaScript(_antiDetectionJs);
+            } catch (e) {
+              debugPrint('Auth WebView anti-detection JS error: $e');
+            }
           },
           onPageFinished: (_) async {
             try {
