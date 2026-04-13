@@ -1,5 +1,6 @@
 package ru.refrosty
 
+import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.os.Build
 import android.os.Handler
@@ -56,6 +57,31 @@ class MainActivity : PipCallbackHelperActivityWrapper() {
                 result.notImplemented()
             }
         }
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            "ru.refrosty/browser",
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "hasChromiumBrowser" -> result.success(hasChromiumBrowserInstalled())
+                else -> result.notImplemented()
+            }
+        }
+    }
+
+    private fun hasChromiumBrowserInstalled(): Boolean {
+        val pm = packageManager
+        for (pkg in CHROMIUM_PACKAGES) {
+            if (isPackageInstalled(pm, pkg)) return true
+        }
+        return false
+    }
+
+    @Suppress("DEPRECATION")
+    private fun isPackageInstalled(pm: PackageManager, packageName: String): Boolean = try {
+        pm.getPackageInfo(packageName, 0)
+        true
+    } catch (_: PackageManager.NameNotFoundException) {
+        false
     }
 
     private fun setDisplayUnderCutout(enabled: Boolean) {
@@ -72,6 +98,14 @@ class MainActivity : PipCallbackHelperActivityWrapper() {
 
     companion object {
         private const val TAG = "RefrostyPIP"
+
+        private val CHROMIUM_PACKAGES = arrayOf(
+            "com.android.chrome",
+            "com.chrome.beta",
+            "com.chrome.dev",
+            "com.chrome.canary",
+            "org.chromium.chrome",
+        )
     }
 }
 
