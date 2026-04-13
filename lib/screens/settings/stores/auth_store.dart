@@ -1,16 +1,14 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:frosty/apis/base_api_client.dart';
 import 'package:frosty/apis/twitch_api.dart';
 import 'package:frosty/constants.dart';
-import 'package:frosty/main.dart';
 import 'package:frosty/screens/settings/stores/user_store.dart';
 import 'package:frosty/widgets/frosty_dialog.dart';
 import 'package:mobx/mobx.dart';
-import 'package:webview_flutter/webview_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 part 'auth_store.g.dart';
 
@@ -60,104 +58,43 @@ abstract class AuthBase with Store {
   @readonly
   String? _error;
 
-  /// User-Agent used by the auth WebView (platform-specific, works around Google OAuth WebView blocking).
-  static String get webViewUserAgent => Platform.isIOS
-      ? 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1'
-      : 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Mobile Safari/537.36';
+  /// OAuth scopes requested during Twitch authorization.
+  static const _oauthScopes =
+      'chat:read chat:edit user:read:follows user:read:blocked_users user:manage:blocked_users user:manage:chat_color moderator:manage:banned_users moderator:manage:chat_messages';
 
-  /// Navigation handler for the login webview. Fires on every navigation request (whenever the URL changes).
-  FutureOr<NavigationDecision> handleNavigation({required NavigationRequest request, Widget? routeAfter}) {
-    // Check if the URL is the redirect URI.
-    if (request.url.startsWith('https://twitch.tv/login')) {
-      // Extract the token from the query parameters.
-      final uri = Uri.parse(request.url.replaceFirst('#', '?'));
-      final token = uri.queryParameters['access_token'];
+  /// Builds the Twitch OAuth authorization URI for the implicit grant flow.
+  Uri get oauthUri => Uri(
+        scheme: 'https',
+        host: 'id.twitch.tv',
+        path: '/oauth2/authorize',
+        queryParameters: {
+          'client_id': clientId,
+          'redirect_uri': oauthRedirectUri,
+          'response_type': 'token',
+          'scope': _oauthScopes,
+          'force_verify': 'true',
+        },
+      );
 
-      // Login with the provided token.
-      if (token != null) login(token: token);
-    }
-
-    // Check if the the URL has been redirected to "https://www.twitch.tv/?no-reload=true".
-    // When redirected to the redirect_uri, there will be another redirect to "https://www.twitch.tv/?no-reload=true".
-    // Checking for this will ensure that the user has automatically logged in to Twitch on the WebView itself.
-    if (request.url == 'https://www.twitch.tv/?no-reload=true') {
-      if (routeAfter != null) {
-        navigatorKey.currentState?.pop();
-        navigatorKey.currentState?.push(MaterialPageRoute(builder: (context) => routeAfter));
-      } else {
-        // Pop the WebView to return to the previous screen
-        navigatorKey.currentState?.pop();
-      }
-    }
-
-    // Always allow navigation to the next URL.
-    return NavigationDecision.navigate;
+  /// Launches the Twitch OAuth page in an external browser.
+  Future<void> launchLogin() async {
+    await launchUrl(oauthUri, mode: LaunchMode.externalApplication);
   }
 
-  WebViewController createAuthWebViewController({Widget? routeAfter}) {
-    final webViewController = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      // Use platform-specific user agents to allow Google OAuth sign-in.
-      // Google blocks OAuth in embedded WebViews (error 403: disallowed_useragent)
-      // by detecting WebView markers. These standard browser UAs work around that.
-      ..setUserAgent(webViewUserAgent);
+  /// Handles an OAuth redirect URI, extracting and storing the access token.
+  /// Returns true if a valid token was found and login succeeded.
+  Future<bool> handleOAuthRedirect(Uri uri) async {
+    if (uri.host != Uri.parse(oauthRedirectUri).host) return false;
 
-    return webViewController
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onNavigationRequest: (request) => handleNavigation(request: request, routeAfter: routeAfter),
-          onWebResourceError: (error) {
-            debugPrint('Auth WebView error: ${error.description}');
-          },
-          onPageFinished: (_) async {
-            try {
-              await webViewController.runJavaScript('''
-                {
-                  function modifyElement(element) {
-                    element.style.maxHeight = '20vh';
-                    element.style.overflow = 'auto';
-                  }
+    final fragment = uri.fragment;
+    if (fragment.isEmpty) return false;
 
-                  const observer = new MutationObserver((mutations) => {
-                    for (let mutation of mutations) {
-                      if (mutation.type === 'childList') {
-                        const element = document.querySelector('.fAVISI');
-                        if (element) {
-                          modifyElement(element);
-                          observer.disconnect();
-                          break;
-                        }
-                      }
-                    }
-                  });
+    final params = Uri.splitQueryString(fragment);
+    final token = params['access_token'];
+    if (token == null) return false;
 
-                  observer.observe(document.body, {
-                    childList: true,
-                    subtree: true
-                  });
-                }
-                ''');
-            } catch (e) {
-              debugPrint('Auth WebView JavaScript error: $e');
-            }
-          },
-        ),
-      )
-      ..loadRequest(
-        Uri(
-          scheme: 'https',
-          host: 'id.twitch.tv',
-          path: '/oauth2/authorize',
-          queryParameters: {
-            'client_id': clientId,
-            'redirect_uri': 'https://twitch.tv/login',
-            'response_type': 'token',
-            'scope':
-                'chat:read chat:edit user:read:follows user:read:blocked_users user:manage:blocked_users user:manage:chat_color moderator:manage:banned_users moderator:manage:chat_messages',
-            'force_verify': 'true',
-          },
-        ),
-      );
+    await login(token: token);
+    return true;
   }
 
   /// Shows a dialog verifying that the user is sure they want to block/unblock the target user.

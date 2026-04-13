@@ -10,8 +10,9 @@ class OnboardingScaffold extends StatelessWidget {
   final Widget? content;
   final String? buttonText;
   final Widget? buttonIcon;
-  final Widget route;
+  final Widget? route;
   final Widget? skipRoute;
+  final VoidCallback? onButtonPressed;
   final bool showLogo;
   final bool isLast;
 
@@ -23,8 +24,9 @@ class OnboardingScaffold extends StatelessWidget {
     this.content,
     this.buttonText,
     this.buttonIcon,
-    required this.route,
+    this.route,
     this.skipRoute,
+    this.onButtonPressed,
     this.showLogo = false,
     this.isLast = false,
   });
@@ -84,13 +86,16 @@ class OnboardingScaffold extends StatelessWidget {
                 margin: const EdgeInsets.symmetric(horizontal: 12),
                 width: double.infinity,
                 child: FilledButton.icon(
-                  onPressed: () => isLast
-                      ? Navigator.pushAndRemoveUntil(
-                          context,
-                          MaterialPageRoute(builder: (context) => route),
-                          (_) => false,
-                        )
-                      : Navigator.push(context, MaterialPageRoute(builder: (context) => route)),
+                  onPressed: onButtonPressed ??
+                      (route != null
+                          ? () => isLast
+                              ? Navigator.pushAndRemoveUntil(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => route!),
+                                  (_) => false,
+                                )
+                              : Navigator.push(context, MaterialPageRoute(builder: (context) => route!))
+                          : null),
                   icon: buttonIcon ?? const SizedBox(),
                   label: Text(buttonText ?? 'Next'),
                 ),

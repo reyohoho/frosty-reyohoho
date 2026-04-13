@@ -257,16 +257,19 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> handleDeepLink(Uri uri) async {
+    // Handle OAuth redirect from external browser login
+    final authStore = context.read<AuthStore>();
+    if (await authStore.handleOAuthRedirect(uri)) return;
+
     final failureSnackbar = SnackBar(
       content: AlertMessage(
         message: 'Unable to navigate to \'$uri\'',
         centered: false,
         trailingIcon: Icons.open_in_browser_rounded,
-        // Fallback, allow user to open URL outside app
         onTrailingIconPressed: () async {
           await launchUrl(
             uri,
-            mode: LaunchMode.inAppWebView, // Force browser
+            mode: LaunchMode.inAppWebView,
           );
         },
       ),

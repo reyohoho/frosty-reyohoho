@@ -1,10 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:frosty/main.dart';
-import 'package:frosty/screens/onboarding/login_webview.dart';
 import 'package:frosty/screens/settings/stores/auth_store.dart';
 import 'package:frosty/widgets/frosty_dialog.dart';
-import 'package:provider/provider.dart';
 
 /// Dio interceptor that catches 401 Unauthorized errors and shows a login dialog
 class UnauthorizedInterceptor extends Interceptor {
@@ -65,15 +63,10 @@ class UnauthorizedInterceptor extends Interceptor {
             FilledButton(
               onPressed: () {
                 _isDialogShowing = false;
-                Navigator.of(dialogContext).pop(); // Close dialog
-                // Navigate to login WebView
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => Provider<AuthStore>.value(value: _authStore, child: const LoginWebView()),
-                  ),
-                );
+                Navigator.of(dialogContext).pop();
+                _authStore.launchLogin();
               },
-              child: Text('Log in'),
+              child: const Text('Log in'),
             ),
           ],
         );

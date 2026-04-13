@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:frosty/screens/settings/stores/auth_store.dart';
 import 'package:frosty/widgets/frosty_app_bar.dart';
 import 'package:ua_parser/ua_parser.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -26,7 +25,6 @@ class _UserAgentDebugScreenState extends State<UserAgentDebugScreen> {
 
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setUserAgent(AuthBase.webViewUserAgent)
       ..setNavigationDelegate(NavigationDelegate(onPageFinished: (_) => _capturePageContent()))
       ..loadRequest(Uri.parse(_uaCheckUrl));
   }

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
-import 'package:frosty/screens/onboarding/login_webview.dart';
 import 'package:frosty/screens/settings/account/account_options.dart';
 import 'package:frosty/screens/settings/stores/auth_store.dart';
 import 'package:frosty/utils/modal_bottom_sheet.dart';
@@ -45,7 +44,7 @@ class ProfileCard extends StatelessWidget {
           title: const Text('Anonymous'),
           subtitle: const Text('Log in to enable the ability to chat, view followed streams, and more.'),
           trailing: const SizedBox(height: double.infinity, child: Icon(Icons.chevron_right_rounded)),
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => LoginWebView())),
+          onTap: authStore.launchLogin,
           onLongPress: () async {
             final clipboardText = (await Clipboard.getData(Clipboard.kTextPlain))?.text;
 
