@@ -44,7 +44,7 @@ class ProfileCard extends StatelessWidget {
           title: const Text('Anonymous'),
           subtitle: const Text('Log in to enable the ability to chat, view followed streams, and more.'),
           trailing: const SizedBox(height: double.infinity, child: Icon(Icons.chevron_right_rounded)),
-          onTap: authStore.launchLogin,
+          onTap: () => authStore.launchLogin(context),
           onLongPress: () async {
             final clipboardText = (await Clipboard.getData(Clipboard.kTextPlain))?.text;
 

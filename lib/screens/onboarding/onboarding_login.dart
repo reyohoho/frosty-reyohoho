@@ -51,7 +51,7 @@ class _OnboardingLoginState extends State<OnboardingLogin> {
       buttonText: 'Connect with Twitch',
       buttonIcon: const Icon(SimpleIcons.twitch),
       skipRoute: const OnboardingSetup(),
-      onButtonPressed: authStore.launchLogin,
+      onButtonPressed: () => authStore.launchLogin(context),
     );
   }
 }

@@ -22,18 +22,19 @@ import 'package:frosty/apis/seventv_api.dart';
 import 'package:frosty/apis/twitch_api.dart';
 import 'package:frosty/apis/twitch_auth_interceptor.dart';
 import 'package:frosty/apis/unauthorized_interceptor.dart';
+import 'package:frosty/app_navigator_key.dart';
 import 'package:frosty/cache_manager.dart';
 // import 'package:frosty/firebase_options.dart';
 import 'package:frosty/screens/channel/channel.dart';
 import 'package:frosty/screens/home/home.dart';
-import 'package:frosty/utils/background_playback_callback.dart';
-import 'package:frosty/utils/pip_callback.dart';
 import 'package:frosty/screens/onboarding/onboarding_intro.dart';
 import 'package:frosty/screens/settings/stores/auth_store.dart';
 import 'package:frosty/screens/settings/stores/settings_store.dart';
 import 'package:frosty/stores/global_assets_store.dart';
 import 'package:frosty/theme.dart';
 import 'package:frosty/utils.dart';
+import 'package:frosty/utils/background_playback_callback.dart';
+import 'package:frosty/utils/pip_callback.dart';
 import 'package:frosty/widgets/alert_message.dart';
 import 'package:mobx/mobx.dart';
 import 'package:provider/provider.dart';
@@ -174,9 +175,6 @@ void main() async {
     ),
   );
 }
-
-// Navigator key for sleep timer. Allows navigation popping without context.
-final navigatorKey = GlobalKey<NavigatorState>();
 
 class MyApp extends StatefulWidget {
   final bool firstRun;

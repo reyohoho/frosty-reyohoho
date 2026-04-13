@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:frosty/main.dart';
+import 'package:frosty/app_navigator_key.dart';
 import 'package:frosty/screens/settings/stores/auth_store.dart';
 import 'package:frosty/widgets/frosty_dialog.dart';
 
@@ -64,7 +64,7 @@ class UnauthorizedInterceptor extends Interceptor {
               onPressed: () {
                 _isDialogShowing = false;
                 Navigator.of(dialogContext).pop();
-                _authStore.launchLogin();
+                _authStore.launchLogin(navigatorKey.currentContext);
               },
               child: const Text('Log in'),
             ),

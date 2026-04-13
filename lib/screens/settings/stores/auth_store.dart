@@ -1,14 +1,19 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:frosty/apis/base_api_client.dart';
 import 'package:frosty/apis/twitch_api.dart';
+import 'package:frosty/app_navigator_key.dart';
 import 'package:frosty/constants.dart';
+import 'package:frosty/screens/onboarding/login_webview.dart';
 import 'package:frosty/screens/settings/stores/user_store.dart';
+import 'package:frosty/utils/chromium_login_support.dart';
 import 'package:frosty/widgets/frosty_dialog.dart';
 import 'package:mobx/mobx.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 
 part 'auth_store.g.dart';
 
@@ -62,6 +67,101 @@ abstract class AuthBase with Store {
   static const _oauthScopes =
       'chat:read chat:edit user:read:follows user:read:blocked_users user:manage:blocked_users user:manage:chat_color moderator:manage:banned_users moderator:manage:chat_messages';
 
+  /// Redirect URI for the in-app WebView login flow (implicit grant).
+  static const _oauthWebViewRedirectUri = 'https://twitch.tv/login';
+
+  /// User-Agent for the auth WebView (works around Google OAuth WebView blocking).
+  static String get webViewUserAgent => Platform.isIOS
+      ? 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1'
+      : 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Mobile Safari/537.36';
+
+  /// Navigation handler for the login WebView.
+  FutureOr<NavigationDecision> handleAuthWebViewNavigation({
+    required NavigationRequest request,
+    Widget? routeAfter,
+  }) {
+    if (request.url.startsWith('https://twitch.tv/login')) {
+      final uri = Uri.parse(request.url.replaceFirst('#', '?'));
+      final token = uri.queryParameters['access_token'];
+
+      if (token != null) login(token: token);
+    }
+
+    if (request.url == 'https://www.twitch.tv/?no-reload=true') {
+      if (routeAfter != null) {
+        navigatorKey.currentState?.pop();
+        navigatorKey.currentState?.push(MaterialPageRoute<void>(builder: (context) => routeAfter));
+      } else {
+        navigatorKey.currentState?.pop();
+      }
+    }
+
+    return NavigationDecision.navigate;
+  }
+
+  /// WebView-based OAuth (fallback when Chrome is not installed on Android).
+  WebViewController createAuthWebViewController({Widget? routeAfter}) {
+    final webViewController = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setUserAgent(webViewUserAgent);
+
+    return webViewController
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onNavigationRequest: (request) => handleAuthWebViewNavigation(request: request, routeAfter: routeAfter),
+          onWebResourceError: (error) {
+            debugPrint('Auth WebView error: ${error.description}');
+          },
+          onPageFinished: (_) async {
+            try {
+              await webViewController.runJavaScript('''
+                {
+                  function modifyElement(element) {
+                    element.style.maxHeight = '20vh';
+                    element.style.overflow = 'auto';
+                  }
+
+                  const observer = new MutationObserver((mutations) => {
+                    for (let mutation of mutations) {
+                      if (mutation.type === 'childList') {
+                        const element = document.querySelector('.fAVISI');
+                        if (element) {
+                          modifyElement(element);
+                          observer.disconnect();
+                          break;
+                        }
+                      }
+                    }
+                  });
+
+                  observer.observe(document.body, {
+                    childList: true,
+                    subtree: true
+                  });
+                }
+                ''');
+            } catch (e) {
+              debugPrint('Auth WebView JavaScript error: $e');
+            }
+          },
+        ),
+      )
+      ..loadRequest(
+        Uri(
+          scheme: 'https',
+          host: 'id.twitch.tv',
+          path: '/oauth2/authorize',
+          queryParameters: {
+            'client_id': clientId,
+            'redirect_uri': _oauthWebViewRedirectUri,
+            'response_type': 'token',
+            'scope': _oauthScopes,
+            'force_verify': 'true',
+          },
+        ),
+      );
+  }
+
   /// Builds the Twitch OAuth authorization URI for the implicit grant flow.
   Uri get oauthUri => Uri(
         scheme: 'https',
@@ -76,8 +176,35 @@ abstract class AuthBase with Store {
         },
       );
 
-  /// Launches the Twitch OAuth page in an external browser.
-  Future<void> launchLogin() async {
+  /// Launches Twitch OAuth: external browser when Chrome is available on Android,
+  /// otherwise a dialog (store / in-app WebView fallback). Pass [routeAfter] for
+  /// onboarding so the WebView flow can navigate forward after login.
+  Future<void> launchLogin(BuildContext? context, {Widget? routeAfter}) async {
+    if (Platform.isAndroid) {
+      final hasBrowser = await hasChromiumBrowserForLogin();
+      if (!hasBrowser) {
+        final ctx = context ?? navigatorKey.currentContext;
+        if (ctx != null && ctx.mounted) {
+          final choice = await showChromiumRequiredDialog(ctx);
+          switch (choice) {
+            case ChromiumLoginChoice.openStore:
+              await openChromeInstallInDeviceStore();
+              return;
+            case ChromiumLoginChoice.inAppWebView:
+              navigatorKey.currentState?.push(
+                MaterialPageRoute<void>(
+                  builder: (_) => LoginWebView(routeAfter: routeAfter),
+                ),
+              );
+              return;
+            case ChromiumLoginChoice.dismissed:
+            case null:
+              return;
+          }
+        }
+        return;
+      }
+    }
     await launchUrl(oauthUri, mode: LaunchMode.externalApplication);
   }
 
