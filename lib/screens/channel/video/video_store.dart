@@ -46,8 +46,12 @@ abstract class VideoStoreBase with Store {
   /// The [SimplePip] instance used for initiating PiP on Android.
   late final SimplePip pip;
 
-  /// Callback for when PIP mode is exited on Android.
-  /// This is called when user dismisses the PIP window.
+  /// Callback for when PIP mode is exited on Android via dismissal
+  /// (user swiped the PIP window away / closed it, activity not returning
+  /// to the foreground). Pauses the video and tears down the background
+  /// audio foreground service. Must NOT be called on "expanded" — when
+  /// the user taps the PIP to return to fullscreen — otherwise the video
+  /// would pause on every return (notably on Samsung One UI).
   void _onPipExited() {
     _isInPipMode = false;
     if (!_paused) {
@@ -202,14 +206,25 @@ abstract class VideoStoreBase with Store {
     required this.settingsStore,
     this.usherProxyBaseUrl,
   }) {
-    // Initialize SimplePip with callbacks for PIP exit detection
+    // Initialize SimplePip with callbacks for PIP exit detection.
+    //
+    // IMPORTANT: SimplePip fires onPipExited for BOTH "expanded back to app"
+    // and "dismissed" cases and gives us no way to distinguish. If we paused
+    // here unconditionally, the video would pause on every return to fullscreen
+    // (especially noticeable on Samsung One UI with aggressive auto-PiP).
+    //
+    // So we only update the in-PiP flag here and defer the play/pause decision
+    // to PipCallbackRegistry, which receives "expanded" vs "dismissed" from
+    // MainActivity.onPictureInPictureModeChanged via our EventChannel.
     debugPrint(
       '[PIP] VideoStore: registering SimplePip callbacks (onPipExited, onPipEntered)',
     );
     pip = SimplePip(
       onPipExited: () {
-        debugPrint('[PIP] VideoStore: onPipExited invoked (native -> Dart)');
-        _onPipExited();
+        debugPrint(
+          '[PIP] VideoStore: SimplePip.onPipExited (flag only; pause decision deferred to native event)',
+        );
+        _isInPipMode = false;
       },
       onPipEntered: () {
         debugPrint('[PIP] VideoStore: onPipEntered invoked (native -> Dart)');
