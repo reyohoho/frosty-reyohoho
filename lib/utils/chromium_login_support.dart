@@ -59,7 +59,6 @@ Future<LoginMethodChoice> showLoginMethodChooser(
 
   final choice = await showDialog<LoginMethodChoice>(
     context: context,
-    useRootNavigator: true,
     builder: (dialogContext) => _LoginMethodChooserDialog(
       authUrl: authUrl,
       hasChromium: hasChromium,
