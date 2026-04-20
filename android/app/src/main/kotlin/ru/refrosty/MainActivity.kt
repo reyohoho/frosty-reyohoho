@@ -1,7 +1,9 @@
 package ru.refrosty
 
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -63,6 +65,14 @@ class MainActivity : PipCallbackHelperActivityWrapper() {
         ).setMethodCallHandler { call, result ->
             when (call.method) {
                 "hasChromiumBrowser" -> result.success(hasChromiumBrowserInstalled())
+                "launchUrlInChromeOrChooser" -> {
+                    val url = call.argument<String>("url")
+                    if (url.isNullOrEmpty()) {
+                        result.error("INVALID_ARGUMENT", "url is required", null)
+                    } else {
+                        result.success(launchUrlInChromeOrChooser(url))
+                    }
+                }
                 else -> result.notImplemented()
             }
         }
@@ -82,6 +92,39 @@ class MainActivity : PipCallbackHelperActivityWrapper() {
         true
     } catch (_: PackageManager.NameNotFoundException) {
         false
+    }
+
+    private fun launchUrlInChromeOrChooser(url: String): Boolean {
+        val uri = try {
+            Uri.parse(url)
+        } catch (e: Exception) {
+            Log.w(TAG, "launchUrlInChromeOrChooser: failed to parse url", e)
+            return false
+        }
+
+        for (pkg in CHROMIUM_PACKAGES) {
+            if (!isPackageInstalled(packageManager, pkg)) continue
+            val chromeIntent = Intent(Intent.ACTION_VIEW, uri)
+                .setPackage(pkg)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            try {
+                startActivity(chromeIntent)
+                return true
+            } catch (e: Exception) {
+                Log.w(TAG, "launchUrlInChromeOrChooser: failed to start $pkg", e)
+            }
+        }
+
+        val viewIntent = Intent(Intent.ACTION_VIEW, uri)
+        val chooser = Intent.createChooser(viewIntent, "Выберите браузер")
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        return try {
+            startActivity(chooser)
+            true
+        } catch (e: Exception) {
+            Log.w(TAG, "launchUrlInChromeOrChooser: no activity to handle view intent", e)
+            false
+        }
     }
 
     private fun setDisplayUnderCutout(enabled: Boolean) {

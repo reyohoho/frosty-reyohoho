@@ -2,20 +2,64 @@ import 'package:flutter/material.dart';
 import 'package:frosty/screens/settings/stores/auth_store.dart';
 import 'package:frosty/widgets/frosty_app_bar.dart';
 import 'package:frosty/widgets/frosty_dialog.dart';
+import 'package:mobx/mobx.dart';
 import 'package:provider/provider.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
-/// In-app WebView for Twitch OAuth when external Chrome is unavailable (fallback).
-class LoginWebView extends StatelessWidget {
-  /// Optional screen after successful login (e.g. onboarding next step).
-  final Widget? routeAfter;
+/// In-app WebView for Twitch OAuth when the user opts for the internal browser.
+///
+/// Owns its lifecycle: once [AuthStore.isLoggedIn] flips to `true` (or the
+/// WebView reaches the OAuth redirect without a usable token), the screen
+/// removes itself from the navigator stack. Any post-login navigation
+/// (e.g. onboarding → setup) is handled by the caller's own MobX reaction on
+/// `isLoggedIn`, so we don't race with it here.
+class LoginWebView extends StatefulWidget {
+  const LoginWebView({super.key});
 
-  const LoginWebView({super.key, this.routeAfter});
+  @override
+  State<LoginWebView> createState() => _LoginWebViewState();
+}
+
+class _LoginWebViewState extends State<LoginWebView> {
+  ReactionDisposer? _loginReactionDisposer;
+  late final WebViewController _controller;
+
+  void _removeSelf() {
+    if (!mounted) return;
+    final route = ModalRoute.of(context);
+    if (route == null) return;
+    // `removeRoute` dismisses this specific route regardless of whether it is
+    // currently on top of the stack, which protects us from other reactions
+    // pushing routes on top before our reaction fires.
+    Navigator.of(context).removeRoute(route);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+
+    final authStore = context.read<AuthStore>();
+
+    _controller = authStore.createAuthWebViewController(
+      onRedirectWithoutToken: _removeSelf,
+    );
+
+    _loginReactionDisposer = reaction<bool>(
+      (_) => authStore.isLoggedIn,
+      (isLoggedIn) {
+        if (isLoggedIn) _removeSelf();
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _loginReactionDisposer?.call();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final authStore = context.read<AuthStore>();
-
     return Scaffold(
       appBar: FrostyAppBar(
         title: const Text('Connect with Twitch'),
@@ -36,7 +80,7 @@ class LoginWebView extends StatelessWidget {
           ),
         ],
       ),
-      body: WebViewWidget(controller: authStore.createAuthWebViewController(routeAfter: routeAfter)),
+      body: WebViewWidget(controller: _controller),
     );
   }
 }

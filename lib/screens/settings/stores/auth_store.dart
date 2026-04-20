@@ -12,7 +12,6 @@ import 'package:frosty/screens/settings/stores/user_store.dart';
 import 'package:frosty/utils/chromium_login_support.dart';
 import 'package:frosty/widgets/frosty_dialog.dart';
 import 'package:mobx/mobx.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 part 'auth_store.g.dart';
@@ -67,40 +66,56 @@ abstract class AuthBase with Store {
   static const _oauthScopes =
       'chat:read chat:edit user:read:follows user:read:blocked_users user:manage:blocked_users user:manage:chat_color moderator:manage:banned_users moderator:manage:chat_messages';
 
-  /// Redirect URI for the in-app WebView login flow (implicit grant).
-  static const _oauthWebViewRedirectUri = 'https://twitch.tv/login';
-
   /// User-Agent for the auth WebView (works around Google OAuth WebView blocking).
   static String get webViewUserAgent => Platform.isIOS
       ? 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1'
       : 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Mobile Safari/537.36';
 
-  /// Navigation handler for the login WebView.
-  FutureOr<NavigationDecision> handleAuthWebViewNavigation({
-    required NavigationRequest request,
-    Widget? routeAfter,
-  }) {
-    if (request.url.startsWith('https://twitch.tv/login')) {
-      final uri = Uri.parse(request.url.replaceFirst('#', '?'));
-      final token = uri.queryParameters['access_token'];
-
-      if (token != null) login(token: token);
-    }
-
-    if (request.url == 'https://www.twitch.tv/?no-reload=true') {
-      if (routeAfter != null) {
-        navigatorKey.currentState?.pop();
-        navigatorKey.currentState?.push(MaterialPageRoute<void>(builder: (context) => routeAfter));
-      } else {
-        navigatorKey.currentState?.pop();
-      }
-    }
-
-    return NavigationDecision.navigate;
+  /// Whether the incoming URL matches our configured OAuth redirect URI
+  /// (scheme + host). Path/fragment may vary.
+  static bool _isOAuthRedirectUrl(String url) {
+    final incoming = Uri.tryParse(url);
+    if (incoming == null) return false;
+    final redirect = Uri.parse(oauthRedirectUri);
+    return incoming.scheme == redirect.scheme && incoming.host == redirect.host;
   }
 
-  /// WebView-based OAuth (fallback when Chrome is not installed on Android).
-  WebViewController createAuthWebViewController({Widget? routeAfter}) {
+  /// Extracts `access_token` from an OAuth redirect URL. Twitch's implicit
+  /// grant puts it in the URI fragment, but we also accept query parameters in
+  /// case something in the stack converts `#` → `?`.
+  static String? _extractAccessToken(String url) {
+    final uri = Uri.tryParse(url);
+    if (uri == null) return null;
+    if (uri.fragment.isNotEmpty) {
+      final params = Uri.splitQueryString(uri.fragment);
+      final token = params['access_token'];
+      if (token != null) return token;
+    }
+    return uri.queryParameters['access_token'];
+  }
+
+  /// WebView-based OAuth flow used by [LoginWebView] when the user picks the
+  /// in-app browser option. Uses [oauthRedirectUri] and detects the token via
+  /// three independent paths to survive Android WebView quirks where the URI
+  /// fragment is sometimes stripped from navigation events:
+  ///   1. `onNavigationRequest` — fastest, usually has the fragment
+  ///   2. `onUrlChange`         — fires on every URL update (fragment-safe)
+  ///   3. `onPageFinished` + JS — reads `window.location.hash` from the page
+  ///
+  /// Once the token is recovered we only call [login]; closing the WebView is
+  /// the caller's responsibility (e.g. [LoginWebView] watches `isLoggedIn` and
+  /// pops itself). Keeping navigation out of the store avoids races with MobX
+  /// reactions that also listen to `isLoggedIn`.
+  WebViewController createAuthWebViewController({VoidCallback? onRedirectWithoutToken}) {
+    var loginHandled = false;
+
+    void finishLogin(String token) {
+      if (loginHandled) return;
+      loginHandled = true;
+      debugPrint('Auth WebView: token captured, calling login()');
+      unawaited(login(token: token));
+    }
+
     final webViewController = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setUserAgent(webViewUserAgent);
@@ -108,12 +123,57 @@ abstract class AuthBase with Store {
     return webViewController
       ..setNavigationDelegate(
         NavigationDelegate(
-          onNavigationRequest: (request) => handleAuthWebViewNavigation(request: request, routeAfter: routeAfter),
+          onNavigationRequest: (request) {
+            if (_isOAuthRedirectUrl(request.url)) {
+              debugPrint('Auth WebView: onNavigationRequest redirect url = ${request.url}');
+              final token = _extractAccessToken(request.url);
+              if (token != null) {
+                finishLogin(token);
+                // Block loading the external redirect stub inside the WebView.
+                return NavigationDecision.prevent;
+              }
+              // Fragment may have been stripped on this platform — let the
+              // page load so `onUrlChange` / JS fallback can recover it.
+            }
+            return NavigationDecision.navigate;
+          },
+          onUrlChange: (change) {
+            final url = change.url;
+            if (url == null) return;
+            if (_isOAuthRedirectUrl(url)) {
+              debugPrint('Auth WebView: onUrlChange redirect url = $url');
+              final token = _extractAccessToken(url);
+              if (token != null) finishLogin(token);
+            }
+          },
           onWebResourceError: (error) {
             debugPrint('Auth WebView error: ${error.description}');
           },
-          onPageFinished: (_) async {
+          onPageFinished: (url) async {
             try {
+              if (_isOAuthRedirectUrl(url) && !loginHandled) {
+                debugPrint('Auth WebView: onPageFinished on redirect, reading hash via JS');
+                final result = await webViewController.runJavaScriptReturningResult(
+                  'window.location.hash',
+                );
+                final raw = result is String ? result : result.toString();
+                final hash = raw.replaceAll('"', '');
+                if (hash.isNotEmpty) {
+                  final fragment = hash.startsWith('#') ? hash.substring(1) : hash;
+                  final params = Uri.splitQueryString(fragment);
+                  final token = params['access_token'];
+                  if (token != null) {
+                    finishLogin(token);
+                    return;
+                  }
+                }
+                if (!loginHandled) {
+                  debugPrint('Auth WebView: redirect reached without token');
+                  onRedirectWithoutToken?.call();
+                }
+                return;
+              }
+
               await webViewController.runJavaScript('''
                 {
                   function modifyElement(element) {
@@ -146,23 +206,13 @@ abstract class AuthBase with Store {
           },
         ),
       )
-      ..loadRequest(
-        Uri(
-          scheme: 'https',
-          host: 'id.twitch.tv',
-          path: '/oauth2/authorize',
-          queryParameters: {
-            'client_id': clientId,
-            'redirect_uri': _oauthWebViewRedirectUri,
-            'response_type': 'token',
-            'scope': _oauthScopes,
-            'force_verify': 'true',
-          },
-        ),
-      );
+      ..loadRequest(oauthUri);
   }
 
   /// Builds the Twitch OAuth authorization URI for the implicit grant flow.
+  /// Used for both the external browser flow and the in-app [LoginWebView];
+  /// only [oauthRedirectUri] needs to be registered in the Twitch developer
+  /// console.
   Uri get oauthUri => Uri(
         scheme: 'https',
         host: 'id.twitch.tv',
@@ -176,36 +226,43 @@ abstract class AuthBase with Store {
         },
       );
 
-  /// Launches Twitch OAuth: external browser when Chrome is available on Android,
-  /// otherwise a dialog (store / in-app WebView fallback). Pass [routeAfter] for
-  /// onboarding so the WebView flow can navigate forward after login.
-  Future<void> launchLogin(BuildContext? context, {Widget? routeAfter}) async {
-    if (Platform.isAndroid) {
-      final hasBrowser = await hasChromiumBrowserForLogin();
-      if (!hasBrowser) {
-        final ctx = context ?? navigatorKey.currentContext;
-        if (ctx != null && ctx.mounted) {
-          final choice = await showChromiumRequiredDialog(ctx);
-          switch (choice) {
-            case ChromiumLoginChoice.openStore:
-              await openChromeInstallInDeviceStore();
-              return;
-            case ChromiumLoginChoice.inAppWebView:
-              navigatorKey.currentState?.push(
-                MaterialPageRoute<void>(
-                  builder: (_) => LoginWebView(routeAfter: routeAfter),
-                ),
-              );
-              return;
-            case ChromiumLoginChoice.dismissed:
-            case null:
-              return;
-          }
-        }
-        return;
-      }
+  /// Shows a chooser dialog letting the user pick how to sign in (in-app WebView,
+  /// external browser with Chrome preference, or copy the auth URL).
+  ///
+  /// Post-login navigation (e.g. onboarding → setup) is expected to be driven
+  /// by the caller's own MobX reaction on [isLoggedIn]; this method only opens
+  /// the picked auth flow.
+  Future<void> launchLogin(BuildContext? context) async {
+    debugPrint('launchLogin: called (context mounted=${context?.mounted})');
+    // Prefer the global navigator context — it stays valid across MobX
+    // rebuilds that may invalidate a passed-in Observer builder context.
+    final ctx = navigatorKey.currentContext ?? context;
+    if (ctx == null || !ctx.mounted) {
+      debugPrint('launchLogin: no usable context, falling back to external browser');
+      await launchUrlInChromeOrChooser(oauthUri);
+      return;
     }
-    await launchUrl(oauthUri, mode: LaunchMode.externalApplication);
+
+    final choice = await showLoginMethodChooser(ctx, authUrl: oauthUri);
+    debugPrint('launchLogin: user chose $choice');
+    switch (choice) {
+      case LoginMethodChoice.internal:
+        navigatorKey.currentState?.push(
+          MaterialPageRoute<void>(
+            builder: (_) => const LoginWebView(),
+          ),
+        );
+        return;
+      case LoginMethodChoice.external:
+        final confirmCtx = navigatorKey.currentContext ?? ctx;
+        if (!confirmCtx.mounted) return;
+        final confirmed = await showExternalBrowserWarningDialog(confirmCtx);
+        if (!confirmed) return;
+        await launchUrlInChromeOrChooser(oauthUri);
+        return;
+      case LoginMethodChoice.cancelled:
+        return;
+    }
   }
 
   /// Handles an OAuth redirect URI, extracting and storing the access token.
