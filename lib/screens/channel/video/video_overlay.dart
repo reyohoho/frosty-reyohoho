@@ -104,25 +104,56 @@ class VideoOverlay extends StatelessWidget {
               const SectionHeader('Stream quality', padding: EdgeInsets.fromLTRB(16, 0, 16, 8), isFirst: true),
               Flexible(
                 child: Observer(
-                  builder: (context) => ListView(
-                    shrinkWrap: true,
-                    primary: false,
-                    children: videoStore.availableStreamQualities
-                        .map(
-                          (quality) => ListTile(
-                            trailing: videoStore.streamQuality == quality ? const Icon(Icons.check_rounded) : null,
-                            title: Text(quality),
-                            onTap: () {
-                              videoStore.setStreamQuality(quality);
-                              SharedPreferences.getInstance().then(
-                                (prefs) => prefs.setString('last_stream_quality', quality),
-                              );
-                              Navigator.pop(context);
-                            },
+                  builder: (context) {
+                    final adActive = videoStore.isAdActive;
+                    return ListView(
+                      shrinkWrap: true,
+                      primary: false,
+                      children: [
+                        if (adActive)
+                          const Padding(
+                            padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+                            child: Text(
+                              'Quality is locked while a Twitch ad is playing. '
+                              'It will unlock once the ad is over.',
+                              style: TextStyle(fontSize: 12),
+                            ),
                           ),
-                        )
-                        .toList(),
-                  ),
+                        ...videoStore.availableStreamQualities.map((quality) {
+                          final isCurrent = videoStore.streamQuality == quality;
+                          final disabled = adActive && !isCurrent;
+                          return ListTile(
+                            trailing: isCurrent
+                                ? const Icon(Icons.check_rounded)
+                                : disabled
+                                    ? const Text(
+                                        'AD',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      )
+                                    : null,
+                            title: Text(quality),
+                            enabled: !disabled,
+                            onTap: disabled
+                                ? null
+                                : () {
+                                    videoStore.setStreamQuality(quality);
+                                    SharedPreferences.getInstance().then(
+                                      (prefs) => prefs.setString(
+                                        'last_stream_quality',
+                                        quality,
+                                      ),
+                                    );
+                                    Navigator.pop(context);
+                                  },
+                          );
+                        }),
+                      ],
+                    );
+                  },
                 ),
               ),
             ],

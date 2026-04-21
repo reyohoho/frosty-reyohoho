@@ -12,10 +12,12 @@ import android.view.WindowManager
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
+import androidx.media3.common.util.UnstableApi
 import cl.puntito.simple_pip_mode.PipCallbackHelperActivityWrapper
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodChannel
+import ru.refrosty.player.NativePlayerFactory
 
 class MainActivity : PipCallbackHelperActivityWrapper() {
 
@@ -115,8 +117,21 @@ class MainActivity : PipCallbackHelperActivityWrapper() {
         pipEventSink?.success(event)
     }
 
+    @androidx.annotation.OptIn(UnstableApi::class)
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+
+        // Register the native ExoPlayer-backed PlatformView used by Flutter's
+        // NativePlayerView for low-latency Twitch live playback. View type id
+        // is referenced from Dart via const `_viewType` in native_player_view.dart.
+        flutterEngine
+            .platformViewsController
+            .registry
+            .registerViewFactory(
+                "ru.refrosty/native_player",
+                NativePlayerFactory(flutterEngine.dartExecutor.binaryMessenger),
+            )
+
         EventChannel(flutterEngine.dartExecutor.binaryMessenger, "ru.refrosty/pip").setStreamHandler(
             object : EventChannel.StreamHandler {
                 override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {

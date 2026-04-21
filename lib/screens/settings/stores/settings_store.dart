@@ -67,6 +67,13 @@ abstract class _SettingsStoreBase with Store {
   static const defaultUseTextureRendering = true;
   static const defaultUsePlaylistProxy = false;
   static const defaultSelectedProxyUrl = '';
+  static const defaultUseNativePlayer = false;
+
+  /// Default [nativePlayerAdsWorkaround]. `picture-by-picture` is what
+  /// Twitch's own mini-player uses and in our experience skips the pre-roll
+  /// ads on most channels. `site` is the historical value (gets ads every
+  /// time), `embed` is the embed player (sometimes different ad frequency).
+  static const defaultNativePlayerAdsWorkaround = 'picture-by-picture';
 
   // Overlay defaults
   static const defaultShowOverlay = true;
@@ -102,6 +109,23 @@ abstract class _SettingsStoreBase with Store {
   @JsonKey(defaultValue: defaultSelectedProxyUrl)
   @observable
   var selectedProxyUrl = defaultSelectedProxyUrl;
+
+  /// When enabled (Android only), live streams are played with a native
+  /// Media3/ExoPlayer PlatformView instead of the embedded Twitch WebView.
+  /// VODs continue to use the WebView.
+  @JsonKey(defaultValue: defaultUseNativePlayer)
+  @observable
+  var useNativePlayer = defaultUseNativePlayer;
+
+  /// Controls the `playerType` value we send to Twitch's GQL
+  /// `PlaybackAccessToken` query when the native player is enabled. Changing
+  /// this is the cheapest pre-roll ad bypass that doesn't require an external
+  /// ad-stripping proxy.
+  ///
+  /// Allowed values: `site`, `picture-by-picture`, `embed`.
+  @JsonKey(defaultValue: defaultNativePlayerAdsWorkaround)
+  @observable
+  var nativePlayerAdsWorkaround = defaultNativePlayerAdsWorkaround;
 
   // Overlay options
   @JsonKey(defaultValue: defaultShowOverlay)
@@ -139,6 +163,8 @@ abstract class _SettingsStoreBase with Store {
     useTextureRendering = defaultUseTextureRendering;
     usePlaylistProxy = defaultUsePlaylistProxy;
     selectedProxyUrl = defaultSelectedProxyUrl;
+    useNativePlayer = defaultUseNativePlayer;
+    nativePlayerAdsWorkaround = defaultNativePlayerAdsWorkaround;
 
     showOverlay = defaultShowOverlay;
     toggleableOverlay = defaultToggleableOverlay;

@@ -25,6 +25,9 @@ SettingsStore _$SettingsStoreFromJson(
   ..useTextureRendering = json['useTextureRendering'] as bool? ?? true
   ..usePlaylistProxy = json['usePlaylistProxy'] as bool? ?? false
   ..selectedProxyUrl = json['selectedProxyUrl'] as String? ?? ''
+  ..useNativePlayer = json['useNativePlayer'] as bool? ?? false
+  ..nativePlayerAdsWorkaround =
+      json['nativePlayerAdsWorkaround'] as String? ?? 'picture-by-picture'
   ..showOverlay = json['showOverlay'] as bool? ?? true
   ..toggleableOverlay = json['toggleableOverlay'] as bool? ?? false
   ..showLatency = json['showLatency'] as bool? ?? false
@@ -121,6 +124,8 @@ Map<String, dynamic> _$SettingsStoreToJson(
   'useTextureRendering': instance.useTextureRendering,
   'usePlaylistProxy': instance.usePlaylistProxy,
   'selectedProxyUrl': instance.selectedProxyUrl,
+  'useNativePlayer': instance.useNativePlayer,
+  'nativePlayerAdsWorkaround': instance.nativePlayerAdsWorkaround,
   'showOverlay': instance.showOverlay,
   'toggleableOverlay': instance.toggleableOverlay,
   'showLatency': instance.showLatency,
@@ -383,6 +388,46 @@ mixin _$SettingsStore on _SettingsStoreBase, Store {
     _$selectedProxyUrlAtom.reportWrite(value, super.selectedProxyUrl, () {
       super.selectedProxyUrl = value;
     });
+  }
+
+  late final _$useNativePlayerAtom = Atom(
+    name: '_SettingsStoreBase.useNativePlayer',
+    context: context,
+  );
+
+  @override
+  bool get useNativePlayer {
+    _$useNativePlayerAtom.reportRead();
+    return super.useNativePlayer;
+  }
+
+  @override
+  set useNativePlayer(bool value) {
+    _$useNativePlayerAtom.reportWrite(value, super.useNativePlayer, () {
+      super.useNativePlayer = value;
+    });
+  }
+
+  late final _$nativePlayerAdsWorkaroundAtom = Atom(
+    name: '_SettingsStoreBase.nativePlayerAdsWorkaround',
+    context: context,
+  );
+
+  @override
+  String get nativePlayerAdsWorkaround {
+    _$nativePlayerAdsWorkaroundAtom.reportRead();
+    return super.nativePlayerAdsWorkaround;
+  }
+
+  @override
+  set nativePlayerAdsWorkaround(String value) {
+    _$nativePlayerAdsWorkaroundAtom.reportWrite(
+      value,
+      super.nativePlayerAdsWorkaround,
+      () {
+        super.nativePlayerAdsWorkaround = value;
+      },
+    );
   }
 
   late final _$showOverlayAtom = Atom(
@@ -1463,6 +1508,8 @@ defaultToHighestQuality: ${defaultToHighestQuality},
 useTextureRendering: ${useTextureRendering},
 usePlaylistProxy: ${usePlaylistProxy},
 selectedProxyUrl: ${selectedProxyUrl},
+useNativePlayer: ${useNativePlayer},
+nativePlayerAdsWorkaround: ${nativePlayerAdsWorkaround},
 showOverlay: ${showOverlay},
 toggleableOverlay: ${toggleableOverlay},
 showLatency: ${showLatency},

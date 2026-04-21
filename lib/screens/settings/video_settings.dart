@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:frosty/screens/settings/stores/settings_store.dart';
+import 'package:frosty/screens/settings/widgets/settings_list_select.dart';
 import 'package:frosty/screens/settings/widgets/settings_list_switch.dart';
 import 'package:frosty/utils.dart';
 import 'package:frosty/widgets/section_header.dart';
@@ -21,6 +22,50 @@ class VideoSettings extends StatefulWidget {
 class _VideoSettingsState extends State<VideoSettings> {
   void _handleProxyToggle(bool newValue) {
     widget.settingsStore.usePlaylistProxy = newValue;
+  }
+
+  static String _adsWorkaroundLabel(String value) {
+    switch (value) {
+      case 'picture-by-picture':
+        return 'pbp';
+      case 'embed':
+        return 'embed';
+      default:
+        return 'site';
+    }
+  }
+
+  static String _adsWorkaroundValue(String label) {
+    switch (label) {
+      case 'pbp':
+        return 'picture-by-picture';
+      case 'embed':
+        return 'embed';
+      default:
+        return 'site';
+    }
+  }
+
+  static String _adsWorkaroundSubtitle(String value) {
+    const autoUpgradeNote =
+        'The quality ladder is auto-upgraded to "site" ~15s after playback '
+        'starts or immediately after an ad ends, so you do not stay capped '
+        'at 360p.';
+    switch (value) {
+      case 'picture-by-picture':
+        return 'pbp: Twitch mini-player type. Usually skips the pre-roll ad; '
+            'max quality is often capped at 360p until the first upgrade. '
+            '$autoUpgradeNote';
+      case 'embed':
+        return 'embed: iframe embed player type. Reduces ads on some '
+            'channels, quality list may be reduced (often 480p max). '
+            '$autoUpgradeNote';
+      case 'site':
+        return 'site: same as the web player. Gets all qualities up to '
+            'Source, but pre-roll ads will play.';
+      default:
+        return '';
+    }
   }
 
   Future<void> _handleBackgroundAudioToggle(bool newValue) async {
@@ -62,6 +107,31 @@ class _VideoSettingsState extends State<VideoSettings> {
               value: widget.settingsStore.useTextureRendering,
               onChanged: (newValue) =>
                   widget.settingsStore.useTextureRendering = newValue,
+            ),
+          if (Platform.isAndroid)
+            SettingsListSwitch(
+              title: 'Native player (experimental)',
+              subtitle: const Text(
+                'Play live streams with a native ExoPlayer instead of the '
+                'embedded Twitch web player. Targets ~2s low-latency HLS. '
+                'VODs still use the web player.',
+              ),
+              value: widget.settingsStore.useNativePlayer,
+              onChanged: (newValue) =>
+                  widget.settingsStore.useNativePlayer = newValue,
+            ),
+          if (Platform.isAndroid && widget.settingsStore.useNativePlayer)
+            SettingsListSelect(
+              title: 'Ads workaround (native player)',
+              subtitle: _adsWorkaroundSubtitle(
+                widget.settingsStore.nativePlayerAdsWorkaround,
+              ),
+              selectedOption: _adsWorkaroundLabel(
+                widget.settingsStore.nativePlayerAdsWorkaround,
+              ),
+              options: const ['pbp', 'site', 'embed'],
+              onChanged: (label) => widget.settingsStore
+                  .nativePlayerAdsWorkaround = _adsWorkaroundValue(label),
             ),
           SettingsListSwitch(
             title: 'Use playlist proxy',

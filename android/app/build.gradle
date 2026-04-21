@@ -16,18 +16,25 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 }
 
+// Version used for all androidx.media3 artifacts that power the native Twitch
+// ExoPlayer implementation (see android/app/src/main/java/ru/refrosty/player).
+// The bundled HlsPlaylistParser is a patched fork of the parser shipped with
+// this exact Media3 release, so bumping the version here may require
+// re-porting the parser from the matching upstream.
+def media3Version = "1.9.3"
+
 android {
     namespace = "ru.refrosty"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_1_8
+        jvmTarget = JavaVersion.VERSION_17
     }
 
     defaultConfig {
@@ -50,9 +57,20 @@ android {
     }
     buildTypes {
         release {
-            signingConfig signingConfigs.release
+            signingConfig signingConfigs.debug
         }
     }
+}
+
+dependencies {
+    // Media3 / ExoPlayer stack for the native Twitch HLS player.
+    implementation "androidx.media3:media3-exoplayer:${media3Version}"
+    implementation "androidx.media3:media3-exoplayer-hls:${media3Version}"
+    implementation "androidx.media3:media3-ui:${media3Version}"
+    implementation "androidx.media3:media3-common:${media3Version}"
+    implementation "androidx.media3:media3-datasource-okhttp:${media3Version}"
+    // Required by Media3 internals (ListenableFuture, Iterables, ...).
+    implementation "com.google.guava:guava:33.3.1-android"
 }
 
 flutter {

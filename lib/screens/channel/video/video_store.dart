@@ -9,12 +9,14 @@ import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:frosty/apis/reyohoho_api.dart';
 import 'package:frosty/apis/twitch_api.dart';
+import 'package:frosty/apis/twitch_playlist_api.dart';
 import 'package:frosty/models/channel.dart';
 import 'package:frosty/models/stream.dart';
 import 'package:frosty/screens/settings/stores/auth_store.dart';
 import 'package:frosty/screens/settings/stores/settings_store.dart';
 import 'package:frosty/utils/background_playback_callback.dart';
 import 'package:frosty/utils/pip_callback.dart';
+import 'package:frosty/widgets/native_player/native_player_controller.dart';
 import 'package:mobx/mobx.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:simple_pip_mode/simple_pip.dart';
@@ -68,6 +70,48 @@ abstract class VideoStoreBase with Store {
 
   /// Getter for the webview controller
   InAppWebViewController? get webViewController => _webViewController;
+
+  // region Native player (Android Media3)
+
+  /// When [SettingsStore.useNativePlayer] is on, live playback is driven by
+  /// a native ExoPlayer PlatformView instead of the Twitch WebView. The rest
+  /// of this store (overlay, PiP, foreground audio, friends activity) is
+  /// transparent to the switch: observables such as [_paused], [_latency] and
+  /// [_availableStreamQualities] are populated from the native controller
+  /// just as they are populated from JavaScript in the WebView path.
+  final TwitchPlaylistApi _playlistApi = TwitchPlaylistApi();
+
+  /// Lazy controller for the native ExoPlayer. Created in [nativePlayerController].
+  NativePlayerController? _nativePlayerController;
+
+  /// Whether the native playback path is active for this store.
+  bool get useNativePlayer =>
+      Platform.isAndroid && settingsStore.useNativePlayer;
+
+  /// `true` while the native player is hiding a Twitch-stitched ad. Always
+  /// `false` for the WebView backend (we have no signal there).
+  bool get isAdActive =>
+      useNativePlayer && (_nativePlayerController?.adActive ?? false);
+
+  /// Returns (and lazily creates) the native player controller. Callers must
+  /// only access this when [useNativePlayer] is true.
+  NativePlayerController get nativePlayerController {
+    final existing = _nativePlayerController;
+    if (existing != null) return existing;
+    final created = NativePlayerController();
+    _nativePlayerController = created;
+    _wireNativeControllerReactions(created);
+    return created;
+  }
+
+  /// Timer that polls the native player for LL-HLS latency.
+  Timer? _nativeLatencyTimer;
+
+  /// Subscriptions to native controller state changes that drive VideoStore
+  /// observables (_paused, _availableStreamQualities, ...).
+  final List<ReactionDisposer> _nativeReactionDisposers = [];
+
+  // endregion
 
   /// Dio instance for proxy requests
   final _dio = Dio(
@@ -514,6 +558,19 @@ abstract class VideoStoreBase with Store {
   static String _stripTrailingSlashes(String s) =>
       s.replaceAll(RegExp(r'/+$'), '');
 
+  /// Clamps an arbitrary [nativePlayerAdsWorkaround] value to one of the three
+  /// `playerType`s Twitch's GQL PlaybackAccessToken actually accepts.
+  static String _resolvePlayerType(String raw) {
+    switch (raw) {
+      case 'picture-by-picture':
+      case 'embed':
+      case 'site':
+        return raw;
+      default:
+        return 'picture-by-picture';
+    }
+  }
+
   /// Base URL for usher proxying: RTE quality proxy from [usherProxyBaseUrl] if valid,
   /// otherwise manual playlist proxy from settings (same gate as before).
   String? get _effectiveUsherProxyBase {
@@ -657,6 +714,10 @@ abstract class VideoStoreBase with Store {
 
   @action
   Future<void> setStreamQuality(String newStreamQuality) async {
+    if (useNativePlayer) {
+      await _setNativeStreamQualityByLabel(newStreamQuality);
+      return;
+    }
     final indexOfStreamQuality = _availableStreamQualities.indexOf(
       newStreamQuality,
     );
@@ -1118,6 +1179,16 @@ abstract class VideoStoreBase with Store {
   /// Toggles the audio compressor on/off.
   @action
   Future<void> toggleAudioCompressor() async {
+    if (useNativePlayer) {
+      final next = !_audioCompressorActive;
+      try {
+        await nativePlayerController.setDynamicsProcessing(next);
+        _audioCompressorActive = next;
+      } catch (e) {
+        debugPrint('Native audio compressor toggle error: $e');
+      }
+      return;
+    }
     try {
       final result = await _webViewController?.evaluateJavascript(
         source: 'window._audioCompressor?.toggle()',
@@ -1133,6 +1204,15 @@ abstract class VideoStoreBase with Store {
   @action
   Future<void> toggleMirror() async {
     _videoMirrored = !_videoMirrored;
+    if (useNativePlayer) {
+      try {
+        await nativePlayerController.setMirror(_videoMirrored);
+        debugPrint('Native video mirror toggled: $_videoMirrored');
+      } catch (e) {
+        debugPrint('Native video mirror toggle error: $e');
+      }
+      return;
+    }
     try {
       final transform = _videoMirrored ? 'scaleX(-1)' : 'scaleX(1)';
       await _webViewController?.evaluateJavascript(
@@ -1441,6 +1521,16 @@ abstract class VideoStoreBase with Store {
     _firstTimeSettingQuality = true;
     _isInPipMode = false;
 
+    if (useNativePlayer) {
+      try {
+        await reloadNativeStream();
+      } catch (e) {
+        debugPrint('native reload error: $e');
+      }
+      updateStreamInfo();
+      return;
+    }
+
     try {
       _webViewController
           ?.evaluateJavascript(source: 'window._latencyTracker?.stop()')
@@ -1461,6 +1551,20 @@ abstract class VideoStoreBase with Store {
 
   /// Play or pause the video depending on the current state of [_paused].
   void handlePausePlay() {
+    if (useNativePlayer) {
+      final ctrl = _nativePlayerController;
+      if (ctrl == null) return;
+      if (_paused) {
+        ctrl.play().catchError((Object e) {
+          debugPrint('native play error: $e');
+        });
+      } else {
+        ctrl.pause().catchError((Object e) {
+          debugPrint('native pause error: $e');
+        });
+      }
+      return;
+    }
     try {
       _webViewController?.evaluateJavascript(
         source: 'document.getElementsByTagName("video")[0].play();',
@@ -1602,6 +1706,322 @@ abstract class VideoStoreBase with Store {
     }
   }
 
+  // region Native player bootstrap / lifecycle
+
+  /// Sets up MobX reactions that mirror native controller state into this
+  /// store's `@readonly` observables so the existing overlay keeps working.
+  void _wireNativeControllerReactions(NativePlayerController c) {
+    _nativeReactionDisposers.add(
+      reaction<bool>((_) => c.isPlaying, (playing) {
+        if (playing) {
+          _paused = false;
+          _onFriendsActivityPlaybackPlaying();
+        } else {
+          _paused = true;
+          _onFriendsActivityPlaybackPaused();
+        }
+      }, fireImmediately: true),
+    );
+    _nativeReactionDisposers.add(
+      reaction<List<TwitchHlsVariant>>(
+        (_) => c.masterVariants.toList(growable: false),
+        (variants) {
+          _availableStreamQualities = [
+            'Auto',
+            ...variants
+                .where((v) => !v.audioOnly)
+                .map((v) => v.displayLabel),
+            if (variants.any((v) => v.audioOnly)) 'Audio Only',
+          ];
+          _streamQualityIndex = 0;
+        },
+        fireImmediately: true,
+      ),
+    );
+    _nativeReactionDisposers.add(
+      reaction<int?>((_) => c.latencyMs, (latency) {
+        if (latency == null) {
+          _latency = null;
+        } else {
+          _latency = '${(latency / 1000).toStringAsFixed(1)}s';
+          if (settingsStore.autoSyncChatDelay) {
+            settingsStore.chatDelay = (latency / 1000).clamp(0.0, 30.0);
+          }
+        }
+      }),
+    );
+
+    // When a Twitch-stitched ad finishes, the master playlist we originally
+    // got with `playerType=picture-by-picture` / `embed` tends to stay
+    // quality-capped (often 360p) even after the ad ends, because Twitch
+    // issues the master once per access-token fetch and we never asked for a
+    // new one. Re-fetch the stream with `playerType=site` — at this point we
+    // are mid-session so Twitch won't re-run a pre-roll, but it will now
+    // return the full quality ladder. If the user explicitly chose `site`
+    // (they don't care about pre-roll) we skip this to avoid the extra
+    // buffering hiccup.
+    _nativeReactionDisposers.add(
+      reaction<bool>(
+        (_) => c.adActive,
+        (adActive) {
+          if (adActive) return;
+          scheduleMicrotask(() => _maybeUpgradeNativeToSite('ad ended'));
+        },
+      ),
+    );
+  }
+
+  /// `true` while we're in the middle of a native-player reload so we don't
+  /// double-trigger on simultaneous ad-end + state events.
+  bool _nativeReloadInFlight = false;
+
+  /// Last `playerType` actually used on Twitch's PlaybackAccessToken call.
+  /// Tracks what's in the current master, not the user setting — we need
+  /// this to decide whether to re-upgrade to `site` after an ad.
+  String _nativeLoadedPlayerType = '';
+
+  /// Fallback timer that upgrades the stream to `playerType=site` after
+  /// [_nativeQualityUpgradeDelay] of playback when the user is on `pbp`/
+  /// `embed` and no ad ever fired. Handles channels that simply don't serve
+  /// pre-rolls for the current user — without this they would stay capped
+  /// at the 360p rung `picture-by-picture` usually hands out.
+  Timer? _nativeQualityUpgradeTimer;
+  static const _nativeQualityUpgradeDelay = Duration(seconds: 15);
+
+  /// Resolves a new PlaybackAccessToken + Usher playlist URL and hands it off
+  /// to the native ExoPlayer. Call this after the native view is attached
+  /// (i.e. after [NativePlayerController.attach] has run).
+  ///
+  /// [playerTypeOverride] forces a specific `playerType` value and bypasses
+  /// the user's "Ads workaround" preference for this single reload — used
+  /// after an ad ends to force `site` and get the full quality ladder back.
+  @action
+  Future<void> reloadNativeStream({String? playerTypeOverride}) async {
+    final ctrl = _nativePlayerController;
+    if (ctrl == null) return;
+    if (_nativeReloadInFlight) return;
+    _nativeReloadInFlight = true;
+    final proxyBase = _effectiveUsherProxyBase;
+    // Only attach a user OAuth token when the user is actually logged in.
+    // `authStore.token` silently falls back to the app-level default (client
+    // credentials) token when anonymous, and GQL `PlaybackAccessToken` rejects
+    // that with 401 if sent as `Authorization: OAuth <token>`.
+    final userAuthToken = authStore.isLoggedIn ? authStore.token : null;
+
+    try {
+      // 1. Resolve the Usher master playlist URL (GQL PlaybackAccessToken).
+      //    `playerType` comes from the user-facing "Ads workaround" setting;
+      //    `picture-by-picture` (Twitch's own mini-player) tends to skip the
+      //    pre-roll ad, while `site` behaves like the web player.
+      final playerType = _resolvePlayerType(
+        playerTypeOverride ?? settingsStore.nativePlayerAdsWorkaround,
+      );
+      _nativeLoadedPlayerType = playerType;
+      debugPrint(
+        '[native_player] reload: playerType=$playerType '
+        'proxyBase=${proxyBase ?? "<none>"} override=$playerTypeOverride',
+      );
+      final usherUrl = await _playlistApi.resolveStreamPlaylistUrl(
+        channelLogin: userLogin,
+        userAuthToken: (userAuthToken != null && userAuthToken.isNotEmpty)
+            ? userAuthToken
+            : null,
+        proxyBaseUrl: proxyBase,
+        playerType: playerType,
+      );
+
+      // 2. Download the master playlist so we can populate the quality list.
+      final variants = await _playlistApi.fetchVariants(
+        masterPlaylistUrl: usherUrl,
+      );
+      runInAction(() {
+        ctrl.masterVariants
+          ..clear()
+          ..addAll(variants);
+      });
+
+      // 3. Pick the starting variant. Source by default unless the user set
+      //    `defaultToHighestQuality`, in which case force the highest rung.
+      TwitchHlsVariant? initial;
+      final videoVariants = variants.where((v) => !v.audioOnly).toList();
+      if (videoVariants.isNotEmpty) {
+        if (settingsStore.defaultToHighestQuality) {
+          initial = videoVariants.first;
+        } else {
+          initial = null; // let ExoPlayer pick (ABR)
+        }
+      }
+
+      // 4. Point ExoPlayer at the master playlist and apply the quality cap.
+      //    The `proxyBase` (when set) tells the native side's
+      //    ResolvingDataSource to route all `*.m3u8` fetches on
+      //    `usher.ttvnw.net` / `*.hls.ttvnw.net` through `{proxy}/{url}`.
+      //    The master URL we pass is itself already proxy-prefixed from step
+      //    1, so the native side must not double-wrap it (handled by
+      //    `shouldProxyForHls`).
+      await ctrl.setDataSource(
+        usherUrl,
+        userAgent: 'Mozilla/5.0 (Linux; Android 14) Frosty/native',
+        headers: const {
+          'Origin': 'https://player.twitch.tv',
+          'Referer': 'https://player.twitch.tv/',
+        },
+        proxyBase: proxyBase,
+      );
+      if (initial != null) {
+        await ctrl.applyQuality(initial);
+        runInAction(() {
+          _streamQualityIndex = _availableStreamQualities.indexWhere(
+            (q) => q.toLowerCase() == initial!.displayLabel.toLowerCase(),
+          );
+          if (_streamQualityIndex < 0) _streamQualityIndex = 0;
+        });
+      }
+
+      // 5. Apply persisted toggles (compressor / mirror) if the user had them on.
+      if (_audioCompressorActive) {
+        await ctrl.setDynamicsProcessing(true);
+      }
+      if (_videoMirrored) {
+        await ctrl.setMirror(true);
+      }
+
+      // 6. Kick off a latency polling loop (~3s cadence) so chat auto-sync
+      //    and the overlay's latency badge keep working.
+      _nativeLatencyTimer?.cancel();
+      _nativeLatencyTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+        final c = _nativePlayerController;
+        if (c == null) return;
+        c.refreshLatency().catchError((Object e) {
+          debugPrint('native latency poll error: $e');
+        });
+      });
+
+      // 7. Schedule an auto-upgrade to `playerType=site` when we're currently
+      //    on `pbp`/`embed`. This handles channels without ads where the
+      //    ad-end reaction would never fire and the user would otherwise
+      //    stay capped at the lower quality ladder forever.
+      _nativeQualityUpgradeTimer?.cancel();
+      if (playerType != 'site') {
+        _nativeQualityUpgradeTimer = Timer(_nativeQualityUpgradeDelay, () {
+          _maybeUpgradeNativeToSite('playback running');
+        });
+      }
+    } catch (e, st) {
+      debugPrint('reloadNativeStream failed: $e\n$st');
+    } finally {
+      _nativeReloadInFlight = false;
+    }
+  }
+
+  /// Re-runs the native reload with `playerType=site` if we're currently
+  /// using a restricted playerType and not in the middle of an ad. Safe to
+  /// call multiple times — guarded by `_nativeReloadInFlight` and a
+  /// currently-loaded-playerType check.
+  ///
+  /// If the upgrade is blocked right now (a first-load reload is still
+  /// in flight, or we're still in the middle of an ad), we re-arm the
+  /// timer so the quality list doesn't stay stuck at 360p forever on
+  /// pbp/embed.
+  Future<void> _maybeUpgradeNativeToSite(String trigger) async {
+    final ctrl = _nativePlayerController;
+    if (ctrl == null) return;
+    if (_nativeLoadedPlayerType == 'site') return;
+    if (_nativeReloadInFlight) {
+      debugPrint(
+        '[native_player] upgrade blocked by in-flight reload '
+        '(trigger=$trigger) — retrying in 3s',
+      );
+      _nativeQualityUpgradeTimer?.cancel();
+      _nativeQualityUpgradeTimer = Timer(
+        const Duration(seconds: 3),
+        () => _maybeUpgradeNativeToSite('retry-after-inflight'),
+      );
+      return;
+    }
+    if (ctrl.adActive) {
+      // The adActive reaction will retry for us once the ad ends; still
+      // schedule a safety-net timer in case the ad marker fails to flip.
+      debugPrint(
+        '[native_player] upgrade deferred: ad in progress (trigger=$trigger)',
+      );
+      _nativeQualityUpgradeTimer?.cancel();
+      _nativeQualityUpgradeTimer = Timer(
+        const Duration(seconds: 5),
+        () => _maybeUpgradeNativeToSite('retry-after-ad'),
+      );
+      return;
+    }
+    debugPrint(
+      '[native_player] upgrading to playerType=site '
+      '(trigger=$trigger, was=$_nativeLoadedPlayerType)',
+    );
+    await reloadNativeStream(playerTypeOverride: 'site');
+  }
+
+  /// Maps a UI-visible quality label ("Auto", "720p60", "Audio Only", ...)
+  /// back to the right [TwitchHlsVariant] and applies it on the native
+  /// ExoPlayer via [NativePlayerController.applyQuality].
+  Future<void> _setNativeStreamQualityByLabel(String label) async {
+    final ctrl = _nativePlayerController;
+    if (ctrl == null) return;
+    final variants = ctrl.masterVariants;
+    if (label.toLowerCase() == 'auto') {
+      await ctrl.applyQuality(null);
+      _streamQualityIndex = 0;
+      return;
+    }
+    TwitchHlsVariant? match;
+    if (label.toLowerCase() == 'audio only') {
+      match = variants.firstWhere(
+        (v) => v.audioOnly,
+        orElse: () => variants.isEmpty
+            ? const TwitchHlsVariant(
+                name: 'audio_only',
+                groupId: 'audio_only',
+                uri: '',
+                audioOnly: true,
+              )
+            : variants.first,
+      );
+    } else {
+      for (final v in variants) {
+        if (v.displayLabel.toLowerCase() == label.toLowerCase()) {
+          match = v;
+          break;
+        }
+      }
+    }
+    if (match == null) return;
+    await ctrl.applyQuality(match);
+    _streamQualityIndex = _availableStreamQualities.indexOf(label);
+    if (_streamQualityIndex < 0) _streamQualityIndex = 0;
+  }
+
+  /// Releases the native player and tears down latency polling / reactions.
+  Future<void> _disposeNativePlayer() async {
+    _nativeLatencyTimer?.cancel();
+    _nativeLatencyTimer = null;
+    _nativeQualityUpgradeTimer?.cancel();
+    _nativeQualityUpgradeTimer = null;
+    for (final d in _nativeReactionDisposers) {
+      d();
+    }
+    _nativeReactionDisposers.clear();
+    final ctrl = _nativePlayerController;
+    if (ctrl != null) {
+      try {
+        await ctrl.pause();
+      } catch (_) {}
+      try {
+        await ctrl.detach();
+      } catch (_) {}
+    }
+    _nativePlayerController = null;
+  }
+
+  // endregion
+
   @action
   void dispose() {
     PipCallbackRegistry.registerPipExitedFromNative(null);
@@ -1615,6 +2035,8 @@ abstract class VideoStoreBase with Store {
     _streamInfoTimer?.cancel();
     _jsCleanupTimer?.cancel();
     _friendsActivityTimer?.cancel();
+
+    unawaited(_disposeNativePlayer());
 
     _disposeOverlayReaction();
     _disposeVideoModeReaction();

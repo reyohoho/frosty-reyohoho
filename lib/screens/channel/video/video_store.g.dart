@@ -307,6 +307,18 @@ mixin _$VideoStore on VideoStoreBase, Store {
     return _$handleRefreshAsyncAction.run(() => super.handleRefresh());
   }
 
+  late final _$reloadNativeStreamAsyncAction = AsyncAction(
+    'VideoStoreBase.reloadNativeStream',
+    context: context,
+  );
+
+  @override
+  Future<void> reloadNativeStream({String? playerTypeOverride}) {
+    return _$reloadNativeStreamAsyncAction.run(
+      () => super.reloadNativeStream(playerTypeOverride: playerTypeOverride),
+    );
+  }
+
   late final _$VideoStoreBaseActionController = ActionController(
     name: 'VideoStoreBase',
     context: context,
