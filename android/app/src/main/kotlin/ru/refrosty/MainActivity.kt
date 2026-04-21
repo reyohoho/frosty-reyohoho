@@ -10,6 +10,8 @@ import android.os.Looper
 import android.util.Log
 import android.view.WindowManager
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleOwner
 import cl.puntito.simple_pip_mode.PipCallbackHelperActivityWrapper
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
@@ -20,19 +22,97 @@ class MainActivity : PipCallbackHelperActivityWrapper() {
     private var pipEventSink: EventChannel.EventSink? = null
     private val mainHandler = Handler(Looper.getMainLooper())
 
+    /// One-shot lifecycle observer that waits for the next ON_RESUME or ON_STOP
+    /// after exiting PiP, used to distinguish "expanded" from "dismissed".
+    private var pipExitLifecycleObserver: LifecycleEventObserver? = null
+
+    /// Fallback timeout to guarantee we emit a pip-exit event even if the next
+    /// lifecycle transition never arrives (e.g., activity is destroyed or
+    /// the main thread is stalled longer than the timeout).
+    private val pipExitTimeoutRunnable = Runnable {
+        val observer = pipExitLifecycleObserver ?: return@Runnable
+        pipExitLifecycleObserver = null
+        lifecycle.removeObserver(observer)
+
+        // Inspect the current state at timeout as a best-effort guess.
+        // If we're at least STARTED, likely expanded; otherwise dismissed.
+        val state = lifecycle.currentState
+        val event = if (state.isAtLeast(Lifecycle.State.RESUMED)) "expanded" else "dismissed"
+        Log.d(TAG, "pip exited: timeout fallback -> $event (state=$state)")
+        pipEventSink?.success(event)
+    }
+
     override fun onPictureInPictureModeChanged(active: Boolean, newConfig: Configuration?) {
         Log.d(TAG, "onPictureInPictureModeChanged: active=$active (pip ${if (active) "entered" else "exited"})")
         if (!active) {
-            // Distinguish "expanded back to app" vs "dismissed (swiped away)":
-            // after a short delay, if activity is resumed we're full screen (expanded); else dismissed.
-            mainHandler.postDelayed({
-                val resumed = lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
-                val event = if (resumed) "expanded" else "dismissed"
-                Log.d(TAG, "pip exited: $event (resumed=$resumed)")
-                pipEventSink?.success(event)
-            }, 150)
+            resolvePipExitOutcome()
         }
         super.onPictureInPictureModeChanged(active, newConfig)
+    }
+
+    /// Determines whether PiP exit was "expanded" (user returned to fullscreen)
+    /// or "dismissed" (PiP swiped away / closed) by inspecting lifecycle.
+    ///
+    /// The previous implementation used a fixed 150ms delay and checked
+    /// `lifecycle.currentState` — that is unreliable on slow devices / when
+    /// the main thread is stalled (e.g., Samsung One UI with heavy webview
+    /// work), because the ON_RESUME transition may arrive later than 150ms,
+    /// causing expanded-PiP to be misreported as dismissed.
+    ///
+    /// Here we instead wait for the actual next lifecycle event:
+    ///   - ON_RESUME  -> "expanded"
+    ///   - ON_STOP    -> "dismissed"
+    /// with a generous timeout fallback as a safety net.
+    private fun resolvePipExitOutcome() {
+        // Cancel any in-flight observer from a previous PiP cycle.
+        pipExitLifecycleObserver?.let { lifecycle.removeObserver(it) }
+        pipExitLifecycleObserver = null
+        mainHandler.removeCallbacks(pipExitTimeoutRunnable)
+
+        val currentState = lifecycle.currentState
+
+        // Fast path: already at the terminal state when the callback fires.
+        if (currentState == Lifecycle.State.RESUMED) {
+            Log.d(TAG, "pip exited: expanded (already RESUMED)")
+            pipEventSink?.success("expanded")
+            return
+        }
+        if (!currentState.isAtLeast(Lifecycle.State.STARTED)) {
+            // CREATED / DESTROYED / INITIALIZED: activity is effectively gone.
+            Log.d(TAG, "pip exited: dismissed (state=$currentState)")
+            pipEventSink?.success("dismissed")
+            return
+        }
+
+        // STARTED: waiting for the next ON_RESUME or ON_STOP.
+        val observer = object : LifecycleEventObserver {
+            override fun onStateChanged(source: LifecycleOwner, event: Lifecycle.Event) {
+                when (event) {
+                    Lifecycle.Event.ON_RESUME -> {
+                        finishPipExit("expanded", "ON_RESUME")
+                    }
+                    Lifecycle.Event.ON_STOP,
+                    Lifecycle.Event.ON_DESTROY -> {
+                        finishPipExit("dismissed", event.name)
+                    }
+                    else -> Unit
+                }
+            }
+        }
+        pipExitLifecycleObserver = observer
+        lifecycle.addObserver(observer)
+
+        // Safety: if neither event arrives in ~3s, fall back to a best guess.
+        mainHandler.postDelayed(pipExitTimeoutRunnable, 3000)
+    }
+
+    private fun finishPipExit(event: String, reason: String) {
+        val observer = pipExitLifecycleObserver ?: return
+        pipExitLifecycleObserver = null
+        lifecycle.removeObserver(observer)
+        mainHandler.removeCallbacks(pipExitTimeoutRunnable)
+        Log.d(TAG, "pip exited: $event ($reason)")
+        pipEventSink?.success(event)
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {

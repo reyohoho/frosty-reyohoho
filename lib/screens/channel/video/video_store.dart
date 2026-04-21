@@ -46,13 +46,10 @@ abstract class VideoStoreBase with Store {
   /// The [SimplePip] instance used for initiating PiP on Android.
   late final SimplePip pip;
 
-  /// Callback for when PIP mode is exited on Android via dismissal
-  /// (user swiped the PIP window away / closed it, activity not returning
-  /// to the foreground). Pauses the video and tears down the background
-  /// audio foreground service. Must NOT be called on "expanded" — when
-  /// the user taps the PIP to return to fullscreen — otherwise the video
-  /// would pause on every return (notably on Samsung One UI).
+  /// Callback for when PIP mode is exited on Android.
+  /// This is called when user dismisses the PIP window.
   void _onPipExited() {
+    print('AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA PIP exited');
     _isInPipMode = false;
     if (!_paused) {
       handlePausePlay();
@@ -206,25 +203,14 @@ abstract class VideoStoreBase with Store {
     required this.settingsStore,
     this.usherProxyBaseUrl,
   }) {
-    // Initialize SimplePip with callbacks for PIP exit detection.
-    //
-    // IMPORTANT: SimplePip fires onPipExited for BOTH "expanded back to app"
-    // and "dismissed" cases and gives us no way to distinguish. If we paused
-    // here unconditionally, the video would pause on every return to fullscreen
-    // (especially noticeable on Samsung One UI with aggressive auto-PiP).
-    //
-    // So we only update the in-PiP flag here and defer the play/pause decision
-    // to PipCallbackRegistry, which receives "expanded" vs "dismissed" from
-    // MainActivity.onPictureInPictureModeChanged via our EventChannel.
+    // Initialize SimplePip with callbacks for PIP exit detection
     debugPrint(
       '[PIP] VideoStore: registering SimplePip callbacks (onPipExited, onPipEntered)',
     );
     pip = SimplePip(
       onPipExited: () {
-        debugPrint(
-          '[PIP] VideoStore: SimplePip.onPipExited (flag only; pause decision deferred to native event)',
-        );
-        _isInPipMode = false;
+        debugPrint('[PIP] VideoStore: onPipExited invoked (native -> Dart)');
+        _onPipExited();
       },
       onPipEntered: () {
         debugPrint('[PIP] VideoStore: onPipEntered invoked (native -> Dart)');
@@ -330,9 +316,7 @@ abstract class VideoStoreBase with Store {
           // Stop tracker if both settings are now disabled
           try {
             _webViewController
-                ?.evaluateJavascript(
-                  source: 'window._latencyTracker?.stop()',
-                )
+                ?.evaluateJavascript(source: 'window._latencyTracker?.stop()')
                 .catchError((_) {});
           } catch (e) {
             debugPrint(e.toString());
@@ -443,7 +427,9 @@ abstract class VideoStoreBase with Store {
 
   void _onFriendsActivityPlaybackPaused() {
     if (_friendsActivityPlayingSince != null) {
-      _friendsActivityAccumulated += DateTime.now().difference(_friendsActivityPlayingSince!);
+      _friendsActivityAccumulated += DateTime.now().difference(
+        _friendsActivityPlayingSince!,
+      );
       _friendsActivityPlayingSince = null;
     }
     _friendsActivityTimer?.cancel();
@@ -471,7 +457,9 @@ abstract class VideoStoreBase with Store {
     _friendsActivityTimer = Timer(remaining, () {
       if (_friendsActivitySent || _paused) return;
       if (_friendsActivityPlayingSince == null) return;
-      _friendsActivityAccumulated += DateTime.now().difference(_friendsActivityPlayingSince!);
+      _friendsActivityAccumulated += DateTime.now().difference(
+        _friendsActivityPlayingSince!,
+      );
       _friendsActivityPlayingSince = DateTime.now();
       if (_friendsActivityAccumulated >= friendsActivityThreshold) {
         unawaited(_tryPostFriendsActivityAfterThreshold());
@@ -493,7 +481,8 @@ abstract class VideoStoreBase with Store {
         _friendsActivitySent = true;
         return;
       }
-      if (_friendsActivityWaitingForStreamAttempts >= _friendsActivityMaxStreamWaitAttempts) {
+      if (_friendsActivityWaitingForStreamAttempts >=
+          _friendsActivityMaxStreamWaitAttempts) {
         _friendsActivitySent = true;
         return;
       }
@@ -518,7 +507,9 @@ abstract class VideoStoreBase with Store {
     );
   }
 
-  static final RegExp _rteQualityProxyHost = RegExp(r'^proxy\d+\.rte\.net\.ru$');
+  static final RegExp _rteQualityProxyHost = RegExp(
+    r'^proxy\d+\.rte\.net\.ru$',
+  );
 
   static String _stripTrailingSlashes(String s) =>
       s.replaceAll(RegExp(r'/+$'), '');
@@ -1452,9 +1443,7 @@ abstract class VideoStoreBase with Store {
 
     try {
       _webViewController
-          ?.evaluateJavascript(
-            source: 'window._latencyTracker?.stop()',
-          )
+          ?.evaluateJavascript(source: 'window._latencyTracker?.stop()')
           .catchError((_) {});
     } catch (e) {
       // Ignore
@@ -1473,15 +1462,18 @@ abstract class VideoStoreBase with Store {
   /// Play or pause the video depending on the current state of [_paused].
   void handlePausePlay() {
     try {
-      if (_paused) {
-        _webViewController?.evaluateJavascript(
-          source: 'document.getElementsByTagName("video")[0].play();',
-        );
-      } else {
-        _webViewController?.evaluateJavascript(
-          source: 'document.getElementsByTagName("video")[0].pause();',
-        );
-      }
+      _webViewController?.evaluateJavascript(
+        source: 'document.getElementsByTagName("video")[0].play();',
+      );
+      // if (_paused) {
+      //   _webViewController?.evaluateJavascript(
+      //     source: 'document.getElementsByTagName("video")[0].play();',
+      //   );
+      // } else {
+      //   _webViewController?.evaluateJavascript(
+      //     source: 'document.getElementsByTagName("video")[0].pause();',
+      //   );
+      // }
     } catch (e) {
       debugPrint(e.toString());
     }
@@ -1640,9 +1632,7 @@ abstract class VideoStoreBase with Store {
 
     try {
       _webViewController
-          ?.evaluateJavascript(
-            source: 'window._latencyTracker?.stop()',
-          )
+          ?.evaluateJavascript(source: 'window._latencyTracker?.stop()')
           .catchError((_) {});
     } catch (e) {
       // WebView controller may already be disposed by platform
