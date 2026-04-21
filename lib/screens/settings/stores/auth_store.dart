@@ -23,10 +23,10 @@ abstract class AuthBase with Store {
   static const _storage = FlutterSecureStorage();
 
   /// The shared_preferences key for the default token.
-  static const _defaultTokenKey = 'default_token';
+  static const _defaultTokenKey = 'default_token_v2';
 
   /// The shared_preferences key for the user token.
-  static const _userTokenKey = 'user_token';
+  static const _userTokenKey = 'user_token_v2';
 
   /// The Twitch API service for making requests.
   final TwitchApi twitchApi;
@@ -56,7 +56,10 @@ abstract class AuthBase with Store {
 
   /// Authentication headers for Twitch API requests.
   @computed
-  Map<String, String> get headersTwitch => {'Authorization': 'Bearer $_token', 'Client-Id': clientId};
+  Map<String, String> get headersTwitch => {
+    'Authorization': 'Bearer $_token',
+    'Client-Id': clientId,
+  };
 
   /// Error flag that will be non-null and contain an error message if login failed.
   @readonly
@@ -106,7 +109,9 @@ abstract class AuthBase with Store {
   /// the caller's responsibility (e.g. [LoginWebView] watches `isLoggedIn` and
   /// pops itself). Keeping navigation out of the store avoids races with MobX
   /// reactions that also listen to `isLoggedIn`.
-  WebViewController createAuthWebViewController({VoidCallback? onRedirectWithoutToken}) {
+  WebViewController createAuthWebViewController({
+    VoidCallback? onRedirectWithoutToken,
+  }) {
     var loginHandled = false;
 
     void finishLogin(String token) {
@@ -125,7 +130,9 @@ abstract class AuthBase with Store {
         NavigationDelegate(
           onNavigationRequest: (request) {
             if (_isOAuthRedirectUrl(request.url)) {
-              debugPrint('Auth WebView: onNavigationRequest redirect url = ${request.url}');
+              debugPrint(
+                'Auth WebView: onNavigationRequest redirect url = ${request.url}',
+              );
               final token = _extractAccessToken(request.url);
               if (token != null) {
                 finishLogin(token);
@@ -152,14 +159,17 @@ abstract class AuthBase with Store {
           onPageFinished: (url) async {
             try {
               if (_isOAuthRedirectUrl(url) && !loginHandled) {
-                debugPrint('Auth WebView: onPageFinished on redirect, reading hash via JS');
-                final result = await webViewController.runJavaScriptReturningResult(
-                  'window.location.hash',
+                debugPrint(
+                  'Auth WebView: onPageFinished on redirect, reading hash via JS',
                 );
+                final result = await webViewController
+                    .runJavaScriptReturningResult('window.location.hash');
                 final raw = result is String ? result : result.toString();
                 final hash = raw.replaceAll('"', '');
                 if (hash.isNotEmpty) {
-                  final fragment = hash.startsWith('#') ? hash.substring(1) : hash;
+                  final fragment = hash.startsWith('#')
+                      ? hash.substring(1)
+                      : hash;
                   final params = Uri.splitQueryString(fragment);
                   final token = params['access_token'];
                   if (token != null) {
@@ -214,17 +224,17 @@ abstract class AuthBase with Store {
   /// only [oauthRedirectUri] needs to be registered in the Twitch developer
   /// console.
   Uri get oauthUri => Uri(
-        scheme: 'https',
-        host: 'id.twitch.tv',
-        path: '/oauth2/authorize',
-        queryParameters: {
-          'client_id': clientId,
-          'redirect_uri': oauthRedirectUri,
-          'response_type': 'token',
-          'scope': _oauthScopes,
-          'force_verify': 'true',
-        },
-      );
+    scheme: 'https',
+    host: 'id.twitch.tv',
+    path: '/oauth2/authorize',
+    queryParameters: {
+      'client_id': clientId,
+      'redirect_uri': oauthRedirectUri,
+      'response_type': 'token',
+      'scope': _oauthScopes,
+      'force_verify': 'true',
+    },
+  );
 
   /// Shows a chooser dialog letting the user pick how to sign in (in-app WebView,
   /// external browser with Chrome preference, or copy the auth URL).
@@ -238,7 +248,9 @@ abstract class AuthBase with Store {
     // rebuilds that may invalidate a passed-in Observer builder context.
     final ctx = navigatorKey.currentContext ?? context;
     if (ctx == null || !ctx.mounted) {
-      debugPrint('launchLogin: no usable context, falling back to external browser');
+      debugPrint(
+        'launchLogin: no usable context, falling back to external browser',
+      );
       await launchUrlInChromeOrChooser(oauthUri);
       return;
     }
@@ -248,9 +260,7 @@ abstract class AuthBase with Store {
     switch (choice) {
       case LoginMethodChoice.internal:
         navigatorKey.currentState?.push(
-          MaterialPageRoute<void>(
-            builder: (_) => const LoginWebView(),
-          ),
+          MaterialPageRoute<void>(builder: (_) => const LoginWebView()),
         );
         return;
       case LoginMethodChoice.external:
@@ -282,8 +292,14 @@ abstract class AuthBase with Store {
   }
 
   /// Shows a dialog verifying that the user is sure they want to block/unblock the target user.
-  Future<void> showBlockDialog(BuildContext context, {required String targetUser, required String targetUserId}) {
-    final isBlocked = user.blockedUsers.where((blockedUser) => blockedUser.userId == targetUserId).isNotEmpty;
+  Future<void> showBlockDialog(
+    BuildContext context, {
+    required String targetUser,
+    required String targetUserId,
+  }) {
+    final isBlocked = user.blockedUsers
+        .where((blockedUser) => blockedUser.userId == targetUserId)
+        .isNotEmpty;
 
     final title = isBlocked ? 'Unblock' : 'Block';
 
@@ -305,7 +321,10 @@ abstract class AuthBase with Store {
         title: title,
         message: message,
         actions: [
-          TextButton(onPressed: Navigator.of(context).pop, child: const Text('Cancel')),
+          TextButton(
+            onPressed: Navigator.of(context).pop,
+            child: const Text('Cancel'),
+          ),
           FilledButton(onPressed: onPressed, child: const Text('Yes')),
         ],
       ),
