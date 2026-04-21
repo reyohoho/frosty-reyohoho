@@ -23,10 +23,10 @@ abstract class AuthBase with Store {
   static const _storage = FlutterSecureStorage();
 
   /// The shared_preferences key for the default token.
-  static const _defaultTokenKey = 'default_token';
+  static const _defaultTokenKey = 'default_token_new';
 
   /// The shared_preferences key for the user token.
-  static const _userTokenKey = 'user_token';
+  static const _userTokenKey = 'user_token_new';
 
   /// The Twitch API service for making requests.
   final TwitchApi twitchApi;
