@@ -31,11 +31,14 @@ import 'package:frosty/screens/onboarding/onboarding_intro.dart';
 import 'package:frosty/screens/settings/stores/auth_store.dart';
 import 'package:frosty/screens/settings/stores/settings_store.dart';
 import 'package:frosty/stores/global_assets_store.dart';
+import 'package:frosty/stores/mini_player_store.dart';
 import 'package:frosty/theme.dart';
 import 'package:frosty/utils.dart';
 import 'package:frosty/utils/background_playback_callback.dart';
 import 'package:frosty/utils/pip_callback.dart';
 import 'package:frosty/widgets/alert_message.dart';
+import 'package:frosty/widgets/mini_player/mini_player_overlay.dart';
+import 'package:frosty/widgets/mini_player/mini_player_route_observer.dart';
 import 'package:mobx/mobx.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -158,6 +161,20 @@ void main() async {
 
   await authStore.init();
 
+  // Mini-player store: owns VideoStore + ChatTabsStore across navigator
+  // transitions so the channel can collapse into a floating thumb when the
+  // user navigates back to other screens.
+  final miniPlayerStore = MiniPlayerStore(
+    twitchApi: twitchApiService,
+    bttvApi: bttvApiService,
+    ffzApi: ffzApiService,
+    sevenTVApi: sevenTVApiService,
+    reyohohoApi: reyohohoApiService,
+    authStore: authStore,
+    settingsStore: settingsStore,
+    globalAssetsStore: globalAssetsStore,
+  );
+
   runApp(
     MultiProvider(
       providers: [
@@ -170,6 +187,7 @@ void main() async {
         Provider<ReyohohoApi>.value(value: reyohohoApiService),
         Provider<GitHubApi>.value(value: githubApiService),
         Provider<GlobalAssetsStore>.value(value: globalAssetsStore),
+        Provider<MiniPlayerStore>.value(value: miniPlayerStore),
       ],
       child: MyApp(firstRun: firstRun),
     ),
@@ -188,6 +206,7 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   final AppLinks _appLinks = AppLinks();
   StreamSubscription<Uri>? _linkSubscription;
+  OverlayEntry? _miniPlayerEntry;
 
   @override
   void initState() {
@@ -203,6 +222,18 @@ class _MyAppState extends State<MyApp> {
         .monitor();
 
     _initDeepLinks();
+
+    // Mount the global mini-player overlay inside the root Navigator's
+    // Overlay so it floats above all routes while still being able to call
+    // `Navigator.of(context)` for actions like the back button and settings
+    // bottom sheet inside the player overlay.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final overlayState = navigatorKey.currentState?.overlay;
+      if (overlayState == null) return;
+      final entry = OverlayEntry(builder: (_) => const MiniPlayerOverlay());
+      _miniPlayerEntry = entry;
+      overlayState.insert(entry);
+    });
   }
 
   @override
@@ -227,6 +258,7 @@ class _MyAppState extends State<MyApp> {
                 : ThemeMode.dark,
             home: widget.firstRun ? const OnboardingIntro() : const Home(),
             navigatorKey: navigatorKey,
+            navigatorObservers: [miniPlayerRouteObserver],
           ),
         );
       },
@@ -318,6 +350,8 @@ class _MyAppState extends State<MyApp> {
   @override
   void dispose() {
     _linkSubscription?.cancel();
+    _miniPlayerEntry?.remove();
+    _miniPlayerEntry = null;
     super.dispose();
   }
 }

@@ -4,27 +4,34 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
-import 'package:frosty/cache_manager.dart';
 import 'package:frosty/screens/channel/chat/stores/chat_store.dart';
 import 'package:frosty/screens/channel/chat/stores/chat_tabs_store.dart';
 import 'package:frosty/screens/channel/chat/widgets/chat_tabs.dart';
 import 'package:frosty/screens/channel/video/stream_info_bar.dart';
-import 'package:frosty/screens/channel/video/video.dart';
-import 'package:frosty/screens/channel/video/video_overlay.dart';
 import 'package:frosty/screens/channel/video/video_store.dart';
 import 'package:frosty/screens/channel/vods/vod_list_screen.dart';
 import 'package:frosty/screens/settings/stores/settings_store.dart';
+import 'package:frosty/stores/mini_player_store.dart';
 import 'package:frosty/theme.dart';
 import 'package:frosty/utils/context_extensions.dart';
 import 'package:frosty/widgets/blurred_container.dart';
 import 'package:frosty/widgets/draggable_divider.dart';
 import 'package:frosty/widgets/frosty_notification.dart';
 import 'package:frosty/widgets/loading_indicator.dart';
+import 'package:frosty/widgets/mini_player/mini_player_overlay.dart';
+import 'package:frosty/widgets/mini_player/mini_player_route_observer.dart';
 import 'package:provider/provider.dart';
 import 'package:simple_pip_mode/actions/pip_actions_layout.dart';
 import 'package:simple_pip_mode/pip_widget.dart';
 
 /// Creates a widget that shows the video stream (if live) and chat of the given user.
+///
+/// The actual `Video` widget and its overlay live in the global
+/// [MiniPlayerOverlay], not inside this screen — VideoChat only renders a
+/// transparent placeholder ([PlayerSlotReporter]) at the spot where the
+/// player should appear, then reports that rect to [MiniPlayerStore]. This
+/// lets the player survive being popped: the slot disappears, the overlay
+/// notices and animates the same Video widget into a floating mini thumb.
 class VideoChat extends StatefulWidget {
   final String userId;
   final String userName;
@@ -42,15 +49,16 @@ class VideoChat extends StatefulWidget {
 }
 
 class _VideoChatState extends State<VideoChat>
-    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
-  final _videoKey = GlobalKey();
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver, RouteAware {
   final _chatKey = GlobalKey();
 
-  // PiP drag state - essential only
+  // PiP drag state - essential only.
+  // The "PiP" naming is now a misnomer: this swipe-down gesture used to
+  // request system Picture-in-Picture, but the user-selected behaviour is
+  // now to collapse into the in-app mini player instead.
   double _pipDragDistance = 0;
   bool _isPipDragging = false;
-  bool _isInPipTriggerZone =
-      false; // Track when in trigger zone for haptic feedback
+  bool _isInPipTriggerZone = false;
 
   // Divider drag state for synchronizing animation
   bool _isDividerDragging = false;
@@ -64,67 +72,35 @@ class _VideoChatState extends State<VideoChat>
   late Animation<double> _springBackAnimation;
 
   bool _channelStoresReady = false;
-  late ChatTabsStore _chatTabsStore;
-  late VideoStore _videoStore;
+  late MiniPlayerStore _miniPlayerStore;
+
+  ChatTabsStore get _chatTabsStore => _miniPlayerStore.chatTabsStore!;
+  VideoStore get _videoStore => _miniPlayerStore.videoStore!;
+  ChatStore get _chatStore => _chatTabsStore.activeChatStore;
 
   Future<void> _initChannelStores() async {
-    final settings = context.settingsStore;
-
-    // Always verify a working starege domain on channel open.
-    // This makes reyohohoApi.workingDomain available for image widgets
-    // and, when emote proxy is enabled, sets API proxy prefixes.
-    final domain = await context.reyohohoApi.initializeDomain(force: true);
-    if (!mounted) return;
-    if (settings.useEmoteProxy && domain != null) {
-      context.bttvApi.proxyUrlPrefix = domain;
-      context.ffzApi.proxyUrlPrefix = domain;
-      context.sevenTVApi.proxyUrlPrefix = domain;
+    final isReusing = _miniPlayerStore.isSessionFor(widget.userId);
+    if (!isReusing) {
+      await _miniPlayerStore.openChannel(
+        userId: widget.userId,
+        userLogin: widget.userLogin,
+        userName: widget.userName,
+      );
     }
-
-    if (CustomCacheManager.needsCacheFlush) {
-      CustomCacheManager.needsCacheFlush = false;
-      PaintingBinding.instance.imageCache.clear();
-      PaintingBinding.instance.imageCache.clearLiveImages();
-      await CustomCacheManager.instance.emptyCache();
-      if (!mounted) return;
-    }
-
     if (!mounted) return;
-    final qualityProxy = settings.usePlaylistProxy
-        ? (await context.reyohohoApi.findQualityDomain()) ?? ''
-        : '';
-    if (!mounted) return;
-
-    _chatTabsStore = ChatTabsStore(
-      twitchApi: context.twitchApi,
-      bttvApi: context.bttvApi,
-      ffzApi: context.ffzApi,
-      sevenTVApi: context.sevenTVApi,
-      reyohohoApi: context.reyohohoApi,
-      authStore: context.authStore,
-      settingsStore: context.settingsStore,
-      globalAssetsStore: context.globalAssetsStore,
-      primaryChannelId: widget.userId,
-      primaryChannelLogin: widget.userLogin,
-      primaryDisplayName: widget.userName,
-    );
-
-    if (!mounted) return;
-    _videoStore = VideoStore(
-      userLogin: widget.userLogin,
-      userId: widget.userId,
-      twitchApi: context.twitchApi,
-      reyohohoApi: context.reyohohoApi,
-      authStore: context.authStore,
-      settingsStore: context.settingsStore,
-      usherProxyBaseUrl: qualityProxy,
-    );
+    // The session may have been replaced by a parallel `openChannel` while
+    // we were awaiting (user opened a second channel). Bail out — our route
+    // will be auto-popped via the didPopNext check.
+    if (!_miniPlayerStore.isSessionFor(widget.userId)) return;
     setState(() => _channelStoresReady = true);
+    _miniPlayerStore.enterFull();
   }
 
   @override
   void initState() {
     super.initState();
+    _miniPlayerStore = context.read<MiniPlayerStore>();
+
     unawaited(_initChannelStores());
 
     // Initialize animation controller for smooth drag interactions
@@ -143,8 +119,53 @@ class _VideoChatState extends State<VideoChat>
           });
         });
 
-    // Register as observer for app lifecycle events
     WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route is ModalRoute<void>) {
+      miniPlayerRouteObserver.subscribe(this, route);
+    }
+  }
+
+  // RouteAware overrides — drive the mini-player presentation as the user
+  // navigates around. Only `didPop` and `didPushNext` collapse into mini;
+  // `didPush` and `didPopNext` restore full mode. Replacements (e.g. the
+  // VOD list) are handled by the explicit `closeSession` in `_openVodList`.
+
+  @override
+  void didPush() {
+    if (_channelStoresReady) _miniPlayerStore.enterFull();
+  }
+
+  @override
+  void didPopNext() {
+    if (!_channelStoresReady) return;
+    // If a sibling VideoChat replaced our session in the meantime (user
+    // opened a different channel from the stream list while we were sitting
+    // in the navigator stack), don't rebuild ourselves with someone else's
+    // chat/video — auto-pop instead.
+    if (!_miniPlayerStore.isSessionFor(widget.userId)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        Navigator.of(context).maybePop();
+      });
+      return;
+    }
+    _miniPlayerStore.enterFull();
+  }
+
+  @override
+  void didPushNext() {
+    if (_channelStoresReady) _miniPlayerStore.minimizeAfterPop();
+  }
+
+  @override
+  void didPop() {
+    if (_channelStoresReady) _miniPlayerStore.minimizeAfterPop();
   }
 
   @override
@@ -156,29 +177,11 @@ class _VideoChatState extends State<VideoChat>
     }
   }
 
-  void _openVodsReplacingChannel() {
-    final navigator = Navigator.of(context);
-    navigator.pushReplacement(
-      MaterialPageRoute<void>(
-        builder: (_) => VodListScreen(
-          userId: widget.userId,
-          userLogin: widget.userLogin,
-          displayName: widget.userName,
-          restoreChannelBuilder: () => VideoChat(
-            userId: widget.userId,
-            userName: widget.userName,
-            userLogin: widget.userLogin,
-          ),
-        ),
-      ),
-    );
-  }
-
   void _handlePipDragStart(DragStartDetails details) {
-    // Disable drag gesture when already in PiP mode or video is not playing
-    if (_videoStore.isInPipMode || _videoStore.paused) return;
+    // Disable swipe-down gesture when video is paused.
+    if (!_channelStoresReady || _videoStore.paused) return;
 
-    _animationController.stop(); // Stop any ongoing animation
+    _animationController.stop();
     setState(() {
       _isPipDragging = true;
       _pipDragDistance = 0;
@@ -187,7 +190,7 @@ class _VideoChatState extends State<VideoChat>
   }
 
   void _handlePipDragUpdate(DragUpdateDetails details) {
-    if (!_isPipDragging || _videoStore.isInPipMode || _videoStore.paused) {
+    if (!_isPipDragging || !_channelStoresReady || _videoStore.paused) {
       return;
     }
 
@@ -195,38 +198,33 @@ class _VideoChatState extends State<VideoChat>
       _pipDragDistance += details.delta.dy;
       _pipDragDistance = _pipDragDistance.clamp(0, _pipMaxDragDistance);
 
-      // Check if we've entered or exited the trigger zone for haptic feedback
       final wasInTriggerZone = _isInPipTriggerZone;
       _isInPipTriggerZone = _pipDragDistance >= _pipTriggerDistance;
 
-      // Provide haptic feedback when entering the trigger zone
       if (!wasInTriggerZone && _isInPipTriggerZone) {
-        HapticFeedback.mediumImpact(); // Entering trigger zone
-      }
-      // Provide subtle haptic feedback when exiting the trigger zone
-      else if (wasInTriggerZone && !_isInPipTriggerZone) {
-        HapticFeedback.lightImpact(); // Exiting trigger zone
+        HapticFeedback.mediumImpact();
+      } else if (wasInTriggerZone && !_isInPipTriggerZone) {
+        HapticFeedback.lightImpact();
       }
     });
   }
 
   void _handlePipDragEnd(DragEndDetails details) {
-    if (!_isPipDragging || _videoStore.isInPipMode || _videoStore.paused) {
+    if (!_isPipDragging || !_channelStoresReady || _videoStore.paused) {
       return;
     }
 
     final velocity = details.velocity.pixelsPerSecond.dy;
-    final shouldTriggerPip =
-        _pipDragDistance >= _pipTriggerDistance ||
-        velocity > 600; // Simple velocity threshold
+    final shouldMinimize =
+        _pipDragDistance >= _pipTriggerDistance || velocity > 600;
 
-    if (shouldTriggerPip) {
-      // Simple haptic feedback on success
+    if (shouldMinimize) {
       HapticFeedback.mediumImpact();
-      _videoStore.requestPictureInPicture();
+      // Pop the channel route — the RouteAware didPop handler then drives
+      // [MiniPlayerStore] into mini mode.
       _resetDragState();
+      Navigator.of(context).maybePop();
     } else {
-      // Animate back to original position
       _animateSpringBack();
     }
   }
@@ -256,10 +254,10 @@ class _VideoChatState extends State<VideoChat>
     });
   }
 
-  /// Wraps a video widget with PiP swipe-down gesture handling.
+  /// Wraps a video slot widget with the in-app mini-player swipe-down gesture.
   ///
-  /// Provides visual feedback (translate + scale), haptic feedback,
-  /// and an instructional overlay during the drag gesture.
+  /// Provides visual feedback (translate + scale), haptic feedback, and an
+  /// instructional overlay during the drag gesture.
   Widget _buildPipGestureWrapper({required Widget child, double? aspectRatio}) {
     return AnimatedBuilder(
       animation: Listenable.merge([_animationController, _springBackAnimation]),
@@ -289,33 +287,32 @@ class _VideoChatState extends State<VideoChat>
                   onPanCancel: _handlePipDragCancel,
                   child: content,
                 ),
-                if (!_videoStore.isInPipMode)
-                  Positioned.fill(
-                    child: IgnorePointer(
-                      ignoring: !(_isPipDragging && _pipDragDistance > 0),
-                      child: AnimatedOpacity(
-                        opacity: (_isPipDragging && _pipDragDistance > 0)
-                            ? 1.0
-                            : 0.0,
-                        duration: const Duration(milliseconds: 150),
-                        curve: Curves.easeOut,
-                        child: Container(
-                          color: Colors.black.withValues(alpha: 0.4),
-                          child: const Center(
-                            child: Text(
-                              'Swipe down to enter picture-in-picture',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                              ),
+                Positioned.fill(
+                  child: IgnorePointer(
+                    ignoring: !(_isPipDragging && _pipDragDistance > 0),
+                    child: AnimatedOpacity(
+                      opacity: (_isPipDragging && _pipDragDistance > 0)
+                          ? 1.0
+                          : 0.0,
+                      duration: const Duration(milliseconds: 150),
+                      curve: Curves.easeOut,
+                      child: Container(
+                        color: Colors.black.withValues(alpha: 0.4),
+                        child: const Center(
+                          child: Text(
+                            'Swipe down for mini player',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ),
                       ),
                     ),
                   ),
+                ),
               ],
             ),
           ),
@@ -324,74 +321,29 @@ class _VideoChatState extends State<VideoChat>
     );
   }
 
-  /// Convenience getter for the currently active chat store.
-  ChatStore get _chatStore => _chatTabsStore.activeChatStore;
+  /// Builds a transparent placeholder that occupies the same space the player
+  /// used to occupy. The real `Video` widget lives in [MiniPlayerOverlay] and
+  /// reads its target rect from this slot.
+  Widget _buildSlot({double? aspectRatio}) {
+    return PlayerSlotReporter(
+      store: _miniPlayerStore,
+      aspectRatio: aspectRatio,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    if (!_channelStoresReady) {
+    // If the session was torn down (e.g. user popped + closeSession from
+    // mini chrome happened in the same frame), avoid building UI that
+    // dereferences null stores. The route will be popped by the auto-pop
+    // logic in didPopNext or by the navigator transition.
+    if (!_channelStoresReady ||
+        _miniPlayerStore.videoStore == null ||
+        _miniPlayerStore.chatTabsStore == null) {
       return const Scaffold(body: LoadingIndicator());
     }
 
     final settingsStore = _chatTabsStore.settingsStore;
-
-    final player = GestureDetector(
-      onLongPress: _videoStore.handleToggleOverlay,
-      child: Video(key: _videoKey, videoStore: _videoStore),
-    );
-
-    final overlay = GestureDetector(
-      onLongPress: _videoStore.handleToggleOverlay,
-      onDoubleTap: context.isLandscape
-          ? () => settingsStore.fullScreen = !settingsStore.fullScreen
-          : null,
-      onTap: () {
-        if (_chatStore.assetsStore.showEmoteMenu) {
-          _chatStore.assetsStore.showEmoteMenu = false;
-        } else {
-          if (_chatStore.textFieldFocusNode.hasFocus) {
-            _chatStore.unfocusInput();
-          } else {
-            _videoStore.handleVideoTap();
-          }
-        }
-      },
-      child: Observer(
-        builder: (_) {
-          final videoOverlay = VideoOverlay(
-            videoStore: _videoStore,
-            chatStore: _chatStore,
-            settingsStore: settingsStore,
-            onOpenVodList: _openVodsReplacingChannel,
-          );
-
-          if (_videoStore.paused || _videoStore.streamInfo == null) {
-            return videoOverlay;
-          }
-
-          return AnimatedOpacity(
-            opacity: _videoStore.overlayVisible ? 1.0 : 0.0,
-            curve: Curves.ease,
-            duration: const Duration(milliseconds: 200),
-            child: ColoredBox(
-              color: Colors.transparent,
-              child: IgnorePointer(
-                ignoring: !_videoStore.overlayVisible,
-                child: videoOverlay,
-              ),
-            ),
-          );
-        },
-      ),
-    );
-
-    final video = Observer(
-      builder: (context) {
-        if (!_videoStore.settingsStore.showOverlay) return player;
-
-        return Stack(children: [player, overlay]);
-      },
-    );
 
     final chat = Observer(
       builder: (context) {
@@ -402,7 +354,6 @@ class _VideoChatState extends State<VideoChat>
             ChatTabs(
               key: _chatKey,
               chatTabsStore: _chatTabsStore,
-              // In chat-only mode, account for the blurred AppBar height
               listPadding: chatOnly
                   ? EdgeInsets.only(top: context.safePaddingTop)
                   : null,
@@ -525,7 +476,7 @@ class _VideoChatState extends State<VideoChat>
                       ? settingsStore.fullScreen
                             ? Stack(
                                 children: [
-                                  _buildPipGestureWrapper(child: player),
+                                  _buildPipGestureWrapper(child: _buildSlot()),
                                   if (settingsStore.showOverlay)
                                     LayoutBuilder(
                                       builder: (context, constraints) {
@@ -571,10 +522,14 @@ class _VideoChatState extends State<VideoChat>
                                                       .landscapeChatLeftSide
                                                   ? [
                                                       overlayChat,
-                                                      Expanded(child: overlay),
+                                                      const Expanded(
+                                                        child: SizedBox(),
+                                                      ),
                                                     ]
                                                   : [
-                                                      Expanded(child: overlay),
+                                                      const Expanded(
+                                                        child: SizedBox(),
+                                                      ),
                                                       overlayChat,
                                                     ],
                                             ),
@@ -626,7 +581,6 @@ class _VideoChatState extends State<VideoChat>
                                         ? 0.5
                                         : settingsStore.chatWidth;
 
-                                    // Create the landscape chat container with proper styling
                                     final chatContainer = AnimatedContainer(
                                       curve: Curves.ease,
                                       duration: _isDividerDragging
@@ -679,7 +633,7 @@ class _VideoChatState extends State<VideoChat>
                                                   Expanded(
                                                     child:
                                                         _buildPipGestureWrapper(
-                                                          child: video,
+                                                          child: _buildSlot(),
                                                         ),
                                                   ),
                                                 ]
@@ -687,7 +641,7 @@ class _VideoChatState extends State<VideoChat>
                                                   Expanded(
                                                     child:
                                                         _buildPipGestureWrapper(
-                                                          child: video,
+                                                          child: _buildSlot(),
                                                         ),
                                                   ),
                                                   chatContainer,
@@ -724,8 +678,6 @@ class _VideoChatState extends State<VideoChat>
                 overlays: SystemUiOverlay.values,
               );
               return SafeArea(
-                // Keep chat-only scrolling under the blurred app bar, but
-                // ensure video does not bleed into the system status bar.
                 top: settingsStore.showVideo,
                 bottom: false,
                 child: Stack(
@@ -735,7 +687,7 @@ class _VideoChatState extends State<VideoChat>
                         if (settingsStore.showVideo) ...[
                           AspectRatio(
                             aspectRatio: 16 / 9,
-                            child: Container(), // Placeholder for video space
+                            child: Container(),
                           ),
                         ],
                         Expanded(child: chat),
@@ -747,8 +699,7 @@ class _VideoChatState extends State<VideoChat>
                         left: 0,
                         right: 0,
                         child: _buildPipGestureWrapper(
-                          child: video,
-                          aspectRatio: 16 / 9,
+                          child: _buildSlot(aspectRatio: 16 / 9),
                         ),
                       ),
                   ],
@@ -760,7 +711,11 @@ class _VideoChatState extends State<VideoChat>
       },
     );
 
-    // If on Android, use PiPSwitcher to enable PiP functionality.
+    // System Picture-in-Picture (out-of-app overlay) is still used when the
+    // user backgrounds the whole app — it's wired up in [VideoStore]'s
+    // `didChangeAppLifecycleState`. The PipWidget below provides the special
+    // shrunk-down render path for that case (it draws just the player,
+    // which we wrap as the `pipChild`).
     if (Platform.isAndroid) {
       return PipWidget(
         pipLayout: PipActionsLayout.mediaOnlyPause,
@@ -770,7 +725,12 @@ class _VideoChatState extends State<VideoChat>
           );
           _videoStore.handlePausePlay();
         },
-        pipChild: player,
+        // In system PiP mode the global mini-player overlay isn't visible
+        // (the OS shows our process at thumbnail size). We draw a fresh
+        // slot here so the same `Video` widget can be re-targeted to it
+        // briefly. When the user collapses out of system PiP the regular
+        // overlay logic takes over again.
+        pipChild: PlayerSlotReporter(store: _miniPlayerStore),
         child: videoChat,
       );
     }
@@ -778,16 +738,38 @@ class _VideoChatState extends State<VideoChat>
     return videoChat;
   }
 
+  void _openVodsReplacingChannel() {
+    final navigator = Navigator.of(context);
+    // The user opted "pushReplacement (VOD list) closes the player" — same
+    // behaviour as before this refactor. Tear down the session before
+    // navigating so the mini-player overlay doesn't try to keep showing
+    // the disposed Video.
+    _miniPlayerStore.closeSession(reason: 'open-vod');
+    navigator.pushReplacement(
+      MaterialPageRoute<void>(
+        builder: (_) => VodListScreen(
+          userId: widget.userId,
+          userLogin: widget.userLogin,
+          displayName: widget.userName,
+          restoreChannelBuilder: () => VideoChat(
+            userId: widget.userId,
+            userName: widget.userName,
+            userLogin: widget.userLogin,
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   void dispose() {
+    miniPlayerRouteObserver.unsubscribe(this);
     WidgetsBinding.instance.removeObserver(this);
-
-    if (_channelStoresReady) {
-      _chatTabsStore.dispose();
-      _videoStore.dispose();
-    }
-
     _animationController.dispose();
+
+    // Don't dispose the channel stores here — they belong to
+    // [MiniPlayerStore] now and live on across the route's pop so the mini
+    // player can keep playing.
 
     SystemChrome.setEnabledSystemUIMode(
       SystemUiMode.manual,
