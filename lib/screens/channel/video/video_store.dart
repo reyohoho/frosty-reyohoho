@@ -1566,18 +1566,15 @@ abstract class VideoStoreBase with Store {
       return;
     }
     try {
-      _webViewController?.evaluateJavascript(
-        source: 'document.getElementsByTagName("video")[0].play();',
-      );
-      // if (_paused) {
-      //   _webViewController?.evaluateJavascript(
-      //     source: 'document.getElementsByTagName("video")[0].play();',
-      //   );
-      // } else {
-      //   _webViewController?.evaluateJavascript(
-      //     source: 'document.getElementsByTagName("video")[0].pause();',
-      //   );
-      // }
+      if (_paused) {
+        _webViewController?.evaluateJavascript(
+          source: 'document.getElementsByTagName("video")[0].play();',
+        );
+      } else {
+        _webViewController?.evaluateJavascript(
+          source: 'document.getElementsByTagName("video")[0].pause();',
+        );
+      }
     } catch (e) {
       debugPrint(e.toString());
     }
