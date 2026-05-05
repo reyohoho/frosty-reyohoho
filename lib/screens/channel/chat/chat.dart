@@ -57,22 +57,19 @@ class Chat extends StatelessWidget {
                             final bottomPadding = chatStore.assetsStore.showEmoteMenu || isHorizontalLandscape
                                 ? 0.0
                                 : MediaQuery.of(context).padding.bottom;
-                            // Bottom bar is hidden in landscape, so messages
-                            // can extend to the bottom of the screen.
-                            final bottomBarHeight = context.isLandscape ? 0.0 : chatStore.bottomBarHeight;
 
                             return FrostyScrollbar(
                               controller: chatStore.scrollController,
                               padding: EdgeInsets.only(
                                 top: MediaQuery.of(context).padding.top,
-                                bottom: bottomBarHeight + bottomPadding,
+                                bottom: chatStore.bottomBarHeight + bottomPadding,
                               ),
                               child: Observer(
                                 builder: (context) {
                                   return ListView.builder(
                                     reverse: true,
                                     padding: (listPadding ?? EdgeInsets.zero).add(
-                                      EdgeInsets.only(bottom: bottomBarHeight + bottomPadding),
+                                      EdgeInsets.only(bottom: chatStore.bottomBarHeight + bottomPadding),
                                     ),
                                     addAutomaticKeepAlives: false,
                                     controller: chatStore.scrollController,
@@ -100,19 +97,16 @@ class Chat extends StatelessWidget {
                       height: 24,
                       child: GestureDetector(behavior: HitTestBehavior.translucent, onVerticalDragStart: (_) {}),
                     ),
-                  if (!context.isLandscape)
-                    Positioned(
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      child: ChatBottomBar(chatStore: chatStore, onAddChat: onAddChat),
-                    ),
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: ChatBottomBar(chatStore: chatStore, onAddChat: onAddChat),
+                  ),
                   Builder(
                     builder: (context) {
                       final isHorizontalLandscape =
                           context.isLandscape && !chatStore.settings.landscapeForceVerticalChat;
-                      // Bottom bar is hidden in landscape, so don't reserve space for it.
-                      final bottomBarHeight = context.isLandscape ? 0.0 : chatStore.bottomBarHeight;
                       return AnimatedPadding(
                         duration: const Duration(milliseconds: 200),
                         padding: EdgeInsets.only(
@@ -120,7 +114,7 @@ class Chat extends StatelessWidget {
                           top: 4,
                           right: 4,
                           bottom:
-                              bottomBarHeight +
+                              chatStore.bottomBarHeight +
                               (chatStore.assetsStore.showEmoteMenu || isHorizontalLandscape
                                   ? 0
                                   : MediaQuery.of(context).padding.bottom),

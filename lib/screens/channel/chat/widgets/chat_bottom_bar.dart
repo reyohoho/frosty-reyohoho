@@ -19,11 +19,7 @@ class ChatBottomBar extends StatelessWidget {
   /// Passes this to ChatDetails to show "Add chat" option.
   final VoidCallback onAddChat;
 
-  const ChatBottomBar({
-    super.key,
-    required this.chatStore,
-    required this.onAddChat,
-  });
+  const ChatBottomBar({super.key, required this.chatStore, required this.onAddChat});
 
   @override
   Widget build(BuildContext context) {
@@ -38,18 +34,13 @@ class ChatBottomBar extends StatelessWidget {
             message: 'Emote menu',
             preferBelow: false,
             child: IconButton(
-              color: chatStore.assetsStore.showEmoteMenu
-                  ? Theme.of(context).colorScheme.secondary
-                  : null,
+              color: chatStore.assetsStore.showEmoteMenu ? Theme.of(context).colorScheme.secondary : null,
               icon: Icon(
-                chatStore.assetsStore.showEmoteMenu
-                    ? Icons.emoji_emotions_rounded
-                    : Icons.emoji_emotions_outlined,
+                chatStore.assetsStore.showEmoteMenu ? Icons.emoji_emotions_rounded : Icons.emoji_emotions_outlined,
               ),
               onPressed: () {
                 chatStore.unfocusInput();
-                chatStore.assetsStore.showEmoteMenu =
-                    !chatStore.assetsStore.showEmoteMenu;
+                chatStore.assetsStore.showEmoteMenu = !chatStore.assetsStore.showEmoteMenu;
               },
             ),
           )
@@ -60,12 +51,10 @@ class ChatBottomBar extends StatelessWidget {
         final matchingEmotes = chatStore.matchingEmotes;
         final matchingChatters = chatStore.matchingChatters;
 
-        final isFullscreenOverlay =
-            chatStore.settings.fullScreen && context.isLandscape;
+        final isFullscreenOverlay = chatStore.settings.fullScreen && context.isLandscape;
 
         // Check if chat delay is active (for indicator only, doesn't block input)
-        final hasChatDelay =
-            chatStore.settings.showVideo && chatStore.settings.chatDelay > 0;
+        final hasChatDelay = chatStore.settings.showVideo && chatStore.settings.chatDelay > 0;
 
         const loginTooltipMessage = 'Log in to chat';
 
@@ -77,12 +66,7 @@ class ChatBottomBar extends StatelessWidget {
                 child: Container(
                   height: 40,
                   decoration: BoxDecoration(
-                    border: Border(
-                      left: BorderSide(
-                        color: Theme.of(context).colorScheme.secondary,
-                        width: 4,
-                      ),
-                    ),
+                    border: Border(left: BorderSide(color: Theme.of(context).colorScheme.secondary, width: 4)),
                   ),
                   // Left: 8px so text aligns at 12px (4px border + 8px padding)
                   // Right: 4px to give close button some breathing room
@@ -96,26 +80,21 @@ class ChatBottomBar extends StatelessWidget {
                           preferBelow: false,
                           child: Text.rich(
                             TextSpan(
-                              children: chatStore.replyingToMessage!
-                                  .generateSpan(
-                                    context,
-                                    assetsStore: chatStore.assetsStore,
-                                    emoteScale: chatStore.settings.emoteScale,
-                                    badgeScale: chatStore.settings.badgeScale,
-                                    launchExternal:
-                                        chatStore.settings.launchUrlExternal,
-                                    timestamp: chatStore.settings.timestampType,
-                                    currentChannelId: chatStore.channelId,
-                                    showReyohohoBadges:
-                                        chatStore.settings.showReyohohoBadges,
-                                    showPaints: chatStore.settings.showPaints,
-                                  ),
+                              children: chatStore.replyingToMessage!.generateSpan(
+                                context,
+                                assetsStore: chatStore.assetsStore,
+                                emoteScale: chatStore.settings.emoteScale,
+                                badgeScale: chatStore.settings.badgeScale,
+                                launchExternal: chatStore.settings.launchUrlExternal,
+                                timestamp: chatStore.settings.timestampType,
+                                currentChannelId: chatStore.channelId,
+                                showReyohohoBadges: chatStore.settings.showReyohohoBadges,
+                                showPaints: chatStore.settings.showPaints,
+                              ),
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: context.defaultTextStyle.copyWith(
-                              fontSize: chatStore.settings.fontSize,
-                            ),
+                            style: context.defaultTextStyle.copyWith(fontSize: chatStore.settings.fontSize),
                           ),
                         ),
                       ),
@@ -132,9 +111,7 @@ class ChatBottomBar extends StatelessWidget {
             ],
             // Wrap autocomplete sections with TextFieldTapRegion so taps
             // on them don't trigger TextField's onTapOutside callback.
-            if (chatStore.settings.autocomplete &&
-                chatStore.showEmoteAutocomplete &&
-                matchingEmotes.isNotEmpty) ...[
+            if (chatStore.settings.autocomplete && chatStore.showEmoteAutocomplete && matchingEmotes.isNotEmpty) ...[
               const Divider(),
               TextFieldTapRegion(
                 child: SizedBox(
@@ -144,10 +121,7 @@ class ChatBottomBar extends StatelessWidget {
                     itemCount: matchingEmotes.length,
                     scrollDirection: Axis.horizontal,
                     itemBuilder: (context, index) => InkWell(
-                      onTap: () => chatStore.addEmote(
-                        matchingEmotes[index],
-                        autocompleteMode: true,
-                      ),
+                      onTap: () => chatStore.addEmote(matchingEmotes[index], autocompleteMode: true),
                       onLongPress: () {
                         HapticFeedback.lightImpact();
 
@@ -163,9 +137,7 @@ class ChatBottomBar extends StatelessWidget {
                           child: FrostyCachedNetworkImage(
                             imageUrl: matchingEmotes[index].url,
                             useFade: false,
-                            height:
-                                matchingEmotes[index].height?.toDouble() ??
-                                defaultEmoteSize,
+                            height: matchingEmotes[index].height?.toDouble() ?? defaultEmoteSize,
                             width: matchingEmotes[index].width?.toDouble(),
                           ),
                         ),
@@ -187,21 +159,16 @@ class ChatBottomBar extends StatelessWidget {
                     itemCount: matchingChatters.length,
                     scrollDirection: Axis.horizontal,
                     itemBuilder: (context, index) => TextButton(
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                      ),
+                      style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8)),
                       onPressed: () {
                         final split = chatStore.textController.text.split(' ')
                           ..removeLast()
                           ..add('@${matchingChatters[index]} ');
 
                         chatStore.textController.text = split.join(' ');
-                        chatStore.textController.selection =
-                            TextSelection.fromPosition(
-                              TextPosition(
-                                offset: chatStore.textController.text.length,
-                              ),
-                            );
+                        chatStore.textController.selection = TextSelection.fromPosition(
+                          TextPosition(offset: chatStore.textController.text.length),
+                        );
                       },
                       child: Text(matchingChatters[index]),
                     ),
@@ -224,9 +191,7 @@ class ChatBottomBar extends StatelessWidget {
                         return GestureDetector(
                           onTap: isDisabled
                               ? () {
-                                  chatStore.updateNotification(
-                                    loginTooltipMessage,
-                                  );
+                                  chatStore.updateNotification(loginTooltipMessage);
                                 }
                               : null,
                           child: IconButton(
@@ -250,15 +215,12 @@ class ChatBottomBar extends StatelessWidget {
                           final isWaitingForAck = chatStore.isWaitingForAck;
                           final isConnected = chatStore.isConnected;
                           final hasConnected = chatStore.hasConnected;
-                          final isEnabled =
-                              isLoggedIn && !isWaitingForAck && isConnected;
+                          final isEnabled = isLoggedIn && !isWaitingForAck && isConnected;
 
                           return GestureDetector(
                             onTap: !isLoggedIn
                                 ? () {
-                                    chatStore.updateNotification(
-                                      loginTooltipMessage,
-                                    );
+                                    chatStore.updateNotification(loginTooltipMessage);
                                   }
                                 : null,
                             child: ExtendedTextField(
@@ -268,27 +230,17 @@ class ChatBottomBar extends StatelessWidget {
                               maxLines: 3,
                               enabled: isEnabled,
                               specialTextSpanBuilder: EmoteTextSpanBuilder(
-                                emoteToObject:
-                                    chatStore.assetsStore.emoteToObject,
-                                userEmoteToObject:
-                                    chatStore.assetsStore.userEmoteToObject,
-                                emoteSize:
-                                    chatStore.settings.emoteScale *
-                                    defaultEmoteSize,
+                                emoteToObject: chatStore.assetsStore.emoteToObject,
+                                userEmoteToObject: chatStore.assetsStore.userEmoteToObject,
+                                emoteSize: chatStore.settings.emoteScale * defaultEmoteSize,
                               ),
                               decoration: InputDecoration(
-                                prefixIcon:
-                                    chatStore.settings.emoteMenuButtonOnLeft
-                                    ? emoteMenuButton
-                                    : null,
+                                prefixIcon: chatStore.settings.emoteMenuButtonOnLeft ? emoteMenuButton : null,
                                 suffixIcon: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   spacing: 8,
                                   children: [
-                                    if (!chatStore
-                                            .settings
-                                            .emoteMenuButtonOnLeft &&
-                                        emoteMenuButton != null)
+                                    if (!chatStore.settings.emoteMenuButtonOnLeft && emoteMenuButton != null)
                                       emoteMenuButton,
                                   ],
                                 ),
@@ -296,9 +248,7 @@ class ChatBottomBar extends StatelessWidget {
                                 hintText: !isLoggedIn
                                     ? loginTooltipMessage
                                     : !isConnected
-                                    ? (hasConnected
-                                          ? 'Chat disconnected'
-                                          : 'Connecting...')
+                                    ? (hasConnected ? 'Chat disconnected' : 'Connecting...')
                                     : isWaitingForAck
                                     ? 'Sending...'
                                     : chatStore.replyingToMessage != null
@@ -320,48 +270,36 @@ class ChatBottomBar extends StatelessWidget {
                   TextFieldTapRegion(
                     child:
                         chatStore.showSendButton &&
-                            (chatStore.settings.chatWidth >= 0.3 ||
-                                chatStore.expandChat ||
-                                context.isPortrait)
+                            (chatStore.settings.chatWidth >= 0.3 || chatStore.expandChat || context.isPortrait)
                         ? Observer(
                             builder: (context) => IconButton(
-                              tooltip: chatStore.isWaitingForAck
-                                  ? 'Sending...'
-                                  : 'Send',
+                              tooltip: chatStore.isWaitingForAck ? 'Sending...' : 'Send',
                               icon: chatStore.isWaitingForAck
                                   ? const SizedBox(
                                       width: 20,
                                       height: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                      ),
+                                      child: CircularProgressIndicator(strokeWidth: 2),
                                     )
                                   : const Icon(Icons.send_rounded),
                               onPressed:
-                                  chatStore.auth.isLoggedIn &&
-                                      !chatStore.isWaitingForAck &&
-                                      chatStore.isConnected
-                                  ? () => chatStore.sendMessage(
-                                      chatStore.textController.text,
-                                    )
+                                  chatStore.auth.isLoggedIn && !chatStore.isWaitingForAck && chatStore.isConnected
+                                  ? () => chatStore.sendMessage(chatStore.textController.text)
                                   : null,
                             ),
                           )
                         : IconButton(
                             icon: Icon(Icons.adaptive.more_rounded),
                             tooltip: 'More',
-                            onPressed: () =>
-                                showModalBottomSheetWithProperFocus(
-                                  isScrollControlled: true,
-                                  context: context,
-                                  builder: (_) => ChatDetails(
-                                    chatDetailsStore:
-                                        chatStore.chatDetailsStore,
-                                    chatStore: chatStore,
-                                    userLogin: chatStore.channelName,
-                                    onAddChat: onAddChat,
-                                  ),
-                                ),
+                            onPressed: () => showModalBottomSheetWithProperFocus(
+                              isScrollControlled: true,
+                              context: context,
+                              builder: (_) => ChatDetails(
+                                chatDetailsStore: chatStore.chatDetailsStore,
+                                chatStore: chatStore,
+                                userLogin: chatStore.channelName,
+                                onAddChat: onAddChat,
+                              ),
+                            ),
                           ),
                   ),
                 ],
@@ -378,28 +316,17 @@ class ChatBottomBar extends StatelessWidget {
         // Note: landscapeForceVerticalChat uses portrait layout in landscape
         // orientation with normal (non-immersive) system UI, so it still needs
         // bottom padding.
-        final isHorizontalLandscape =
-            context.isLandscape &&
-            !chatStore.settings.landscapeForceVerticalChat;
-        final needsBottomPadding =
-            !chatStore.assetsStore.showEmoteMenu && !isHorizontalLandscape;
+        final isHorizontalLandscape = context.isLandscape && !chatStore.settings.landscapeForceVerticalChat;
+        final needsBottomPadding = !chatStore.assetsStore.showEmoteMenu && !isHorizontalLandscape;
 
         return isFullscreenOverlay
             ? Padding(
-                padding: EdgeInsets.only(
-                  bottom: needsBottomPadding
-                      ? MediaQuery.of(context).padding.bottom
-                      : 0,
-                ),
+                padding: EdgeInsets.only(bottom: needsBottomPadding ? MediaQuery.of(context).padding.bottom : 0),
                 child: bottomBarContent,
               )
             : BlurredContainer(
                 gradientDirection: GradientDirection.down,
-                padding: EdgeInsets.only(
-                  bottom: needsBottomPadding
-                      ? MediaQuery.of(context).padding.bottom
-                      : 0,
-                ),
+                padding: EdgeInsets.only(bottom: needsBottomPadding ? MediaQuery.of(context).padding.bottom : 0),
                 child: bottomBarContent,
               );
       },
