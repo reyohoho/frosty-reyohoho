@@ -24,6 +24,8 @@ class Chat extends StatelessWidget {
   Widget build(BuildContext context) {
     return Observer(
       builder: (context) {
+        final hideBottomBar = context.isLandscape && chatStore.settings.landscapeHideChatBottomBar;
+
         return Column(
           children: [
             PinnedMessageBanner(chatStore: chatStore),
@@ -57,19 +59,20 @@ class Chat extends StatelessWidget {
                             final bottomPadding = chatStore.assetsStore.showEmoteMenu || isHorizontalLandscape
                                 ? 0.0
                                 : MediaQuery.of(context).padding.bottom;
+                            final effectiveBottomBarHeight = hideBottomBar ? 0.0 : chatStore.bottomBarHeight;
 
                             return FrostyScrollbar(
                               controller: chatStore.scrollController,
                               padding: EdgeInsets.only(
                                 top: MediaQuery.of(context).padding.top,
-                                bottom: chatStore.bottomBarHeight + bottomPadding,
+                                bottom: effectiveBottomBarHeight + bottomPadding,
                               ),
                               child: Observer(
                                 builder: (context) {
                                   return ListView.builder(
                                     reverse: true,
                                     padding: (listPadding ?? EdgeInsets.zero).add(
-                                      EdgeInsets.only(bottom: chatStore.bottomBarHeight + bottomPadding),
+                                      EdgeInsets.only(bottom: effectiveBottomBarHeight + bottomPadding),
                                     ),
                                     addAutomaticKeepAlives: false,
                                     controller: chatStore.scrollController,
@@ -97,16 +100,18 @@ class Chat extends StatelessWidget {
                       height: 24,
                       child: GestureDetector(behavior: HitTestBehavior.translucent, onVerticalDragStart: (_) {}),
                     ),
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    child: ChatBottomBar(chatStore: chatStore, onAddChat: onAddChat),
-                  ),
+                  if (!hideBottomBar)
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      child: ChatBottomBar(chatStore: chatStore, onAddChat: onAddChat),
+                    ),
                   Builder(
                     builder: (context) {
                       final isHorizontalLandscape =
                           context.isLandscape && !chatStore.settings.landscapeForceVerticalChat;
+                      final effectiveBottomBarHeight = hideBottomBar ? 0.0 : chatStore.bottomBarHeight;
                       return AnimatedPadding(
                         duration: const Duration(milliseconds: 200),
                         padding: EdgeInsets.only(
@@ -114,7 +119,7 @@ class Chat extends StatelessWidget {
                           top: 4,
                           right: 4,
                           bottom:
-                              chatStore.bottomBarHeight +
+                              effectiveBottomBarHeight +
                               (chatStore.assetsStore.showEmoteMenu || isHorizontalLandscape
                                   ? 0
                                   : MediaQuery.of(context).padding.bottom),
@@ -147,12 +152,17 @@ class Chat extends StatelessWidget {
             AnimatedContainer(
               curve: Curves.ease,
               duration: const Duration(milliseconds: 200),
-              height: chatStore.assetsStore.showEmoteMenu ? context.screenHeight / (context.isPortrait ? 3 : 2) : 0,
+              // The emote menu is opened from the bottom bar, so when the bar
+              // is hidden in landscape we also collapse the menu to keep the
+              // chat fully read-only and prevent it from being stuck open.
+              height: chatStore.assetsStore.showEmoteMenu && !hideBottomBar
+                  ? context.screenHeight / (context.isPortrait ? 3 : 2)
+                  : 0,
               child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 100),
                 switchInCurve: Curves.easeOut,
                 switchOutCurve: Curves.easeIn,
-                child: chatStore.assetsStore.showEmoteMenu
+                child: chatStore.assetsStore.showEmoteMenu && !hideBottomBar
                     ? ClipRect(
                         child: Column(
                           children: [

@@ -204,6 +204,7 @@ abstract class _SettingsStoreBase with Store {
   // Landscape mode defaults
   static const defaultLandscapeChatLeftSide = false;
   static const defaultLandscapeForceVerticalChat = false;
+  static const defaultLandscapeHideChatBottomBar = false;
   static const defaultLandscapeCutout = LandscapeCutoutType.none;
   static const defaultLandscapeDisplayUnderCutout = false;
   static const defaultChatWidth = 0.2;
@@ -323,6 +324,13 @@ abstract class _SettingsStoreBase with Store {
   @JsonKey(defaultValue: defaultLandscapeForceVerticalChat)
   @observable
   var landscapeForceVerticalChat = defaultLandscapeForceVerticalChat;
+
+  /// When true, the chat bottom bar (input field, emote menu button,
+  /// autocomplete and reply previews) is hidden while the device is in
+  /// landscape orientation.
+  @JsonKey(defaultValue: defaultLandscapeHideChatBottomBar)
+  @observable
+  var landscapeHideChatBottomBar = defaultLandscapeHideChatBottomBar;
 
   @JsonKey(defaultValue: defaultLandscapeCutout)
   @observable
@@ -452,6 +460,7 @@ abstract class _SettingsStoreBase with Store {
 
     landscapeChatLeftSide = defaultLandscapeChatLeftSide;
     landscapeForceVerticalChat = defaultLandscapeForceVerticalChat;
+    landscapeHideChatBottomBar = defaultLandscapeHideChatBottomBar;
     landscapeCutout = defaultLandscapeCutout;
     chatWidth = defaultChatWidth;
     fullScreenChatOverlayOpacity = defaultFullScreenChatOverlayOpacity;

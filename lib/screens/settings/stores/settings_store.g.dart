@@ -60,6 +60,8 @@ SettingsStore _$SettingsStoreFromJson(
   ..landscapeChatLeftSide = json['landscapeChatLeftSide'] as bool? ?? false
   ..landscapeForceVerticalChat =
       json['landscapeForceVerticalChat'] as bool? ?? false
+  ..landscapeHideChatBottomBar =
+      json['landscapeHideChatBottomBar'] as bool? ?? false
   ..landscapeCutout =
       $enumDecodeNullable(
         _$LandscapeCutoutTypeEnumMap,
@@ -150,6 +152,7 @@ Map<String, dynamic> _$SettingsStoreToJson(
   'emoteMenuButtonOnLeft': instance.emoteMenuButtonOnLeft,
   'landscapeChatLeftSide': instance.landscapeChatLeftSide,
   'landscapeForceVerticalChat': instance.landscapeForceVerticalChat,
+  'landscapeHideChatBottomBar': instance.landscapeHideChatBottomBar,
   'landscapeCutout': _$LandscapeCutoutTypeEnumMap[instance.landscapeCutout]!,
   'landscapeDisplayUnderCutout': instance.landscapeDisplayUnderCutout,
   'chatWidth': instance.chatWidth,
@@ -890,6 +893,28 @@ mixin _$SettingsStore on _SettingsStoreBase, Store {
     );
   }
 
+  late final _$landscapeHideChatBottomBarAtom = Atom(
+    name: '_SettingsStoreBase.landscapeHideChatBottomBar',
+    context: context,
+  );
+
+  @override
+  bool get landscapeHideChatBottomBar {
+    _$landscapeHideChatBottomBarAtom.reportRead();
+    return super.landscapeHideChatBottomBar;
+  }
+
+  @override
+  set landscapeHideChatBottomBar(bool value) {
+    _$landscapeHideChatBottomBarAtom.reportWrite(
+      value,
+      super.landscapeHideChatBottomBar,
+      () {
+        super.landscapeHideChatBottomBar = value;
+      },
+    );
+  }
+
   late final _$landscapeCutoutAtom = Atom(
     name: '_SettingsStoreBase.landscapeCutout',
     context: context,
@@ -1534,6 +1559,7 @@ mentionSoundVolume: ${mentionSoundVolume},
 emoteMenuButtonOnLeft: ${emoteMenuButtonOnLeft},
 landscapeChatLeftSide: ${landscapeChatLeftSide},
 landscapeForceVerticalChat: ${landscapeForceVerticalChat},
+landscapeHideChatBottomBar: ${landscapeHideChatBottomBar},
 landscapeCutout: ${landscapeCutout},
 landscapeDisplayUnderCutout: ${landscapeDisplayUnderCutout},
 chatWidth: ${chatWidth},

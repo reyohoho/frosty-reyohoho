@@ -233,6 +233,12 @@ class _ChatSettingsState extends State<ChatSettings> {
             value: settingsStore.landscapeForceVerticalChat,
             onChanged: (newValue) => settingsStore.landscapeForceVerticalChat = newValue,
           ),
+          SettingsListSwitch(
+            title: 'Hide chat input bar',
+            subtitle: const Text('Hides the chat input, emote menu and autocomplete bar in landscape orientation.'),
+            value: settingsStore.landscapeHideChatBottomBar,
+            onChanged: (newValue) => settingsStore.landscapeHideChatBottomBar = newValue,
+          ),
           SettingsListSelect(
             title: 'Fill notch side',
             subtitle: 'Overrides and fills the available space in devices with a display notch.',
