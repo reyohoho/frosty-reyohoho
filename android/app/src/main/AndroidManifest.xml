@@ -13,7 +13,7 @@
     </queries>
 
     <application
-        android:label="ReFrosty"
+        android:label="${appLabel}"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:allowBackup="false">

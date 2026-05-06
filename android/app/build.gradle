@@ -58,6 +58,12 @@ android {
     buildTypes {
         release {
             signingConfig signingConfigs.release
+            manifestPlaceholders = [appLabel: "ReFrosty"]
+        }
+        debug {
+            applicationIdSuffix ".debug"
+            versionNameSuffix "-debug"
+            manifestPlaceholders = [appLabel: "ReFrosty Debug"]
         }
     }
 }
