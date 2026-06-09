@@ -107,6 +107,18 @@ abstract class NativePlayerControllerBase with Store {
   @observable
   bool adActive = false;
 
+  /// `true` while playback is running on an ad-avoiding `playerType`
+  /// (`picture-by-picture`/`embed`), which Twitch caps to a low quality
+  /// ladder (often 360p). VideoStore sets this and clears it once the
+  /// stream is upgraded to `playerType=site`. The UI shows a translucent
+  /// "ad blocking…" badge during this window so the temporary low quality
+  /// doesn't look like a bug.
+  @observable
+  bool adBlocking = false;
+
+  @action
+  void setAdBlocking(bool value) => adBlocking = value;
+
   /// Internal: whether the native MethodChannel has been wired up.
   bool get isAttached => _methodChannel != null;
 

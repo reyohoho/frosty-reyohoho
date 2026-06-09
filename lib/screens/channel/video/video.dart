@@ -205,7 +205,64 @@ class _PlatformViewBootstrapperState extends State<_PlatformViewBootstrapper> {
             return const _AdOverlay();
           },
         ),
+        // While the stream plays on an ad-avoiding (low-quality) playerType,
+        // show a translucent badge so the temporary 360p isn't mistaken for a
+        // bug. Suppressed while the full-screen ad overlay is up.
+        Observer(
+          builder: (_) {
+            if (widget.controller.adActive) return const SizedBox.shrink();
+            if (!widget.controller.adBlocking) return const SizedBox.shrink();
+            return const _AdBlockingBadge();
+          },
+        ),
       ],
+    );
+  }
+}
+
+/// Small translucent badge shown at the top of the video while the native
+/// player is running on an ad-avoiding (quality-capped) stream.
+class _AdBlockingBadge extends StatelessWidget {
+  const _AdBlockingBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: SafeArea(
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: Container(
+            margin: const EdgeInsets.only(top: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.55),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white70,
+                  ),
+                ),
+                SizedBox(width: 8),
+                Text(
+                  'Ad blocking…',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

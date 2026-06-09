@@ -207,6 +207,24 @@ mixin _$NativePlayerController on NativePlayerControllerBase, Store {
     });
   }
 
+  late final _$adBlockingAtom = Atom(
+    name: 'NativePlayerControllerBase.adBlocking',
+    context: context,
+  );
+
+  @override
+  bool get adBlocking {
+    _$adBlockingAtom.reportRead();
+    return super.adBlocking;
+  }
+
+  @override
+  set adBlocking(bool value) {
+    _$adBlockingAtom.reportWrite(value, super.adBlocking, () {
+      super.adBlocking = value;
+    });
+  }
+
   late final _$applyQualityAsyncAction = AsyncAction(
     'NativePlayerControllerBase.applyQuality',
     context: context,
@@ -221,6 +239,17 @@ mixin _$NativePlayerController on NativePlayerControllerBase, Store {
     name: 'NativePlayerControllerBase',
     context: context,
   );
+
+  @override
+  void setAdBlocking(bool value) {
+    final _$actionInfo = _$NativePlayerControllerBaseActionController
+        .startAction(name: 'NativePlayerControllerBase.setAdBlocking');
+    try {
+      return super.setAdBlocking(value);
+    } finally {
+      _$NativePlayerControllerBaseActionController.endAction(_$actionInfo);
+    }
+  }
 
   @override
   void _applyPlayingEvent(Map<dynamic, dynamic> data) {
@@ -246,7 +275,8 @@ variants: ${variants},
 masterVariants: ${masterVariants},
 selectedQuality: ${selectedQuality},
 latencyMs: ${latencyMs},
-adActive: ${adActive}
+adActive: ${adActive},
+adBlocking: ${adBlocking}
     ''';
   }
 }

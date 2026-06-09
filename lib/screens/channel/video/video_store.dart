@@ -2052,6 +2052,10 @@ abstract class VideoStoreBase with Store {
         playerTypeOverride ?? settingsStore.nativePlayerAdsWorkaround,
       );
       _nativeLoadedPlayerType = playerType;
+      // While we're on an ad-avoiding playerType the stream is quality-capped
+      // (often 360p). Surface that as an "ad blocking…" badge until we upgrade
+      // back to `site` so the low quality doesn't look like a bug.
+      ctrl.setAdBlocking(playerType != 'site');
       debugPrint(
         '[native_player] reload: playerType=$playerType '
         'proxyBase=${proxyBase ?? "<none>"} override=$playerTypeOverride',
