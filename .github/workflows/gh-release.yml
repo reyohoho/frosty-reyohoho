@@ -31,6 +31,11 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
+          # Pinned: extended_text_field 16.0.2 (latest) and simple_icons 14.6.1
+          # fail to compile on Flutter >= 3.44 (removed ExtendSelectionByPageIntent,
+          # final IconData). Keep in sync with the version used for local builds.
+          flutter-version: 3.38.9
+          channel: stable
           cache: true
       
       # Decode and create the upload-keystore.jks file, used for signing the app.
