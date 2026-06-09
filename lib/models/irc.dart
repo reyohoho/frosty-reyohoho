@@ -915,6 +915,9 @@ class IRCMessage {
       if (tag.endsWith('=')) continue;
 
       final tagSplit = tag.split('=');
+      // Skip malformed tags without a key=value pair (e.g. a bare flag with no
+      // '='), which would otherwise throw a RangeError on tagSplit[1].
+      if (tagSplit.length < 2) continue;
       mappedTags[tagSplit[0]] = tagSplit[1];
     }
 
@@ -931,9 +934,12 @@ class IRCMessage {
 
     // If the username exists, set it.
     // tmi.twitch.tv means the message was sent by Twitch rather than a user, so will be irrelevant.
+    final exclamationIndex = splitMessage[0].indexOf('!');
     final String? user = splitMessage[0] == _twitchIrcServer
         ? mappedTags['login']
-        : splitMessage[0].substring(0, splitMessage[0].indexOf('!'));
+        : exclamationIndex > 0
+        ? splitMessage[0].substring(0, exclamationIndex)
+        : mappedTags['login'] ?? mappedTags['display-name'];
 
     // If there is an associated message, set it.
     String? message;
@@ -973,8 +979,17 @@ class IRCMessage {
 
         // Extract the word associated with this emoteId by using the provided indices.
         final indexSplit = range.split('-');
+        // Skip malformed ranges that don't contain a start-end pair, which
+        // would otherwise throw a RangeError on indexSplit[1].
+        if (indexSplit.length < 2) continue;
         final startIndex = int.parse(indexSplit[0]);
         final endIndex = int.parse(indexSplit[1]);
+
+        if (startIndex < 0 ||
+            endIndex + 1 > message.length ||
+            startIndex > endIndex) {
+          continue;
+        }
 
         final emoteWord = message.substring(startIndex, endIndex + 1);
 
@@ -1041,8 +1056,10 @@ class IRCMessage {
 
     // Check and parse the command.
     // The majority of messages will be PRIVMSG, so check that first.
+    // Guard against malformed lines without a command token, which would
+    // otherwise throw a RangeError on splitMessage[1].
     final Command messageCommand;
-    switch (splitMessage[1]) {
+    switch (splitMessage.length > 1 ? splitMessage[1] : '') {
       case 'PRIVMSG':
         messageCommand = Command.privateMessage;
         break;

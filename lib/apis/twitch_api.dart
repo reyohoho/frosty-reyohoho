@@ -16,6 +16,9 @@ import 'package:frosty/models/user.dart';
 import 'package:frosty/models/vod.dart';
 import 'package:frosty/models/vod_comment.dart';
 
+/// Shared log tag for recent messages flow, for easy filtering in noisy logs.
+const _recentMsgLogTag = '[RecentMsg]';
+
 /// Starege proxy domains for recent messages API.
 const _recentMessagesProxyDomains = [
   'https://starege.rte.net.ru',
@@ -78,9 +81,17 @@ class TwitchApi extends BaseApiClient {
         if (response.statusCode != null &&
             response.statusCode! >= 200 &&
             response.statusCode! < 400) {
+          debugPrint(
+            '$_recentMsgLogTag proxy probe OK ($domain) -> ${response.statusCode}',
+          );
           return domain;
         }
-      } catch (_) {}
+        debugPrint(
+          '$_recentMsgLogTag proxy probe bad status ($domain) -> ${response.statusCode}',
+        );
+      } catch (error) {
+        debugPrint('$_recentMsgLogTag proxy probe FAILED ($domain): $error');
+      }
       return null;
     }).toList();
 
@@ -102,11 +113,11 @@ class TwitchApi extends BaseApiClient {
     final result = await completer.future;
     if (result != null) {
       debugPrint(
-        'TwitchApi: Using proxy domain for recent messages: $result',
+        '$_recentMsgLogTag Using proxy domain for recent messages: $result',
       );
     } else {
       debugPrint(
-        'TwitchApi: All proxy domains unavailable, using direct connection',
+        '$_recentMsgLogTag All proxy domains unavailable, using direct connection',
       );
     }
     return result;
@@ -683,15 +694,32 @@ class TwitchApi extends BaseApiClient {
 
   // Gets recent messages from a third-party service via proxy.
   Future<JsonList> getRecentMessages({required String userLogin}) async {
+    final stopwatch = Stopwatch()..start();
     final proxyDomain = await _initializeProxyDomain();
+    debugPrint(
+      '$_recentMsgLogTag[$userLogin]: proxy resolved in ${stopwatch.elapsedMilliseconds}ms -> ${proxyDomain ?? 'direct (no proxy)'}',
+    );
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     final targetUrl = '$_recentMessagesUrl/recent-messages/$userLogin?t=$timestamp';
 
     // Use proxy if available, otherwise fall back to direct connection
     final url = proxyDomain != null ? '$proxyDomain/$targetUrl' : targetUrl;
 
-    final data = await get<JsonMap>(url);
+    debugPrint('$_recentMsgLogTag[$userLogin]: requesting $url');
 
-    return data['messages'] as JsonList;
+    try {
+      final data = await get<JsonMap>(url);
+
+      final messages = data['messages'] as JsonList;
+      debugPrint(
+        '$_recentMsgLogTag[$userLogin]: got ${messages.length} messages in ${stopwatch.elapsedMilliseconds}ms',
+      );
+      return messages;
+    } catch (error, stackTrace) {
+      debugPrint(
+        '$_recentMsgLogTag[$userLogin]: REQUEST FAILED after ${stopwatch.elapsedMilliseconds}ms (url: $url): $error\n$stackTrace',
+      );
+      rethrow;
+    }
   }
 }

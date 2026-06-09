@@ -20,6 +20,9 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 
 part 'chat_store.g.dart';
 
+/// Shared log tag for recent messages flow, for easy filtering in noisy logs.
+const _recentMsgLogTag = '[RecentMsg]';
+
 /// The store and view-model for chat-related activities.
 class ChatStore = ChatStoreBase with _$ChatStore;
 
@@ -429,8 +432,29 @@ abstract class ChatStoreBase with Store {
     _messages.add(IRCMessage.createNotice(message: 'Connecting to chat...'));
 
     if (settings.showRecentMessages) {
-      getRecentMessage().then((_) => connectToChat());
+      debugPrint(
+        '$_recentMsgLogTag[$channelName]: showRecentMessages enabled, fetching recent messages before connecting to chat',
+      );
+      getRecentMessage()
+          .then((_) {
+            debugPrint(
+              '$_recentMsgLogTag[$channelName]: getRecentMessage completed, now connecting to chat',
+            );
+            connectToChat();
+          })
+          .catchError((Object error, StackTrace stackTrace) {
+            // If fetching recent messages fails, the .then() above would never
+            // run and connectToChat() would never be called, leaving the chat
+            // stuck on "Connecting to chat...". Connect anyway so the chat works.
+            debugPrint(
+              '$_recentMsgLogTag[$channelName]: getRecentMessage FAILED, connecting to chat anyway. Error: $error\n$stackTrace',
+            );
+            connectToChat();
+          });
     } else {
+      debugPrint(
+        '$_recentMsgLogTag[$channelName]: showRecentMessages disabled, connecting to chat directly',
+      );
       connectToChat();
     }
 
@@ -1308,12 +1332,39 @@ abstract class ChatStoreBase with Store {
 
   @action
   Future<void> getRecentMessage() async {
-    final recentMessages = await twitchApi.getRecentMessages(
-      userLogin: channelName,
-    );
+    final stopwatch = Stopwatch()..start();
+    debugPrint('$_recentMsgLogTag[$channelName]: getRecentMessage START');
+    try {
+      final recentMessages = await twitchApi.getRecentMessages(
+        userLogin: channelName,
+      );
 
-    for (final message in recentMessages) {
-      _handleIRCData(message);
+      debugPrint(
+        '$_recentMsgLogTag[$channelName]: getRecentMessage received ${recentMessages.length} messages in ${stopwatch.elapsedMilliseconds}ms',
+      );
+
+      // Handle each message individually so a single malformed historical
+      // message can't abort the whole batch (and block connectToChat()).
+      var failedCount = 0;
+      for (final message in recentMessages) {
+        try {
+          _handleIRCData(message);
+        } catch (error, stackTrace) {
+          failedCount++;
+          debugPrint(
+            '$_recentMsgLogTag[$channelName]: failed to handle a recent message: $error\n$stackTrace\nmessage: $message',
+          );
+        }
+      }
+
+      debugPrint(
+        '$_recentMsgLogTag[$channelName]: getRecentMessage DONE handling messages (failed: $failedCount/${recentMessages.length})',
+      );
+    } catch (error, stackTrace) {
+      debugPrint(
+        '$_recentMsgLogTag[$channelName]: getRecentMessage ERROR after ${stopwatch.elapsedMilliseconds}ms: $error\n$stackTrace',
+      );
+      rethrow;
     }
   }
 
