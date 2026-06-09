@@ -64,6 +64,20 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
   String get _currentQuality =>
       _availableQualities.elementAtOrNull(_qualityIndex) ?? 'Auto';
 
+  // Playback speed. Driven directly through the HTML5 video element's
+  // playbackRate; the VOD chat stays in sync automatically because it follows
+  // the real video.currentTime rather than a fixed-rate clock.
+  static const List<double> _playbackRates = [
+    0.25,
+    0.5,
+    0.75,
+    1.0,
+    1.25,
+    1.5,
+    2.0,
+  ];
+  double _playbackRate = 1.0;
+
   // Value notifiers for VOD chat
   late final ValueNotifier<double> _currentTimeNotifier;
   late final ValueNotifier<bool> _pausedNotifier;
@@ -77,6 +91,18 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
 
   // Background audio support
   bool _isForegroundServiceRunning = false;
+
+  // Auto-PiP / PiP keep-alive (mirrors the live VideoStore behavior).
+  // Without arming auto-PiP and keeping the WebView alive across the
+  // window-visibility change, minimizing the app neither enters PiP nor keeps
+  // the VOD playing.
+  bool _autoPipArmed = false;
+  bool _pipPlaybackDesired = false;
+  Timer? _pipResumeTimer;
+  int _pipAutoResumeAttempts = 0;
+  int _pipConfirmedPlaying = 0;
+  static const _pipResumeInterval = Duration(seconds: 1);
+  static const _pipMaxAutoResumeAttempts = 30;
 
   // PiP drag state
   double _pipDragDistance = 0;
@@ -160,15 +186,34 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
         if (mounted) {
           setState(() => _isInPipMode = true);
         }
+        _pipPlaybackDesired = true;
+        _startPipResumeWatchdog();
       },
     );
     PipCallbackRegistry.registerPipExitedFromNative((event) {
       if (event == 'dismissed') {
         _onPipExited();
-      } else if (event == 'expanded' && mounted) {
-        setState(() => _isInPipMode = false);
+      } else if (event == 'expanded') {
+        if (mounted) setState(() => _isInPipMode = false);
+        _stopPipResumeWatchdog();
+        _resumePlaybackAfterExpand();
       }
     });
+    // Reliable PiP-entry signal from native onPictureInPictureModeChanged
+    // (SimplePip.onPipEntered does not fire for system auto-PiP on all
+    // devices). Keep the VOD playing in the small window.
+    PipCallbackRegistry.registerPipEnteredFromNative(() {
+      debugPrint('[PIP] VodPlayer: entered (native -> Dart)');
+      if (mounted) setState(() => _isInPipMode = true);
+      _pipPlaybackDesired = true;
+      _startPipResumeWatchdog();
+    });
+
+    // Arm auto-enter PiP so minimizing the app drops into PiP, and keep the
+    // WebView alive across the window-visibility change.
+    if (Platform.isAndroid) {
+      _armAutoPip();
+    }
 
     // Initialize foreground task for background audio on Android
     if (Platform.isAndroid) {
@@ -176,6 +221,100 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
     }
 
     _initPlayer();
+  }
+
+  /// Arms Android auto-enter PiP (setAutoEnterEnabled) when supported, so the
+  /// VOD enters PiP automatically on minimize, and keeps the WebView alive.
+  Future<void> _armAutoPip() async {
+    try {
+      final isAutoPipAvailable = await SimplePip.isAutoPipAvailable;
+      if (isAutoPipAvailable) {
+        _pip.setAutoPipMode();
+        _autoPipArmed = true;
+      }
+    } catch (e) {
+      debugPrint('VOD: failed to arm auto-pip: $e');
+    }
+    await _syncWebViewBackgroundPlayback();
+  }
+
+  /// Keeps the WebView's `allowBackgroundAudioPlaying` flag on while auto-PiP is
+  /// armed or background audio is enabled, so the Android WebView does not
+  /// suspend (freezing JS and stopping playback) the instant we enter PiP.
+  Future<void> _syncWebViewBackgroundPlayback() async {
+    if (!Platform.isAndroid) return;
+    final controller = _webViewController;
+    if (controller == null) return;
+    final shouldKeepPlaying =
+        _settingsStore.backgroundAudioEnabled || _autoPipArmed;
+    try {
+      final settings = webViewSettings
+        ..allowBackgroundAudioPlaying = shouldKeepPlaying;
+      await controller.setSettings(settings: settings);
+    } catch (e) {
+      debugPrint('VOD: failed to sync webview background playback: $e');
+    }
+  }
+
+  /// While in PiP and playback is desired, periodically re-issue `video.play()`
+  /// until it sticks — the Twitch web player pauses itself when the window is
+  /// smaller than its embed min-size and stays paused for a few seconds.
+  void _startPipResumeWatchdog() {
+    _pipResumeTimer?.cancel();
+    _pipAutoResumeAttempts = 0;
+    _pipConfirmedPlaying = 0;
+    _pipResumeTimer = Timer.periodic(_pipResumeInterval, (timer) {
+      if (!_isInPipMode ||
+          _pipAutoResumeAttempts >= _pipMaxAutoResumeAttempts) {
+        timer.cancel();
+        _pipResumeTimer = null;
+        return;
+      }
+      if (!_pipPlaybackDesired) return;
+      _pipAutoResumeAttempts++;
+      try {
+        _webViewController
+            ?.evaluateJavascript(
+              source:
+                  'var v=document.getElementsByTagName("video")[0]; if (!v) { "no-video"; } else if (v.paused) { v.play(); "was-paused-play-called"; } else { "already-playing"; }',
+            )
+            .then((r) {
+              if (r == 'already-playing') {
+                _pipConfirmedPlaying++;
+                if (_pipConfirmedPlaying >= 2) _stopPipResumeWatchdog();
+              } else {
+                _pipConfirmedPlaying = 0;
+              }
+            });
+      } catch (e) {
+        debugPrint(e.toString());
+      }
+    });
+  }
+
+  void _stopPipResumeWatchdog() {
+    _pipResumeTimer?.cancel();
+    _pipResumeTimer = null;
+  }
+
+  /// Resumes playback after returning to fullscreen from PiP ("expanded"). The
+  /// player frequently stays paused after the transition, so re-issue
+  /// `video.play()` a few times while the layout settles.
+  void _resumePlaybackAfterExpand() {
+    if (!_pipPlaybackDesired) return;
+    for (final ms in const [0, 300, 800, 1500]) {
+      Future.delayed(Duration(milliseconds: ms), () {
+        if (_isInPipMode || !_pipPlaybackDesired) return;
+        try {
+          _webViewController?.evaluateJavascript(
+            source:
+                'var v=document.getElementsByTagName("video")[0]; if (v && v.paused) { v.play(); }',
+          );
+        } catch (e) {
+          debugPrint(e.toString());
+        }
+      });
+    }
   }
 
   /// Callback for when PIP mode is exited on Android.
@@ -305,6 +444,10 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
       onWebViewCreated: (controller) {
         _webViewController = controller;
 
+        // Apply the keep-alive flag now that the controller exists (auto-PiP
+        // may have been armed in initState before the WebView was created).
+        unawaited(_syncWebViewBackgroundPlayback());
+
         controller.addJavaScriptHandler(
           handlerName: 'VideoPause',
           callback: (args) {
@@ -327,6 +470,7 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
               _startProgressTimer();
               if (Platform.isAndroid) _pip.setIsPlaying(true);
               _updateBackgroundAudioState();
+              _applyPlaybackRateToVideo();
             }
           },
         );
@@ -462,10 +606,15 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
   void _handlePausePlay() {
     try {
       if (_paused) {
+        // Resuming: remember we want playback so the PiP watchdog stays on.
+        _pipPlaybackDesired = true;
+        _pipAutoResumeAttempts = 0;
         _webViewController?.evaluateJavascript(
           source: 'document.querySelector("video")?.play();',
         );
       } else {
+        // Explicit pause (e.g. PiP button): don't let the watchdog fight it.
+        _pipPlaybackDesired = false;
         _webViewController?.evaluateJavascript(
           source: 'document.querySelector("video")?.pause();',
         );
@@ -812,25 +961,60 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
       await _webViewController?.evaluateJavascript(
         source: r'''
         _queuePromise(async () => {
-          (await _asyncQuerySelector('[data-a-target="player-settings-button"]')).click();
-          (await _asyncQuerySelector('[data-a-target="player-settings-menu-item-quality"]')).click();
+          const settingsBtn = await _asyncQuerySelector('[data-a-target="player-settings-button"]', 8000);
+          if (!settingsBtn) return;
+          settingsBtn.click();
 
-          await _asyncQuerySelector(
-            '[data-a-target="player-settings-menu"] input[name="player-settings-submenu-quality-option"] + label'
-          );
+          const qualityItem = await _asyncQuerySelector('[data-a-target="player-settings-menu-item-quality"]', 8000);
+          if (!qualityItem) { settingsBtn.click(); return; }
+          qualityItem.click();
 
-          const qualities = Array.from(
-            document.querySelectorAll(
-              '[data-a-target="player-settings-menu"] input[name="player-settings-submenu-quality-option"] + label'
-            )
-          ).map(l => l.textContent.replace(/\s+/g, ' ').trim());
+          const optionSelector =
+            '[data-a-target="player-settings-menu"] input[name="player-settings-submenu-quality-option"] + label';
+
+          // Poll until the real renditions are rendered instead of grabbing the
+          // menu the instant the first ("Auto") option appears.
+          let qualities = [];
+          for (let i = 0; i < 24; i++) {
+            qualities = Array.from(document.querySelectorAll(optionSelector))
+              .map(l => l.textContent.replace(/\s+/g, ' ').trim());
+            if (qualities.length > 1) break;
+            await new Promise(r => setTimeout(r, 250));
+          }
 
           window.flutter_inappwebview.callHandler('VodQualities', JSON.stringify(qualities));
 
-          (await _asyncQuerySelector('[data-a-target="player-settings-button"]')).click();
+          settingsBtn.click();
         });
       ''',
       );
+    } catch (e) {
+      debugPrint(e.toString());
+    }
+  }
+
+  /// Re-applies the current playback rate to the underlying video element.
+  /// The player resets playbackRate to 1.0 on (re)buffering and quality
+  /// switches, so this is called again after those events.
+  Future<void> _applyPlaybackRateToVideo() async {
+    if (_playbackRate == 1.0) return;
+    try {
+      await _webViewController?.evaluateJavascript(
+        source:
+            '(function(){var v=document.querySelector("video"); if (v) v.playbackRate = $_playbackRate;})();',
+      );
+    } catch (e) {
+      debugPrint(e.toString());
+    }
+  }
+
+  Future<void> _setPlaybackRate(double rate) async {
+    try {
+      await _webViewController?.evaluateJavascript(
+        source:
+            '(function(){var v=document.querySelector("video"); if (v) v.playbackRate = $rate;})();',
+      );
+      if (mounted) setState(() => _playbackRate = rate);
     } catch (e) {
       debugPrint(e.toString());
     }
@@ -847,15 +1031,26 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
       await _webViewController?.evaluateJavascript(
         source: '''
         _queuePromise(async () => {
-          (await _asyncQuerySelector('[data-a-target="player-settings-button"]')).click();
-          (await _asyncQuerySelector('[data-a-target="player-settings-menu-item-quality"]')).click();
+          const settingsBtn = await _asyncQuerySelector('[data-a-target="player-settings-button"]', 8000);
+          if (!settingsBtn) return;
+          settingsBtn.click();
+
+          const qualityItem = await _asyncQuerySelector('[data-a-target="player-settings-menu-item-quality"]', 8000);
+          if (!qualityItem) { settingsBtn.click(); return; }
+          qualityItem.click();
+
           await _asyncQuerySelector('[data-a-target="player-settings-submenu-quality-option"] input');
-          [...document.querySelectorAll('[data-a-target="player-settings-submenu-quality-option"] input')][$index].click();
-          (await _asyncQuerySelector('[data-a-target="player-settings-button"]')).click();
+          const options = [...document.querySelectorAll('[data-a-target="player-settings-submenu-quality-option"] input')];
+          const target = options[$index];
+          if (target) target.click();
+
+          settingsBtn.click();
         });
       ''',
       );
       setState(() => _qualityIndex = index);
+      // Switching renditions resets playbackRate; restore the user's choice.
+      await _applyPlaybackRateToVideo();
     } catch (e) {
       debugPrint(e.toString());
     }
@@ -1257,23 +1452,26 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
                                   _updateQualities();
                                   showModalBottomSheetWithProperFocus(
                                     context: context,
-                                    builder: (context) =>
-                                        _VodQualitySheet(
-                                          availableQualities:
-                                              _availableQualities,
-                                          currentQuality: _currentQuality,
-                                          onQualitySelected: (quality) {
-                                            _setQuality(quality);
-                                            SharedPreferences.getInstance()
-                                                .then(
-                                                  (prefs) => prefs.setString(
-                                                    'last_vod_quality',
-                                                    quality,
-                                                  ),
-                                                );
-                                            Navigator.pop(context);
-                                          },
-                                        ),
+                                    builder: (context) => _VodSettingsSheet(
+                                      availableQualities: _availableQualities,
+                                      currentQuality: _currentQuality,
+                                      onQualitySelected: (quality) {
+                                        _setQuality(quality);
+                                        SharedPreferences.getInstance().then(
+                                          (prefs) => prefs.setString(
+                                            'last_vod_quality',
+                                            quality,
+                                          ),
+                                        );
+                                        Navigator.pop(context);
+                                      },
+                                      playbackRates: _playbackRates,
+                                      currentRate: _playbackRate,
+                                      onRateSelected: (rate) {
+                                        _setPlaybackRate(rate);
+                                        Navigator.pop(context);
+                                      },
+                                    ),
                                   );
                                 },
                               ),
@@ -1533,15 +1731,21 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
   @override
   void dispose() {
     PipCallbackRegistry.registerPipExitedFromNative(null);
+    PipCallbackRegistry.registerPipEnteredFromNative(null);
     WidgetsBinding.instance.removeObserver(this);
     _overlayTimer?.cancel();
     _progressTimer?.cancel();
+    _stopPipResumeWatchdog();
     _currentTimeNotifier.dispose();
     _pausedNotifier.dispose();
     _animationController.dispose();
 
     // Stop foreground service and disable wakelock when leaving VOD player
     if (Platform.isAndroid) {
+      // Disarm auto-PiP so it doesn't trigger after leaving the player.
+      SimplePip.isAutoPipAvailable.then((isAutoPipAvailable) {
+        if (isAutoPipAvailable) _pip.setAutoPipMode(autoEnter: false);
+      });
       _stopForegroundService();
       if (_settingsStore.backgroundAudioEnabled) {
         WakelockPlus.disable();
@@ -1560,46 +1764,70 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
   }
 }
 
-class _VodQualitySheet extends StatelessWidget {
+String _formatRate(double rate) {
+  // Trim trailing zeros: 1.0 -> "1", 1.25 -> "1.25", 1.5 -> "1.5".
+  final text = rate
+      .toStringAsFixed(2)
+      .replaceAll(RegExp(r'0+$'), '')
+      .replaceAll(RegExp(r'\.$'), '');
+  return '${text}x';
+}
+
+class _VodSettingsSheet extends StatelessWidget {
   final List<String> availableQualities;
   final String currentQuality;
   final ValueChanged<String> onQualitySelected;
+  final List<double> playbackRates;
+  final double currentRate;
+  final ValueChanged<double> onRateSelected;
 
-  const _VodQualitySheet({
+  const _VodSettingsSheet({
     required this.availableQualities,
     required this.currentQuality,
     required this.onQualitySelected,
+    required this.playbackRates,
+    required this.currentRate,
+    required this.onRateSelected,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SectionHeader(
-          'Video quality',
-          padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
-          isFirst: true,
-        ),
-        Flexible(
-          child: ListView(
-            shrinkWrap: true,
-            primary: false,
-            children: availableQualities
-                .map(
-                  (quality) => ListTile(
-                    trailing: currentQuality == quality
-                        ? const Icon(Icons.check_rounded)
-                        : null,
-                    title: Text(quality),
-                    onTap: () => onQualitySelected(quality),
-                  ),
-                )
-                .toList(),
+    return SingleChildScrollView(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SectionHeader(
+            'Playback speed',
+            padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+            isFirst: true,
           ),
-        ),
-      ],
+          ...playbackRates.map(
+            (rate) => ListTile(
+              trailing: currentRate == rate
+                  ? const Icon(Icons.check_rounded)
+                  : null,
+              title: Text(rate == 1.0 ? 'Normal' : _formatRate(rate)),
+              onTap: () => onRateSelected(rate),
+            ),
+          ),
+          if (availableQualities.isNotEmpty) ...[
+            const SectionHeader(
+              'Video quality',
+              padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
+            ),
+            ...availableQualities.map(
+              (quality) => ListTile(
+                trailing: currentQuality == quality
+                    ? const Icon(Icons.check_rounded)
+                    : null,
+                title: Text(quality),
+                onTap: () => onQualitySelected(quality),
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
