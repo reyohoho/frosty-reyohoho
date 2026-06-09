@@ -48,11 +48,16 @@ abstract class VideoStoreBase with Store {
   /// The [SimplePip] instance used for initiating PiP on Android.
   late final SimplePip pip;
 
-  /// Callback for when PIP mode is exited on Android.
-  /// This is called when user dismisses the PIP window.
+  /// Callback for when PIP mode is exited on Android via dismissal
+  /// (user swiped the PIP window away / closed it, activity not returning
+  /// to the foreground). Pauses the video and tears down the background
+  /// audio foreground service. Must NOT be called on "expanded" — when
+  /// the user taps the PIP to return to fullscreen — otherwise the video
+  /// would pause (and the notification would disappear) on every return to
+  /// fullscreen (notably on Samsung One UI with aggressive auto-PiP).
   void _onPipExited() {
-    print('AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA PIP exited');
     _isInPipMode = false;
+    _stopPipResumeWatchdog();
     if (!_paused) {
       handlePausePlay();
       _paused = true;
@@ -175,6 +180,40 @@ abstract class VideoStoreBase with Store {
   /// Whether the foreground service is currently running.
   bool _isForegroundServiceRunning = false;
 
+  /// Whether Android auto-enter PiP is currently armed for this channel. When
+  /// armed, the WebView must keep playing across the window-visibility change
+  /// that accompanies the PiP transition, otherwise the WebView freezes (JS
+  /// stops, audio stops) the moment we enter PiP.
+  bool _autoPipArmed = false;
+
+  /// While in PiP, whether we want the video playing. Used to auto-resume when
+  /// the Twitch web player pauses itself (it disables playback when the PiP
+  /// window is smaller than its embed min-size). `false` means the user paused
+  /// intentionally via the PiP play/pause button, so we must NOT auto-resume.
+  var _pipPlaybackDesired = false;
+
+  /// Periodic watchdog that re-issues `video.play()` while in PiP until the
+  /// stream is actually playing. The Twitch player keeps itself paused for
+  /// several seconds after entering PiP (it re-initialises and rejects
+  /// playback until ready), so a single retry is not enough — we must keep
+  /// nudging it, exactly like a user repeatedly tapping the PiP Play button.
+  Timer? _pipResumeTimer;
+
+  /// Number of `play()` nudges issued in the current PiP session, capped by
+  /// [_pipMaxAutoResumeAttempts] so we don't fight the player forever (and
+  /// waste battery) if it keeps refusing.
+  var _pipAutoResumeAttempts = 0;
+
+  /// Consecutive watchdog ticks that observed the video already playing. Once
+  /// this reaches 2 the watchdog stops (playback has settled in PiP).
+  var _pipConfirmedPlaying = 0;
+
+  /// ~1s cadence × 30 = ~30s of retries, which comfortably covers the observed
+  /// 10-15s the Twitch player needs to become ready in PiP.
+  static const _pipMaxAutoResumeAttempts = 30;
+
+  static const _pipResumeInterval = Duration(seconds: 1);
+
   /// If the video is currently paused.
   ///
   /// Does not pause or play the video, only used for rendering state of the overlay.
@@ -236,6 +275,11 @@ abstract class VideoStoreBase with Store {
     allowsBackForwardNavigationGestures: false,
     iframeAllowFullscreen: true,
     allowBackgroundAudioPlaying: settingsStore.backgroundAudioEnabled,
+    // Required so Android keeps invoking `shouldInterceptRequest`, which routes
+    // usher playlist fetches through the RTE quality proxy. `setSettings`
+    // (used by `_syncWebViewBackgroundPlayback`) replaces the whole settings
+    // object, so this must live here or interception silently turns off.
+    useShouldInterceptRequest: true,
   );
 
   VideoStoreBase({
@@ -247,18 +291,36 @@ abstract class VideoStoreBase with Store {
     required this.settingsStore,
     this.usherProxyBaseUrl,
   }) {
-    // Initialize SimplePip with callbacks for PIP exit detection
+    // Initialize SimplePip with callbacks for PIP exit detection.
+    //
+    // IMPORTANT: SimplePip fires onPipExited for BOTH "expanded back to app"
+    // and "dismissed" cases and gives us no way to distinguish. If we paused
+    // here unconditionally, the video would pause (and the foreground-service
+    // notification would be torn down) on every return to fullscreen,
+    // especially noticeable on Samsung One UI with aggressive auto-PiP.
+    //
+    // So we only update the in-PiP flag here and defer the play/pause decision
+    // to PipCallbackRegistry, which receives "expanded" vs "dismissed" from
+    // MainActivity.onPictureInPictureModeChanged via our EventChannel.
     debugPrint(
       '[PIP] VideoStore: registering SimplePip callbacks (onPipExited, onPipEntered)',
     );
     pip = SimplePip(
       onPipExited: () {
-        debugPrint('[PIP] VideoStore: onPipExited invoked (native -> Dart)');
-        _onPipExited();
+        debugPrint(
+          '[PIP] VideoStore: SimplePip.onPipExited (flag only; pause decision deferred to native event)',
+        );
+        _isInPipMode = false;
       },
       onPipEntered: () {
         debugPrint('[PIP] VideoStore: onPipEntered invoked (native -> Dart)');
         _isInPipMode = true;
+        // Entering PiP means the user wants to keep watching: keep the stream
+        // playing even if Twitch pauses it because of the small window. Set
+        // unconditionally (not `!_paused`) because the player may already have
+        // paused itself during the transition.
+        _pipPlaybackDesired = true;
+        _startPipResumeWatchdog();
       },
     );
     PipCallbackRegistry.registerPipExitedFromNative((event) {
@@ -266,7 +328,20 @@ abstract class VideoStoreBase with Store {
         _onPipExited();
       } else if (event == 'expanded') {
         _isInPipMode = false;
+        _stopPipResumeWatchdog();
+        // Returning to fullscreen: the player often stays paused after the PiP
+        // transition, so nudge playback back on (unless the user paused it).
+        _resumePlaybackAfterExpand();
       }
+    });
+    // Reliable PiP-entry signal from the native onPictureInPictureModeChanged
+    // (SimplePip.onPipEntered does not fire for system auto-PiP on all
+    // devices). Start the playback watchdog so the stream keeps playing.
+    PipCallbackRegistry.registerPipEnteredFromNative(() {
+      debugPrint('[PIP] VideoStore: entered (native -> Dart)');
+      _isInPipMode = true;
+      _pipPlaybackDesired = true;
+      _startPipResumeWatchdog();
     });
 
     // Reset chat delay to 0 if auto sync is already enabled to prevent starting with old values
@@ -311,9 +386,15 @@ abstract class VideoStoreBase with Store {
       _disposeAndroidAutoPipReaction = autorun((_) async {
         if (settingsStore.showVideo && await SimplePip.isAutoPipAvailable) {
           pip.setAutoPipMode();
+          _autoPipArmed = true;
         } else {
           pip.setAutoPipMode(autoEnter: false);
+          _autoPipArmed = false;
         }
+        // Keep the WebView alive across the PiP transition. Done proactively
+        // here (on channel open / setting changes), well before backgrounding,
+        // so there's no race with the window-visibility change.
+        await _syncWebViewBackgroundPlayback();
       });
     }
 
@@ -339,6 +420,7 @@ abstract class VideoStoreBase with Store {
           _stopForegroundService("_disposeBackgroundAudioReaction");
           WakelockPlus.disable();
         }
+        unawaited(_syncWebViewBackgroundPlayback());
       });
     }
 
@@ -370,9 +452,113 @@ abstract class VideoStoreBase with Store {
     );
   }
 
+  /// Keeps the WebView's `allowBackgroundAudioPlaying` flag in sync with
+  /// whether playback must survive the app being backgrounded — either because
+  /// the user enabled background audio, or because Android auto-PiP is armed
+  /// (entering PiP must not freeze/pause the WebView).
+  ///
+  /// Without this, `flutter_inappwebview` lets the Android WebView suspend on
+  /// the window-visibility change that accompanies the PiP transition, which
+  /// freezes its JavaScript and stops audio the instant we enter PiP. When the
+  /// flag is on, the plugin's `onWindowVisibilityChanged` override keeps the
+  /// WebView visible so playback continues.
+  Future<void> _syncWebViewBackgroundPlayback() async {
+    if (!Platform.isAndroid) return;
+    final controller = _webViewController;
+    if (controller == null) return;
+
+    final shouldKeepPlaying =
+        settingsStore.backgroundAudioEnabled || _autoPipArmed;
+    try {
+      final settings = webViewSettings
+        ..allowBackgroundAudioPlaying = shouldKeepPlaying;
+      await controller.setSettings(settings: settings);
+    } catch (e) {
+      debugPrint('Failed to sync webview background playback: $e');
+    }
+  }
+
+  /// Starts the PiP playback watchdog: while in PiP and we want playback, keep
+  /// nudging `video.play()` until the stream is actually playing. The Twitch
+  /// web player pauses itself when the PiP window is smaller than its embed
+  /// min-size and stays paused for several seconds while it re-initialises, so
+  /// a single retry is not enough — we periodically re-issue play (exactly what
+  /// the working manual PiP Play button does) until playback sticks.
+  void _startPipResumeWatchdog() {
+    if (useNativePlayer) return;
+    _pipResumeTimer?.cancel();
+    _pipAutoResumeAttempts = 0;
+    _pipConfirmedPlaying = 0;
+    _pipResumeTimer = Timer.periodic(_pipResumeInterval, (timer) {
+      // Stop entirely once we've left PiP or we've nudged long enough.
+      if (!_isInPipMode ||
+          _pipAutoResumeAttempts >= _pipMaxAutoResumeAttempts) {
+        timer.cancel();
+        _pipResumeTimer = null;
+        return;
+      }
+      // User paused on purpose via the PiP button: do not force playback.
+      if (!_pipPlaybackDesired) return;
+      _pipAutoResumeAttempts++;
+      // Read the real paused state from the DOM (Twitch pauses the element
+      // itself without emitting an event we can see, so the Dart `_paused`
+      // flag is unreliable in PiP) and resume only if actually paused.
+      try {
+        _webViewController
+            ?.evaluateJavascript(
+              source:
+                  'var v=document.getElementsByTagName("video")[0]; if (!v) { "no-video"; } else if (v.paused) { v.play(); "was-paused-play-called"; } else { "already-playing"; }',
+            )
+            .then((r) {
+              // Once playback is confirmed for two consecutive ticks, stop the
+              // watchdog — the Twitch player has settled and keeps playing.
+              if (r == 'already-playing') {
+                _pipConfirmedPlaying++;
+                if (_pipConfirmedPlaying >= 2) _stopPipResumeWatchdog();
+              } else {
+                _pipConfirmedPlaying = 0;
+              }
+            });
+      } catch (e) {
+        debugPrint(e.toString());
+      }
+    });
+  }
+
+  /// Resumes playback after returning to fullscreen from PiP ("expanded").
+  /// The Twitch player frequently stays paused after the PiP window transition,
+  /// so we re-issue `video.play()` a few times while the layout settles. Skips
+  /// when the user paused on purpose via the PiP button.
+  void _resumePlaybackAfterExpand() {
+    if (useNativePlayer || !_pipPlaybackDesired) return;
+    for (final ms in const [0, 300, 800, 1500]) {
+      Future.delayed(Duration(milliseconds: ms), () {
+        if (_isInPipMode || !_pipPlaybackDesired) return;
+        try {
+          _webViewController?.evaluateJavascript(
+            source:
+                'var v=document.getElementsByTagName("video")[0]; if (v && v.paused) { v.play(); }',
+          );
+        } catch (e) {
+          debugPrint(e.toString());
+        }
+      });
+    }
+  }
+
+  /// Stops the PiP playback watchdog (on PiP exit / dispose).
+  void _stopPipResumeWatchdog() {
+    _pipResumeTimer?.cancel();
+    _pipResumeTimer = null;
+  }
+
   /// Called when the InAppWebView is created
   void onWebViewCreated(InAppWebViewController controller) {
     _webViewController = controller;
+
+    // Apply the correct keep-alive flag now that we have a controller (the
+    // auto-PiP autorun may have armed before the WebView existed).
+    unawaited(_syncWebViewBackgroundPlayback());
 
     // Add JavaScript handlers (equivalent to addJavaScriptChannel)
     controller.addJavaScriptHandler(
@@ -400,6 +586,11 @@ abstract class VideoStoreBase with Store {
         if (args.isEmpty) return;
         final data = jsonDecode(args[0].toString()) as List;
         _availableStreamQualities = data.map((item) => item as String).toList();
+        debugPrint(
+          '$qualityProxyLogTag StreamQualities handler: scraped '
+          '${_availableStreamQualities.length} qualities -> '
+          '$_availableStreamQualities',
+        );
         if (_firstTimeSettingQuality) {
           _firstTimeSettingQuality = false;
           if (settingsStore.defaultToHighestQuality) {
@@ -438,6 +629,8 @@ abstract class VideoStoreBase with Store {
         debugPrint('[PIP] VideoStore: PipEntered (WebView JS handler)');
         _overlayWasVisibleBeforePip = _overlayVisible;
         _isInPipMode = true;
+        _pipPlaybackDesired = true;
+        _startPipResumeWatchdog();
         _overlayTimer?.cancel();
         _overlayVisible = true;
       },
@@ -448,6 +641,7 @@ abstract class VideoStoreBase with Store {
       callback: (args) {
         debugPrint('[PIP] VideoStore: PipExited (WebView JS handler)');
         _isInPipMode = false;
+        _stopPipResumeWatchdog();
         if (_overlayWasVisibleBeforePip) {
           _updateLatencyTrackerVisibility(true);
           _scheduleOverlayHide();
@@ -580,6 +774,10 @@ abstract class VideoStoreBase with Store {
       if (_rteQualityProxyHost.hasMatch(host)) {
         return _stripTrailingSlashes(auto);
       }
+      debugPrint(
+        '$qualityProxyLogTag _effectiveUsherProxyBase: ignoring auto proxy '
+        '"$auto" (host "$host" is not a valid proxy*.rte.net.ru host)',
+      );
     }
     if (settingsStore.usePlaylistProxy &&
         settingsStore.selectedProxyUrl.isNotEmpty) {
@@ -603,6 +801,9 @@ abstract class VideoStoreBase with Store {
     if (url.contains('usher.ttvnw.net')) {
       try {
         final proxyUrl = '$proxyBase/$url';
+        debugPrint(
+          '$qualityProxyLogTag shouldInterceptRequest: proxying usher request via $proxyBase',
+        );
 
         final response = await _dio.get<List<int>>(
           proxyUrl,
@@ -630,6 +831,11 @@ abstract class VideoStoreBase with Store {
             contentType = responseContentType.split(';').first;
           }
 
+          debugPrint(
+            '$qualityProxyLogTag shouldInterceptRequest: usher proxy OK '
+            'status=${response.statusCode} bytes=${response.data!.length} type=$contentType',
+          );
+
           return WebResourceResponse(
             contentType: contentType,
             contentEncoding: 'utf-8',
@@ -645,7 +851,9 @@ abstract class VideoStoreBase with Store {
           );
         }
       } catch (e) {
-        debugPrint('[Usher Proxy] Error: $e');
+        debugPrint(
+          '$qualityProxyLogTag shouldInterceptRequest: usher proxy ERROR: $e',
+        );
       }
     }
 
@@ -684,26 +892,35 @@ abstract class VideoStoreBase with Store {
       await _webViewController?.evaluateJavascript(
         source: r'''
       _queuePromise(async () => {
-        // Open the settings → quality submenu
-        (await _asyncQuerySelector('[data-a-target="player-settings-button"]')).click();
-        (await _asyncQuerySelector('[data-a-target="player-settings-menu-item-quality"]')).click();
+        // Open the settings menu. Reuse this reference to close it later so a
+        // re-query that returns null can't throw "Cannot read 'click'".
+        const settingsBtn = await _asyncQuerySelector('[data-a-target="player-settings-button"]', 8000);
+        if (!settingsBtn) return;
+        settingsBtn.click();
 
-        // Wait until at least one quality option is rendered
-        await _asyncQuerySelector(
-          '[data-a-target="player-settings-menu"] input[name="player-settings-submenu-quality-option"] + label'
-        );
+        const qualityItem = await _asyncQuerySelector('[data-a-target="player-settings-menu-item-quality"]', 8000);
+        if (!qualityItem) { settingsBtn.click(); return; }
+        qualityItem.click();
 
-        // Grab every label, normalise whitespace, return as array
-        const qualities = Array.from(
-          document.querySelectorAll(
-            '[data-a-target="player-settings-menu"] input[name="player-settings-submenu-quality-option"] + label'
-          )
-        ).map(l => l.textContent.replace(/\s+/g, ' ').trim());
+        const optionSelector =
+          '[data-a-target="player-settings-menu"] input[name="player-settings-submenu-quality-option"] + label';
+
+        // The player renders only "Auto" until the master playlist is parsed
+        // (the usher fetch finishes a beat after the page loads, more so when
+        // proxied). Poll until the real renditions appear instead of grabbing
+        // the menu the instant the first option shows up.
+        let qualities = [];
+        for (let i = 0; i < 24; i++) {
+          qualities = Array.from(document.querySelectorAll(optionSelector))
+            .map(l => l.textContent.replace(/\s+/g, ' ').trim());
+          if (qualities.length > 1) break;
+          await new Promise(r => setTimeout(r, 250));
+        }
 
         window.flutter_inappwebview.callHandler('StreamQualities', JSON.stringify(qualities));
 
-        // Close the settings panel again
-        (await _asyncQuerySelector('[data-a-target="player-settings-button"]')).click();
+        // Close the settings panel again using the original button reference.
+        settingsBtn.click();
       });
     ''',
       );
@@ -732,11 +949,20 @@ abstract class VideoStoreBase with Store {
         source:
             '''
         _queuePromise(async () => {
-          (await _asyncQuerySelector('[data-a-target="player-settings-button"]')).click();
-          (await _asyncQuerySelector('[data-a-target="player-settings-menu-item-quality"]')).click();
+          const settingsBtn = await _asyncQuerySelector('[data-a-target="player-settings-button"]', 8000);
+          if (!settingsBtn) return;
+          settingsBtn.click();
+
+          const qualityItem = await _asyncQuerySelector('[data-a-target="player-settings-menu-item-quality"]', 8000);
+          if (!qualityItem) { settingsBtn.click(); return; }
+          qualityItem.click();
+
           await _asyncQuerySelector('[data-a-target="player-settings-submenu-quality-option"] input');
-          [...document.querySelectorAll('[data-a-target="player-settings-submenu-quality-option"] input')][$newStreamQualityIndex].click();
-          (await _asyncQuerySelector('[data-a-target="player-settings-button"]')).click();
+          const options = [...document.querySelectorAll('[data-a-target="player-settings-submenu-quality-option"] input')];
+          const target = options[$newStreamQualityIndex];
+          if (target) target.click();
+
+          settingsBtn.click();
         });
       ''',
       );
@@ -770,6 +996,17 @@ abstract class VideoStoreBase with Store {
                 pointer-events: none !important;
                 position: absolute !important;
                 z-index: -1 !important;
+              }
+              /* The native Twitch settings/quality popup is only ever opened
+                 programmatically (quality reading + latency stats). The app
+                 uses its own overlay for quality, so keep this menu invisible
+                 and non-interactive to the user — programmatic .click() still
+                 works on opacity:0 / pointer-events:none elements. This avoids
+                 the panel flashing/sticking open when the open/close toggle
+                 races. */
+              [data-a-target="player-settings-menu"] {
+                opacity: 0 !important;
+                pointer-events: none !important;
               }
             `;
             document.head.appendChild(style);
@@ -1567,10 +1804,16 @@ abstract class VideoStoreBase with Store {
     }
     try {
       if (_paused) {
+        // Resuming: remember we want playback (so PiP auto-resume stays on).
+        _pipPlaybackDesired = true;
+        _pipAutoResumeAttempts = 0;
         _webViewController?.evaluateJavascript(
           source: 'document.getElementsByTagName("video")[0].play();',
         );
       } else {
+        // Pausing: this is an explicit pause (e.g. PiP button), so do not let
+        // the PiP auto-resume logic fight it.
+        _pipPlaybackDesired = false;
         _webViewController?.evaluateJavascript(
           source: 'document.getElementsByTagName("video")[0].pause();',
         );
@@ -1725,9 +1968,7 @@ abstract class VideoStoreBase with Store {
         (variants) {
           _availableStreamQualities = [
             'Auto',
-            ...variants
-                .where((v) => !v.audioOnly)
-                .map((v) => v.displayLabel),
+            ...variants.where((v) => !v.audioOnly).map((v) => v.displayLabel),
             if (variants.any((v) => v.audioOnly)) 'Audio Only',
           ];
           _streamQualityIndex = 0;
@@ -1758,13 +1999,10 @@ abstract class VideoStoreBase with Store {
     // (they don't care about pre-roll) we skip this to avoid the extra
     // buffering hiccup.
     _nativeReactionDisposers.add(
-      reaction<bool>(
-        (_) => c.adActive,
-        (adActive) {
-          if (adActive) return;
-          scheduleMicrotask(() => _maybeUpgradeNativeToSite('ad ended'));
-        },
-      ),
+      reaction<bool>((_) => c.adActive, (adActive) {
+        if (adActive) return;
+        scheduleMicrotask(() => _maybeUpgradeNativeToSite('ad ended'));
+      }),
     );
   }
 
@@ -1817,6 +2055,10 @@ abstract class VideoStoreBase with Store {
       debugPrint(
         '[native_player] reload: playerType=$playerType '
         'proxyBase=${proxyBase ?? "<none>"} override=$playerTypeOverride',
+      );
+      debugPrint(
+        '$qualityProxyLogTag reloadNativeStream: proxyBase=${proxyBase ?? "<none>"} '
+        'playerType=$playerType (usePlaylistProxy=${settingsStore.usePlaylistProxy})',
       );
       final usherUrl = await _playlistApi.resolveStreamPlaylistUrl(
         channelLogin: userLogin,
@@ -2022,6 +2264,7 @@ abstract class VideoStoreBase with Store {
   @action
   void dispose() {
     PipCallbackRegistry.registerPipExitedFromNative(null);
+    PipCallbackRegistry.registerPipEnteredFromNative(null);
     if (Platform.isAndroid) {
       SimplePip.isAutoPipAvailable.then((isAutoPipAvailable) {
         if (isAutoPipAvailable) pip.setAutoPipMode(autoEnter: false);
@@ -2032,6 +2275,7 @@ abstract class VideoStoreBase with Store {
     _streamInfoTimer?.cancel();
     _jsCleanupTimer?.cancel();
     _friendsActivityTimer?.cancel();
+    _stopPipResumeWatchdog();
 
     unawaited(_disposeNativePlayer());
 

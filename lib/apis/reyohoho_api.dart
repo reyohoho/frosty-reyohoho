@@ -22,6 +22,9 @@ const _qualityDomains = [
   'https://proxy7.rte.net.ru',
 ];
 
+/// Shared log tag for the quality (playlist) proxy flow, for easy filtering.
+const qualityProxyLogTag = '[QualityProxy]';
+
 /// The Reyohoho service for making API calls (badges and paints).
 class ReyohohoApi extends BaseApiClient {
   String? _workingDomain;
@@ -93,9 +96,20 @@ class ReyohohoApi extends BaseApiClient {
         if (response.statusCode != null &&
             response.statusCode! >= 200 &&
             response.statusCode! < 400) {
+          debugPrint(
+            'ReyohohoApi: $label: probe OK ($domain) -> ${response.statusCode}',
+          );
           return domain;
         }
-      } catch (_) {}
+        debugPrint(
+          'ReyohohoApi: $label: probe bad status ($domain) -> ${response.statusCode}',
+        );
+      } catch (error) {
+        // Cancellation is expected once another domain wins the race.
+        if (!(error is DioException && CancelToken.isCancel(error))) {
+          debugPrint('ReyohohoApi: $label: probe FAILED ($domain): $error');
+        }
+      }
       return null;
     }).toList();
 
@@ -127,7 +141,7 @@ class ReyohohoApi extends BaseApiClient {
       _findFirstWorkingDomain(_staregeDomains, label: 'Starege');
 
   Future<String?> findQualityDomain() =>
-      _findFirstWorkingDomain(_qualityDomains, label: 'Quality');
+      _findFirstWorkingDomain(_qualityDomains, label: qualityProxyLogTag);
 
   /// Gets the API URL for a given path.
   Future<String?> _getApiUrl(String path) async {

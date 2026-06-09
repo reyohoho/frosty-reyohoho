@@ -5,6 +5,9 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:frosty/constants.dart' as frosty_const;
 
+/// Shared log tag for the quality (playlist) proxy flow, for easy filtering.
+const _qualityProxyLogTag = '[QualityProxy]';
+
 /// A single HLS variant parsed from a Twitch Usher master playlist.
 @immutable
 class TwitchHlsVariant {
@@ -229,10 +232,18 @@ class TwitchPlaylistApi {
       },
     );
     final full = uri.toString();
-    if (proxyBaseUrl == null || proxyBaseUrl.isEmpty) return full;
+    if (proxyBaseUrl == null || proxyBaseUrl.isEmpty) {
+      debugPrint(
+        '$_qualityProxyLogTag buildStreamUsherUrl: $channelLogin -> direct usher (no proxy)',
+      );
+      return full;
+    }
     final trimmed = proxyBaseUrl.endsWith('/')
         ? proxyBaseUrl.substring(0, proxyBaseUrl.length - 1)
         : proxyBaseUrl;
+    debugPrint(
+      '$_qualityProxyLogTag buildStreamUsherUrl: $channelLogin -> proxied usher via $trimmed',
+    );
     return '$trimmed/$full';
   }
 
@@ -281,6 +292,9 @@ class TwitchPlaylistApi {
       return '$trimmedProxy/$masterPlaylistUrl';
     }();
 
+    debugPrint(
+      '$_qualityProxyLogTag fetchVariants: ${trimmedProxy == null ? 'direct' : 'via $trimmedProxy'}',
+    );
     final resp = await _dio.get<String>(
       effectiveUrl,
       options: Options(
@@ -293,7 +307,12 @@ class TwitchPlaylistApi {
       ),
     );
     final body = resp.data ?? '';
-    return parseMasterPlaylist(body);
+    final variants = parseMasterPlaylist(body);
+    debugPrint(
+      '$_qualityProxyLogTag fetchVariants: parsed ${variants.length} variants '
+      '(status ${resp.statusCode})',
+    );
+    return variants;
   }
 
   /// Parses a Twitch Usher master `m3u8` body into a list of [TwitchHlsVariant].

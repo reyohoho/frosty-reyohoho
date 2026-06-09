@@ -9,6 +9,7 @@ class PipCallbackRegistry {
   PipCallbackRegistry._();
 
   static void Function(String event)? _onPipExitedFromNative;
+  static void Function()? _onPipEnteredFromNative;
 
   /// Registers the callback: (event) where event is "expanded" or "dismissed".
   /// Pass [null] to unregister (e.g. on dispose).
@@ -16,10 +17,22 @@ class PipCallbackRegistry {
     _onPipExitedFromNative = callback;
   }
 
+  /// Registers a callback fired when native reports PiP was entered.
+  /// Pass [null] to unregister (e.g. on dispose).
+  static void registerPipEnteredFromNative(void Function()? callback) {
+    _onPipEnteredFromNative = callback;
+  }
+
   /// Called when we receive an event from native. Invokes the registered callback with the event.
   static void invokePipExitedFromNative(String event) {
     debugPrint('[PIP] PipCallbackRegistry: received "$event" from native');
     _onPipExitedFromNative?.call(event);
+  }
+
+  /// Called when native reports PiP was entered.
+  static void invokePipEnteredFromNative() {
+    debugPrint('[PIP] PipCallbackRegistry: received "entered" from native');
+    _onPipEnteredFromNative?.call();
   }
 }
 
@@ -33,6 +46,8 @@ void pipEventChannelListen() {
     (dynamic event) {
       if (event == 'expanded' || event == 'dismissed') {
         PipCallbackRegistry.invokePipExitedFromNative(event as String);
+      } else if (event == 'entered') {
+        PipCallbackRegistry.invokePipEnteredFromNative();
       }
     },
     onError: (Object error, StackTrace stackTrace) {

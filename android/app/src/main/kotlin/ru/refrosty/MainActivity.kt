@@ -46,7 +46,14 @@ class MainActivity : PipCallbackHelperActivityWrapper() {
 
     override fun onPictureInPictureModeChanged(active: Boolean, newConfig: Configuration?) {
         Log.d(TAG, "onPictureInPictureModeChanged: active=$active (pip ${if (active) "entered" else "exited"})")
-        if (!active) {
+        if (active) {
+            // Emit "entered" so Flutter can reliably react to PiP entry. We do
+            // NOT rely on SimplePip.onPipEntered here because it does not fire
+            // for system auto-PiP on all devices; this native callback always
+            // does (see logcat). The Dart side uses this to start the PiP
+            // playback watchdog.
+            pipEventSink?.success("entered")
+        } else {
             resolvePipExitOutcome()
         }
         super.onPictureInPictureModeChanged(active, newConfig)

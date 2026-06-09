@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
+import 'package:frosty/apis/reyohoho_api.dart';
 import 'package:frosty/cache_manager.dart';
 import 'package:frosty/screens/channel/chat/stores/chat_store.dart';
 import 'package:frosty/screens/channel/chat/stores/chat_tabs_store.dart';
@@ -90,9 +91,17 @@ class _VideoChatState extends State<VideoChat>
     }
 
     if (!mounted) return;
+    debugPrint(
+      '$qualityProxyLogTag channel ${widget.userLogin}: usePlaylistProxy=${settings.usePlaylistProxy}, '
+      'selectedProxyUrl="${settings.selectedProxyUrl}"',
+    );
     final qualityProxy = settings.usePlaylistProxy
         ? (await context.reyohohoApi.findQualityDomain()) ?? ''
         : '';
+    debugPrint(
+      '$qualityProxyLogTag channel ${widget.userLogin}: resolved quality proxy domain = '
+      '"${qualityProxy.isEmpty ? '<none>' : qualityProxy}"',
+    );
     if (!mounted) return;
 
     _chatTabsStore = ChatTabsStore(

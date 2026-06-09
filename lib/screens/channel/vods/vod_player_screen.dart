@@ -134,14 +134,26 @@ class _VodPlayerScreenState extends State<VodPlayerScreen>
           });
         });
 
-    // Initialize SimplePip with callbacks for PIP exit detection
+    // Initialize SimplePip with callbacks for PIP exit detection.
+    //
+    // IMPORTANT: SimplePip fires onPipExited for BOTH "expanded back to app"
+    // and "dismissed" cases and gives us no way to distinguish. If we paused
+    // here unconditionally, the video would pause (and the foreground-service
+    // notification would be torn down) on every return to fullscreen. We only
+    // update the in-PiP flag here and defer the play/pause decision to
+    // PipCallbackRegistry, which receives "expanded" vs "dismissed" from
+    // MainActivity.onPictureInPictureModeChanged via our EventChannel.
     debugPrint(
       '[PIP] VodPlayer: registering SimplePip callbacks (onPipExited, onPipEntered)',
     );
     _pip = SimplePip(
       onPipExited: () {
-        debugPrint('[PIP] VodPlayer: onPipExited invoked (native -> Dart)');
-        _onPipExited();
+        debugPrint(
+          '[PIP] VodPlayer: SimplePip.onPipExited (flag only; pause decision deferred to native event)',
+        );
+        if (mounted) {
+          setState(() => _isInPipMode = false);
+        }
       },
       onPipEntered: () {
         debugPrint('[PIP] VodPlayer: onPipEntered invoked (native -> Dart)');
